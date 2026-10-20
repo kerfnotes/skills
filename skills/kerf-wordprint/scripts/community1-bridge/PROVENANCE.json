@@ -1,0 +1,79 @@
+{
+  "source_url": "https://github.com/soniqo/speech-swift/archive/refs/tags/v0.0.27.tar.gz",
+  "version": "0.0.27",
+  "archive_sha256": "67e73e7fc87dc90b047c62310b778da2ee9ad15d32553a51437106b00fc937e2",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "path": "Sources/SpeechVAD/Community1Clustering.swift",
+      "upstream_path": "Sources/SpeechVAD/Community1Clustering.swift",
+      "sha256": "5827c776dda78722a7e40cb56fd4372b5c6b42be29dafa06f77e8f1ac6adb01c",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/SpeechVAD/Community1Configuration.swift",
+      "upstream_path": "Sources/SpeechVAD/Community1Configuration.swift",
+      "sha256": "aba64df771f6eab9fe00c39f7f36c0d24fe2cda74f9de7d94a9cc7e551322fcd",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/SpeechVAD/Community1CoreML.swift",
+      "upstream_path": "Sources/SpeechVAD/Community1CoreML.swift",
+      "sha256": "a79108598643fee8bb264c5ab454c545585c0f6a2d4019cb586fd49a8b7d0136",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/SpeechVAD/Community1DiarizationPipeline.swift",
+      "upstream_path": "Sources/SpeechVAD/Community1DiarizationPipeline.swift",
+      "sha256": "31e5776e6564012afe5352afb23799e3b490bcda63142795fe8974b05dec8ad4",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/SpeechVAD/DiarizationHelpers.swift",
+      "upstream_path": "Sources/SpeechVAD/DiarizationHelpers.swift",
+      "sha256": "160e9130d66f66062a196d2eaae0346a6f0ff72f457e7264877466d83ff57f5a",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/AudioCommon/Protocols.swift",
+      "upstream_path": "Sources/AudioCommon/Protocols.swift",
+      "sha256": "09ce212035f7722cd18207ecaf3835d8f5b380c351bb2661a80777f9c2b94f47",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/AudioCommon/CoreMLComputeUnits.swift",
+      "upstream_path": "Sources/AudioCommon/CoreMLComputeUnits.swift",
+      "sha256": "d99a8e8ed56224a36a22ed436a8ca8f42463d34a403317c6d853a294f86b9ca5",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/AudioCommon/AudioFileLoader.swift",
+      "upstream_path": "Sources/AudioCommon/AudioFileLoader.swift",
+      "sha256": "98b58efd8c0d7e28a944c607a16b47b8de9ab3f37328de555e3eaa10a3b19842",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/AudioCommon/AudioFileStream.swift",
+      "upstream_path": "Sources/AudioCommon/AudioFileStream.swift",
+      "sha256": "c8067cd10cf25c5844c78859501fde19c9f9d6d00a0e99ea8d85beb4520106f1",
+      "unchanged": true
+    },
+    {
+      "path": "Sources/SpeechVAD/DiarizationResult.swift",
+      "upstream_path": "Sources/SpeechVAD/DiarizationPipeline.swift",
+      "sha256": "41b2dfd9114022fc2c714622e81cc9f46788f891289b4b22f01916653753290f",
+      "upstream_declaration": "DiarizationResult",
+      "declaration_unchanged": true
+    }
+  ],
+  "scope": "Unchanged official Community-1 implementation and minimal system-framework support. Downloader shim only throws; bridge calls fromLocal.",
+  "build_script": "build.sh",
+  "architecture": "arm64",
+  "minimum_os": "14.0",
+  "runtime_model_downloads": false,
+  "inference_edits": false,
+  "shim": "Sources/AudioCommon/DisabledDownloader.swift",
+  "shim_behavior": "Both downloader entry points unconditionally throw; fromLocal never calls either.",
+  "bridge_api": "Community1DiarizationPipeline.fromLocal",
+  "binary_sha256": "a3be4cc8ef52baac9febc2df84702088a89d8b03fe293dbc7b7e2bb25e584642"
+}

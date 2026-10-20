@@ -51,6 +51,14 @@ Windows 用 `py -3 -m unittest discover -s tests`。需要 Python 3.10 以上。
 
 依 [setup.md](../references/setup.md) 偵測系統、沿用已安裝的工具，只補缺少的項目：FFmpeg、OpenCC、Qwen3-ASR 0.6B、Qwen ForcedAligner，以及說話者分群工具。工具裝在獨立環境，不放進 skill 資料夾。
 
+Apple Silicon Mac 另外建置離線說話者 bridge（需要 Xcode Command Line Tools，`xcode-select --install`）：
+
+```sh
+sh "$WORDPRINT_SKILL/scripts/community1-bridge/build.sh"
+```
+
+最後一行印出 `Offline downloader guards passed; no models loaded.` 才算成功。產物在 `scripts/community1-bridge/build/`，不進 Git；沒有建置時，轉錄流程會退回會連網的 `speech diarize`。
+
 Community-1 的官方下載需要 Hugging Face 帳號、同意使用條件與 access token。這一步請使用者本人完成；agent 不代為同意條款，也不把 token 寫進指令、檔案或 Git。1.7B 只在使用者要求時才下載。
 
 ## 4. 短音檔驗證
@@ -63,7 +71,15 @@ say -v "Eddy (Chinese (Taiwan))" -o b.aiff "好的，我是第二位說話者。
 ffmpeg -i a.aiff -i b.aiff -filter_complex "[0][1]concat=n=2:v=0:a=1" -ac 1 -ar 16000 sample.wav
 ```
 
-其他系統請使用者提供可分享的短錄音。驗證通過需同時符合：每個階段結束碼為 0；逐字稿涵蓋整段音檔；分出兩位說話者；`scripts/transcript.py validate` 通過；斷網後重跑仍可完成。
+其他系統請使用者提供可分享的短錄音。Mac 上用 `head -1 "$(which mlx-qwen3-asr)"` 找到 worker 要用的 Python，再跑：
+
+```sh
+"$WORKER_PYTHON" "$WORDPRINT_SKILL/scripts/qwen_worker.py" --audio sample.wav --run-directory run-check --model 0.6B
+python3 "$WORDPRINT_SKILL/scripts/transcript.py" render run-check/normalized-run.json --output out-check
+sandbox-exec -p '(version 1)(allow default)(deny network*)' "$WORKER_PYTHON" "$WORDPRINT_SKILL/scripts/qwen_worker.py" --audio sample.wav --run-directory run-offline --model 0.6B
+```
+
+驗證通過需同時符合：每個階段結束碼為 0；`run-check/state.json` 的 stage 是 `complete`；逐字稿涵蓋整段音檔；分出兩位說話者；`scripts/transcript.py validate` 通過；`out-check/transcript.html` 開得起來；斷網重跑（上面第三行）仍是 `complete`。
 
 ## 5. 交付結果
 

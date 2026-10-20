@@ -134,6 +134,75 @@ class TranscriptTests(unittest.TestCase):
         self.assertFalse(output.exists())
         self.assertFalse(list(self.root.glob('.transcript-*')))
 
+    def test_html_srt_and_playback(self):
+        import wave
+        with wave.open(str(self.root / 'canonical.wav'), 'wb') as audio:
+            audio.setnchannels(1), audio.setsampwidth(2), audio.setframerate(16000)
+            audio.writeframes(b'\0\0' * 48000)
+        self.run['pcm'] = 'canonical.wav'
+        self.run['speakers']['S2']['name'] = '陳<先生>'
+        run, report = self.validate()
+        result = m.render(run, report, self.root / 'out', original_script=True, title='週會 <草稿>')
+        out = self.root / 'out'
+        self.assertTrue(result['srt_written'] and result['playback_written'] and result['pcm_verified'])
+        self.assertEqual((out / 'playback.wav').read_bytes(), (self.root / 'canonical.wav').read_bytes())
+        page = (out / 'transcript.html').read_text(encoding='utf-8')
+        self.assertIn('src="playback.wav"', page)
+        self.assertIn('需與 playback.wav 同資料夾', page)
+        self.assertIn('data-start="1.000"', page)
+        self.assertIn('週會 &lt;草稿&gt;', page)
+        self.assertIn('陳&lt;先生&gt;', page)
+        self.assertNotIn('<先生>', page)  # The Markdown payload escapes '<' too.
+        self.assertIn('mailto:?subject=', page)
+        srt = (out / 'transcript.srt').read_text(encoding='utf-8')
+        self.assertTrue(srt.startswith('1\n00:00:00,000 --> 00:00:01,000\n[S1] 你好，'))
+        self.assertIn('[S2｜可能是 陳<先生>] ', srt)
+        # Re-render from the output directory still finds playback audio.
+        self.assertTrue(m.validate(out / 'run.json')[1]['pcm_verified'])
+
+        self.run['chunks'][0]['words'][1].update(start=1.2, end=1.2)
+        run, report = self.validate()
+        result = m.render(run, report, self.root / 'zero', original_script=True)
+        self.assertFalse(result['srt_written'])
+        self.assertFalse((self.root / 'zero' / 'transcript.srt').exists())
+        self.run['sources'][0]['duration'] = 2
+        self.run['chunks'][0]['end'] = 2
+        with self.assertRaisesRegex(m.Invalid, 'pcm: sample count'):
+            self.validate()
+
+    def test_pcm_header_frames_beyond_data_is_rejected(self):
+        import wave
+        pcm = self.root / 'canonical.wav'
+        with wave.open(str(pcm), 'wb') as audio:
+            audio.setnchannels(1), audio.setsampwidth(2), audio.setframerate(16000)
+            audio.writeframes(b'\0\0' * 16000)
+        os.truncate(pcm, os.path.getsize(pcm) - 16000)  # Header still says 16000 frames; 8000 remain.
+        self.run['pcm'] = 'canonical.wav'
+        self.run['sources'][0]['duration'] = 1
+        self.run['chunks'][0]['end'] = 1
+        self.run['chunks'][0]['words'] = [{'text': '你好嗯好', 'start': 0, 'end': 1}]
+        with self.assertRaisesRegex(m.Invalid, 'declares 16000 frames but data holds 8000'):
+            self.validate()
+
+    def test_srt_skipped_when_millisecond_rounding_collapses_a_row(self):
+        self.run['chunks'][0]['words'][0].update(start=0.0001, end=0.0002)
+        run, report = self.validate()
+        result = m.render(run, report, self.root / 'out', original_script=True)
+        self.assertFalse(result['srt_written'])
+        self.assertIn('millisecond rounding', result['srt_reason'])
+        self.assertFalse((self.root / 'out' / 'transcript.srt').exists())
+        self.assertEqual(json.loads((self.root / 'out' / 'validation.json').read_text(encoding='utf-8'))['srt_written'], False)
+
+    def test_page_without_pcm_promises_no_playback(self):
+        run, report = self.validate()
+        result = m.render(run, report, self.root / 'out', original_script=True)
+        page = (self.root / 'out' / 'transcript.html').read_text(encoding='utf-8')
+        self.assertFalse(result['playback_written'])
+        self.assertNotIn('<audio', page)
+        self.assertNotIn('跳到該處播放', page)
+        self.assertIn('此份沒有音訊，無法跳播', page)
+        self.assertFalse((self.root / 'out' / 'playback.wav').exists())
+
     def test_opencc_absence_leaves_no_output_and_name_edit_reuses_text(self):
         run, report = self.validate()
         with self.assertRaisesRegex(m.Invalid, 'OpenCC not found'):
