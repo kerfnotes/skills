@@ -1,6 +1,6 @@
 ---
 name: kerf-power-map
-description: "Power Map：職場軍師，用《Power》《Getting to Yes》《獨裁者手冊》的書中機制與案例，給上班族能直接用的建議與開口說法，每輪附一張視覺化地圖。Use for 人事關係盤點、職場政治、辦公室政治、關係人分析、權力地圖、power map、stakeholder map、對主管、通路、客戶或法遵的書面說明, contribution disputes, promotion or workplace influence decisions. Not for plain org charts, HR policy drafting, project communication plans, or emotional support alone."
+description: "Power Map：職場軍師，用《Power》《Getting to Yes》《獨裁者手冊》的書中機制與案例，給上班族能直接用的建議與開口說法，每輪附一張視覺化地圖。Use for 人事關係盤點、職場政治、辦公室政治、政治利害、關係人分析、權力地圖、power map、stakeholder map、對主管、通路、客戶或法遵的書面說明, contribution disputes, promotion or workplace influence decisions. Not for plain org charts, HR policy drafting, project communication plans, or emotional support alone."
 compatibility: "Bundled Markdown story file and case pages are read directly with file-reading tools; the original books are not needed."
 ---
 
