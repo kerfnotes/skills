@@ -3,116 +3,160 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!--
-  權力地圖版型（見 board.md 第 1 節）。完整圖複製整份；骨架（標題、轉折點、圖例）和「其他看法」一定留，主結構只留承載本案判斷的一到兩塊，其餘整段刪掉、改寫進「其他看法」，其他只改 body 裡的文字與列數。精簡圖只沿用 CSS，照 board.md 精簡圖那段組成，不放圖例。CSS 通常不必動，驗收發現溢出時再調。
-  - 逐項對照：一個 .row 一項，只列會改變結果的項目。
-  - 沿用環境主題變數，不覆寫 :root 配色、不設整頁背景。
-  - 每格一句短語（約 20 字內）；長說明留在正文，不塞進圖。
-  - 箭頭三種：.edge 已發生、.edge.plan 建議你做、.edge.unk 不知道有沒有這條路（標籤寫成問句）。
-  - 使用者自己說的不貼標籤；只標 已核對／推測／未知，一律寫字。body 裡的標籤只是示範，照每格實際依據換掉或刪掉（文件寫明的標 已核對）。圖例只列圖中真的用到的線型與標籤。
-  - 決策圈由外到內：名義上能參與的人（形式參與）→ 誰的話有份量（影響者）→ 少了誰推不動（必要支持）→ 誰能批准或擋下（批准／否決）；只畫第一步要處理的那一項決定，另一項決定在框外寫一行。只畫有依據的圈，沒依據的併成「待查」一行；批准或擋下那圈一定畫。推測標在放圈依據後面，不標在姓名或職稱後面。
-  - 交付版不放任何 script 標籤；量溢出的程式只在預覽時用。
--->
+<!-- 權力地圖零件庫：每個零件一段最小示範。畫圖時只挑這張圖用到的零件，複製它的樣式與 HTML，換成本案內容。 -->
 <style>
-.pm{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground,#e5e5e5);line-height:1.45;display:flex;flex-direction:column;gap:14px;padding:4px 2px 8px}
+.pm{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground);line-height:1.5;display:flex;flex-direction:column;gap:16px}
+.pm p{margin:0}
 .pm h1{font-size:17px;line-height:1.4;margin:0;font-weight:700}
 .pm .turn{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:10px 14px;font-size:14px}
 .pm .turn b{color:var(--accent,#3b82f6)}
-.pm .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted-foreground,#a3a3a3)}
-.pm .panel{border:1px solid var(--border,#3f3f46);border-radius:var(--radius,8px);padding:12px 14px}
-.pm .panel h2{font-size:14px;margin:0;font-weight:700}
-.pm .lens{font-size:12px;color:var(--muted-foreground,#a3a3a3);margin:2px 0 10px}
-.pm .hop{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin:0 0 8px}
-.pm .node{border:1.5px solid var(--foreground,#e5e5e5);border-radius:6px;padding:3px 9px;font-size:13px;font-weight:700;text-align:center;max-width:7.5em;overflow-wrap:anywhere}
-.pm .node.me{border-color:var(--accent,#3b82f6);color:var(--accent,#3b82f6)}
-.pm .edge{font-size:12px;color:var(--muted-foreground,#a3a3a3);border-bottom:2px solid var(--foreground,#e5e5e5);padding:0 6px 2px;text-align:center;position:relative;min-width:60px}
-.pm .edge::after{content:"";position:absolute;right:-2px;bottom:-6px;border:5px solid transparent;border-left:8px solid var(--foreground,#e5e5e5)}
-.pm .edge.plan{border-bottom-style:dashed;border-bottom-color:var(--accent,#3b82f6);color:var(--accent,#3b82f6)}
-.pm .edge.plan::after{border-left-color:var(--accent,#3b82f6)}
-.pm .edge.unk{border-bottom-style:dotted;border-bottom-color:var(--destructive,#ef4444);color:var(--destructive,#ef4444)}
+.pm .tag{display:inline-block;font-size:11px;line-height:1.3;padding:0 4px;border:1.5px solid;border-radius:4px;margin-left:4px;white-space:nowrap;vertical-align:1px;font-weight:600}
+.pm .t-doc{border-color:var(--success,#22c55e)}
+.pm .t-draft{border-color:var(--muted-foreground,currentColor)}
+.pm .t-guess{border-color:var(--warning,#f59e0b);border-style:dashed}
+.pm .t-unk{border-color:var(--destructive,#ef4444);border-style:dotted}
+.pm .t-ask{border-color:var(--destructive,#ef4444)}
+.pm .tags{font-size:13px}
+.pm .qa-h,.pm .qa-r{display:grid;grid-template-columns:2fr 3fr;gap:4px 12px;font-size:13px}
+.pm .qa-h{font-size:12px;color:var(--muted-foreground)}
+.pm .qa-r{border-top:1px solid var(--border);padding:8px 0}
+.pm .qa-r .q{font-weight:700}
+.pm .qa-r[data-focal]{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:8px 10px}
+.pm .ring{border:1px solid var(--border);border-radius:var(--radius,8px);padding:8px 10px 10px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.pm .ring .rk{font-size:12px;color:var(--muted-foreground)}
+.pm .ring.r1{border:1.5px solid}
+.pm .ring[data-focal]{border:2px solid var(--accent,#3b82f6)}
+.pm .route{display:flex;flex-direction:column;gap:8px}
+.pm .hop{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+.pm .node{border:1.5px solid;border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;text-align:center;max-width:7.5em}
+.pm .edge{font-size:12px;color:var(--muted-foreground);border-bottom:2px solid;padding:0 10px 2px 4px;text-align:center;position:relative;min-width:60px}
+.pm .edge::after{content:"";position:absolute;right:-2px;bottom:-6px;border:5px solid transparent;border-left:8px solid}
+.pm .edge.plan{border-bottom-style:dashed}
+.pm .edge.unk{border-bottom-style:dotted;border-bottom-color:var(--destructive,#ef4444)}
 .pm .edge.unk::after{border-left-color:var(--destructive,#ef4444)}
-.pm .ring{border:1px solid var(--border,#52525b);border-radius:12px;padding:8px 10px 10px}
-.pm .ring .rk{font-size:12px;color:var(--muted-foreground,#a3a3a3);margin-bottom:4px}
-.pm .ring .who{font-size:13px;margin-bottom:6px}
-.pm .r1{border-width:2px;border-color:var(--foreground,#e5e5e5)}
-.pm .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.pm ul{margin:0;padding-left:18px;font-size:13px}.pm li{margin:0 0 4px}
-.pm .tag{display:inline-block;font-size:11px;line-height:1.3;padding:0 4px;border:1.5px solid;border-radius:4px;margin-left:4px;white-space:nowrap;vertical-align:1px;font-weight:600;color:var(--foreground,#e5e5e5)}
-.pm .t-doc{border-color:var(--success,#22c55e)}.pm .t-said{border-color:var(--info,#38bdf8)}.pm .t-guess{border-color:var(--warning,#f59e0b);border-style:dashed}.pm .t-unk{border-color:var(--destructive,#ef4444);border-style:dotted}
-.pm .cols h3{font-size:12px;color:var(--muted-foreground,#a3a3a3);margin:0 0 4px;font-weight:600}
-.pm .row{border-top:1px solid var(--border,#3f3f46);padding:8px 0 6px}.pm .row:first-of-type{border-top:0;padding-top:0}
-.pm .row .it{font-size:13px;font-weight:700;margin-bottom:4px}
-.pm .kv{display:grid;grid-template-columns:6.5em 1fr;gap:3px 8px;font-size:13px}.pm .kv .k{color:var(--muted-foreground,#a3a3a3);font-size:12px}
-@media (max-width:560px){.pm .cols{grid-template-columns:1fr}}
+.pm .edge[data-focal]{color:var(--accent,#3b82f6);border-bottom-color:var(--accent,#3b82f6)}
+.pm .edge[data-focal]::after{border-left-color:var(--accent,#3b82f6)}
+.pm .key{font-size:12px;color:var(--muted-foreground)}
+.pm .basis{font-size:13px;color:var(--muted-foreground)}
+.pm .basis b{color:var(--foreground)}
+@media (max-width:480px){.pm .qa-h{display:none}.pm .qa-r{grid-template-columns:1fr}}
+.pm svg{display:block;width:100%;max-width:440px;height:auto}
+.pm svg text{font-size:13px;fill:currentColor}
+.pm svg .mu{font-size:12px;fill:var(--muted-foreground,currentColor)}
+.pm svg .nm{font-weight:700}
+.pm svg .bx{fill:none;stroke:currentColor;stroke-width:1.5}
+.pm svg .ln{fill:none;stroke:var(--muted-foreground,currentColor);stroke-width:1.5}
+.pm svg .ah{fill:var(--muted-foreground,currentColor)}
+.pm svg .ax{fill:none;stroke:var(--border,currentColor)}
+.pm svg .dot{fill:currentColor}
+.pm svg [data-focal]{stroke:var(--accent,#3b82f6);stroke-width:2}
+.pm svg .dot[data-focal]{fill:var(--accent,#3b82f6)}
 </style>
 </head>
 <body>
 <div class="pm">
 
-<h1>【這局卡在哪：原話能回讀的狀態；推薦依賴你沒提的事時點名它】</h1>
-<div class="turn"><b>轉折點：</b>【第一步：對誰提出什麼請求、改哪一項，與正文推薦一致】</div>
-<div class="legend">
-  <span>實線箭頭＝已發生</span>
-  <span style="color:var(--accent,#3b82f6)">虛線箭頭＝建議你做</span>
-  <span style="color:var(--destructive,#ef4444)">點線箭頭＝不知道有沒有這條路</span>
-  <span>現況未標來源＝依你描述；推測、未知另標：<span class="tag t-doc">已核對</span><span class="tag t-guess">推測</span><span class="tag t-unk">未知</span></span>
+<!-- 判斷標題：每張圖都有。一句話說這局卡在哪，要能對回使用者原話。 -->
+<h1>這案卡在處長沒看到你的分析，不是組長不挺你</h1>
+
+<!-- 轉折點：每張圖都有，固定加 data-focal。寫第一步：對誰、提什麼，和正文的建議一致。 -->
+<p class="turn" data-focal><b>第一步：</b>今天請組長讓你在月會親自報五分鐘</p>
+
+<!-- 證據標籤：放在那句話的後面，說明它的依據。已核對＝有文件或紀錄；稿內已有＝使用者草稿已經寫到；推測＝你的判斷；未知＝沒人知道、要查；待問你＝只有使用者知道、這輪就問。使用者自己說的不必標。 -->
+<p class="tags">處長要的是準時<span class="tag t-doc">已核對</span>，他擔心外包品質<span class="tag t-guess">推測</span>；預算誰批<span class="tag t-unk">未知</span>；草稿已寫成本比較<span class="tag t-draft">稿內已有</span>；你上週有沒有口頭答應<span class="tag t-ask">待問你</span></p>
+
+<!-- 疑慮對照格：對方對說明內容有疑慮時用。一列一個對方心裡的問題，右邊是你的回答和依據；草稿已經答到的標「稿內已有」，還沒答到的缺口那一列加 data-focal。窄螢幕自動改成上下排。 -->
+<div class="qa">
+  <div class="qa-h"><span>對方心裡的問題</span><span>你的回答</span></div>
+  <div class="qa-r"><p class="q">為什麼要改流程？</p><p>舊流程每月重工兩天<span class="tag t-draft">稿內已有</span></p></div>
+  <div class="qa-r"><p class="q">客戶會不會受影響？</p><p>對客戶的交期不變<span class="tag t-draft">稿內已有</span></p></div>
+  <div class="qa-r" data-focal><p class="q">為什麼連舊案也要改？</p><p>草稿還沒寫。補一句：舊案沿用會產生兩套數字<span class="tag t-guess">推測</span></p></div>
 </div>
 
-<!-- 主結構：以下四種只留一到兩塊 -->
-<section class="panel">
-  <h2>【文件／提案】逐項：碰到誰、【拍板者】會怎麼讀</h2>
-  <p class="lens">逐項對照：只列會改變結果的項目</p>
-  <div class="row"><div class="it">【項目】</div><div class="kv">
-    <span class="k">碰到誰</span><span>【誰的利益或面子】<span class="tag t-guess">推測</span></span>
-    <span class="k">【拍板者】怎麼讀</span><span>【一句短語】<span class="tag t-guess">推測</span></span>
-    <span class="k">怎麼處理</span><span>【使用者能做的事，與正文一致】</span>
-  </div></div>
-</section>
-
-<section class="panel">
-  <h2>誰把什麼帶到【拍板者】面前</h2>
-  <p class="lens">《Power》資訊與能見度</p>
-  <div class="hop"><span class="node me">你</span><span class="edge">【日期／動詞＋對象】</span><span class="node">【人】</span></div>
-  <div class="hop"><span class="node">【人】</span><span class="edge">【已發生的傳遞，帶原話或數字】</span><span class="node">【拍板者】</span></div>
-  <div class="hop"><span class="node me">你</span><span class="edge unk">【不知道有沒有的路，寫成問句？】</span><span class="node">【拍板者】</span></div>
-  <div class="hop"><span class="node me">你</span><span class="edge plan">【建議你做的第一步】</span><span class="node">【人】</span></div>
-</section>
-
-<section class="panel">
-  <h2>這項決定誰說了算：【寫出是哪一項決定】</h2>
-  <p class="lens">《獨裁者手冊》決策圈：越內圈越接近拍板</p>
-  <div class="ring"><div class="rk">誰的話有份量（影響者）</div><div class="who">【人＋為什麼意見會被聽；你判斷的要加推測】</div>
-    <div class="ring"><div class="rk">少了誰推不動（必要支持／執行）</div><div class="who">【人（已知身分）】：【放這圈的依據】<span class="tag t-guess">推測</span></div>
-      <div class="ring r1"><div class="rk">誰能批准或擋下（批准／否決）</div><div class="who">【人；不知道就寫「還不知道 → 怎麼查」】<span class="tag t-unk">未知</span></div></div>
-    </div>
+<!-- 同心決策圈：卡在誰點頭才算數時用。外圈到內圈越接近拍板，只畫有依據的圈，最內圈是能批准或擋下的人（.r1）。只畫第一步要處理的那一項決定；要強調的那圈加 data-focal。 -->
+<div class="ring"><p class="rk">說話有份量</p><p>你的組長：處長常先問他意見<span class="tag t-guess">推測</span></p>
+  <div class="ring"><p class="rk">少了誰推不動</p><p>資訊部窗口：要他排工時<span class="tag t-doc">已核對</span></p>
+    <div class="ring r1"><p class="rk">能批准或擋下</p><p>營運處長：預算在他手上<span class="tag t-guess">推測</span></p></div>
   </div>
-  <p class="who" style="margin:8px 0 0;font-size:13px">待查：【沒依據的圈合成這一行，保留角色名稱，例如「少了誰推不動（必要支持）：未知；名義上能參與的人：未知」；沒有就刪掉】</p>
-</section>
+</div>
 
-<section class="panel">
-  <h2>各方在意什麼、談不成時你能做的</h2>
-  <p class="lens">《Getting to Yes》利益與退路</p>
-  <div class="cols">
-    <div><h3>各方在意什麼</h3><ul>
-      <li><b>【人】</b>：【顧慮或利益，寫在承擔它的人名下】<span class="tag t-guess">推測</span></li>
-      <li><b>你</b>：【使用者說出的目標；你替他讀出的要加推測】</li>
-    </ul></div>
-    <div><h3>談不成時你能做的</h3><ul>
-      <li><b>自己就能做</b>：【不需任何人點頭的最佳選擇；沒有就寫「目前沒有」】</li>
-      <li><b>還要別人點頭</b>：【需同一批人核准的備選】</li>
-      <li><b>還沒到手</b>：【使用者提過、還沒拿到的機會；沒提就寫「你沒提」，不寫成沒有】</li>
-    </ul></div>
-  </div>
-</section>
+<!-- 傳遞箭頭列：卡在拍板者看到什麼時用。一列一段傳遞：.edge 已發生、.edge.plan 建議你做、.edge.unk 不知道有沒有這條路（標籤寫成問句）。資訊在哪一段被過濾就把原話寫在那段；建議的那一步要強調時加 data-focal。圖下一行只說明用到的線型。 -->
+<div class="route">
+  <div class="hop"><span class="node">你</span><span class="edge">週一寄出完整分析</span><span class="node">組長</span></div>
+  <div class="hop"><span class="node">組長</span><span class="edge">月會只報「進度正常」</span><span class="node">處長</span></div>
+  <div class="hop"><span class="node">你</span><span class="edge unk">處長看得到原始信嗎？</span><span class="node">處長</span></div>
+  <div class="hop"><span class="node">你</span><span class="edge plan">請組長讓你月會報五分鐘</span><span class="node">組長</span></div>
+  <p class="key">實線＝已發生　虛線＝建議你做　點線＝不知道有沒有這條路</p>
+</div>
 
-<section class="panel">
-  <h2>其他看法</h2>
-  <p class="lens">主結構沒答到的書問題，各一行</p>
-  <ul>
-    <li><b>《獨裁者手冊》</b>：【誰點頭才算數；不知道就寫還不知道 → 怎麼查】<span class="tag t-unk">未知</span></li>
-    <li><b>《Getting to Yes》</b>：【關鍵顧慮＋自己就能做的退路；沒有就寫目前沒有】</li>
-  </ul>
-</section>
+<!-- 分支節點（SVG）：關鍵事實只有使用者知道、第一步會因它而不同時用。上方是那個事實，下方每支寫各自的第一步；使用者最可能的那支加 data-focal。 -->
+<svg viewBox="0 0 360 236" role="img" aria-labelledby="br-t br-d">
+<title id="br-t">分支：主管有沒有口頭答應你帶新案</title>
+<desc id="br-d">只有你知道主管是否答應過；答應過就請他在週會確認分工，沒答應就先寫一頁提案約他談。</desc>
+<rect class="bx" x="60" y="8" width="240" height="56" rx="8"/>
+<text x="180" y="32" text-anchor="middle">主管口頭答應過你帶新案嗎？</text>
+<text class="mu" x="180" y="52" text-anchor="middle">〔待問你〕</text>
+<path class="ln" d="M180 64V88M92 88H268M92 88V126M268 88V126"/>
+<path class="ah" d="M86 126L92 134L98 126ZM262 126L268 134L274 126Z"/>
+<text class="mu" x="100" y="114">答應過</text>
+<text class="mu" x="276" y="114">沒答應</text>
+<rect class="bx" x="12" y="136" width="160" height="88" rx="8"/>
+<text x="24" y="164">第一步：</text>
+<text x="24" y="186">請主管在週會上</text>
+<text x="24" y="208">確認新案分工</text>
+<rect class="bx" x="188" y="136" width="160" height="88" rx="8"/>
+<text x="200" y="164">第一步：</text>
+<text x="200" y="186">先寫一頁提案，</text>
+<text x="200" y="208">約主管談十五分鐘</text>
+</svg>
+
+<!-- 四象限畫布（SVG，360 寬直式）：要決定先找誰時用。橫軸支持度、縱軸影響力，每人一點，名字放點的右側、不跨過中線；立場是推測的在名字下方標字。要先找的那個人的點加 data-focal。 -->
+<svg viewBox="0 0 360 392" role="img" aria-labelledby="qd-t qd-d">
+<title id="qd-t">立場四象限：誰影響大、誰支持你</title>
+<desc id="qd-d">營運處長影響大但可能反對，要先找；組長影響大且支持；同事小林支持但影響小；法務同仁影響小、可能反對。</desc>
+<text class="mu" x="40" y="20">↑ 影響力高</text>
+<rect class="ax" x="40" y="32" width="304" height="320"/>
+<path class="ax" d="M192 32V352M40 192H344"/>
+<text class="mu" x="48" y="52">先找：問清顧慮</text>
+<text class="mu" x="336" y="52" text-anchor="end">請他當推手</text>
+<text class="mu" x="48" y="340">保持告知</text>
+<text class="mu" x="336" y="340" text-anchor="end">定期回報</text>
+<circle class="dot" cx="64" cy="104" r="5"/>
+<text x="76" y="109">營運處長</text>
+<text class="mu" x="76" y="127">〔推測〕</text>
+<circle class="dot" cx="232" cy="120" r="5"/>
+<text x="244" y="125">你的組長</text>
+<circle class="dot" cx="232" cy="256" r="5"/>
+<text x="244" y="261">同事小林</text>
+<circle class="dot" cx="64" cy="272" r="5"/>
+<text x="76" y="277">法務同仁</text>
+<text class="mu" x="76" y="295">〔推測〕</text>
+<text class="mu" x="40" y="376">← 反對</text>
+<text class="mu" x="192" y="376" text-anchor="middle">支持度</text>
+<text class="mu" x="344" y="376" text-anchor="end">支持 →</text>
+</svg>
+
+<!-- 交集圓（SVG）：卡在交換條件時用。兩圈各寫自己在意的事，重疊處寫雙方都要的，圈下寫談不成時各自能做什麼。 -->
+<svg viewBox="0 0 360 312" role="img" aria-labelledby="vn-t vn-d">
+<title id="vn-t">利益交集：你和組長都要這季報表準時</title>
+<desc id="vn-d">你在意準時下班、不接週末；組長在意新人有人帶、少被客訴；兩人都要這季報表準時交出。談不成時，你可以申請加班費，組長可以改找外包。</desc>
+<circle class="bx" cx="128" cy="124" r="104"/>
+<circle class="bx" cx="232" cy="124" r="104"/>
+<text class="nm" x="76" y="76" text-anchor="middle">你</text>
+<text class="nm" x="284" y="76" text-anchor="middle">組長</text>
+<text x="76" y="120" text-anchor="middle">準時下班</text>
+<text x="76" y="142" text-anchor="middle">不接週末</text>
+<text x="180" y="120" text-anchor="middle">這季報表</text>
+<text x="180" y="142" text-anchor="middle">準時交出</text>
+<text x="284" y="120" text-anchor="middle">新人有人帶</text>
+<text x="284" y="142" text-anchor="middle">少被客訴</text>
+<text class="mu" x="12" y="260">談不成時各自能做的</text>
+<text x="12" y="282">你：照制度申請加班費〔已核對〕</text>
+<text x="12" y="304">組長：改找外包，要等預算〔推測〕</text>
+</svg>
+
+<!-- 一行依據：圖裡的判斷靠哪個書中機制撐住時用，一句話寫機制和它在本案的意思，不寫故事全文。 -->
+<p class="basis"><b>依據：</b>《Power》能見度：成果要讓拍板的人親眼看到，只靠轉述會被過濾。</p>
 
 </div>
 </body>
