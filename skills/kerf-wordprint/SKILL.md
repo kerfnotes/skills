@@ -32,7 +32,7 @@ Model rules hold whatever the form says:
 
 ## 2. Check the local runtime
 
-Start with `python3 SCRIPTS/doctor.py` (read-only): each missing piece is marked `agent` (a routine install you run) or `you` (pass that single step to the user), plus which routes are ready. For `gemini-3.5-transcribe` only ffmpeg/ffprobe matter; `colab` needs nothing local until step 4. Otherwise discover installed executables, model caches, platform, and accelerators; never copy paths from another user's machine. Read [install.md](docs/install.md) §3 only for missing dependencies, unfamiliar platforms, or model access requirements.
+Start with `python3 SCRIPTS/doctor.py`: each missing piece is marked `agent` or `you`, plus which routes are ready. `--fix` runs every `agent` step in order (Homebrew formulas, mlx-qwen3-asr, the two 0.6B models after a free-space check, speaker models, the bridge build); pass each remaining `you` step to the user one at a time. For `gemini-3.5-transcribe` only ffmpeg/ffprobe matter; `colab` needs nothing local until step 4. Otherwise discover installed executables, model caches, platform, and accelerators; never copy paths from another user's machine. Read [install.md](docs/install.md) §3 only for missing dependencies, unfamiliar platforms, or model access requirements.
 
 - Worker Python: the interpreter on the shebang of `which mlx-qwen3-asr` (`head -1 "$(which mlx-qwen3-asr)"`). The bundled scripts other than the worker run on any `python3`.
 - Speaker backend: `SCRIPTS/community1-bridge/build/community1-bridge` runs offline under `sandbox-exec`. When it is missing, build it with `sh SCRIPTS/community1-bridge/build.sh` (Xcode Command Line Tools). Without it the run ends `partial` with no speakers.
