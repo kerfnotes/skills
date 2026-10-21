@@ -80,6 +80,11 @@ def diarize(run, samples, device):
     import torch
     try:
         from nemo.collections.asr.models import SortformerEncLabelModel
+        from nemo.collections.asr.modules import transformer_encoder_utils
+        from torch.nn.attention.flex_attention import flex_attention
+        # ponytail: NeMo compiles flex_attention on CUDA, and Triton needs more shared memory than a T4 has; eager is
+        # slower but diarization is small next to ASR. Restore the compiled kernel if big GPUs ever need the speed.
+        transformer_encoder_utils._flex_attention_compiled = flex_attention
         model = SortformerEncLabelModel.from_pretrained(DIARIZER, map_location=device).to(torch.float32).eval()
         modules = model.sortformer_modules  # 模型卡的離線設定
         modules.chunk_len, modules.chunk_right_context, modules.fifo_len, modules.spkcache_update_period = 340, 40, 40, 300
