@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  權力地圖預設版型（見 board.md 第 1 節）。複製整份，只改 body 裡的文字與列數；CSS 通常不必動，驗收發現溢出時再調。
+  權力地圖版型（見 board.md 第 1 節）。複製整份；骨架（標題、轉折點、圖例）和「其他看法」一定留，主結構只留承載本案判斷的一到兩塊，其餘整段刪掉、改寫進「其他看法」。只改 body 裡的文字與列數；CSS 通常不必動，驗收發現溢出時再調。
+  - 逐項對照：一個 .row 一項，只列會改變結果的項目。
   - 沿用環境主題變數，不覆寫 :root 配色、不設整頁背景。
   - 每格一句短語（約 20 字內）；長說明留在正文，不塞進圖。
   - 箭頭三種：.edge 已發生、.edge.plan 建議你做、.edge.unk 不知道有沒有這條路（標籤寫成問句）。
@@ -39,20 +40,34 @@
 .pm .tag{display:inline-block;font-size:11px;line-height:1.3;padding:0 4px;border:1.5px solid;border-radius:4px;margin-left:4px;white-space:nowrap;vertical-align:1px;font-weight:600;color:var(--foreground,#e5e5e5)}
 .pm .t-doc{border-color:var(--success,#22c55e)}.pm .t-said{border-color:var(--info,#38bdf8)}.pm .t-guess{border-color:var(--warning,#f59e0b);border-style:dashed}.pm .t-unk{border-color:var(--destructive,#ef4444);border-style:dotted}
 .pm .cols h3{font-size:12px;color:var(--muted-foreground,#a3a3a3);margin:0 0 4px;font-weight:600}
+.pm .row{border-top:1px solid var(--border,#3f3f46);padding:8px 0 6px}.pm .row:first-of-type{border-top:0;padding-top:0}
+.pm .row .it{font-size:13px;font-weight:700;margin-bottom:4px}
+.pm .kv{display:grid;grid-template-columns:6.5em 1fr;gap:3px 8px;font-size:13px}.pm .kv .k{color:var(--muted-foreground,#a3a3a3);font-size:12px}
 @media (max-width:560px){.pm .cols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="pm">
 
-<h1>【狀態句的前兩段：原話能回讀的狀態＋你沒提／還不知道的那一項】</h1>
-<div class="turn"><b>轉折點：</b>【狀態句的第一步：對誰提出什麼請求，與正文推薦一致】</div>
+<h1>【這局卡在哪：原話能回讀的狀態；推薦依賴你沒提的事時點名它】</h1>
+<div class="turn"><b>轉折點：</b>【第一步：對誰提出什麼請求、改哪一項，與正文推薦一致】</div>
 <div class="legend">
   <span>實線箭頭＝已發生</span>
   <span style="color:var(--accent,#3b82f6)">虛線箭頭＝建議你做</span>
   <span style="color:var(--destructive,#ef4444)">點線箭頭＝不知道有沒有這條路</span>
   <span>現況未標來源＝依你描述；推測、未知另標：<span class="tag t-doc">已核對</span><span class="tag t-guess">推測</span><span class="tag t-unk">未知</span></span>
 </div>
+
+<!-- 主結構：以下四種只留一到兩塊 -->
+<section class="panel">
+  <h2>【文件／提案】逐項：碰到誰、【拍板者】會怎麼讀</h2>
+  <p class="lens">逐項對照：只列會改變結果的項目</p>
+  <div class="row"><div class="it">【項目】</div><div class="kv">
+    <span class="k">碰到誰</span><span>【誰的利益或面子】<span class="tag t-guess">推測</span></span>
+    <span class="k">【拍板者】怎麼讀</span><span>【一句短語】<span class="tag t-guess">推測</span></span>
+    <span class="k">怎麼處理</span><span>【使用者能做的事，與正文一致】</span>
+  </div></div>
+</section>
 
 <section class="panel">
   <h2>誰把什麼帶到【拍板者】面前</h2>
@@ -88,6 +103,15 @@
       <li><b>還沒到手</b>：【使用者提過、還沒拿到的機會；沒提就寫「你沒提」，不寫成沒有】</li>
     </ul></div>
   </div>
+</section>
+
+<section class="panel">
+  <h2>其他看法</h2>
+  <p class="lens">主結構沒答到的書問題，各一行</p>
+  <ul>
+    <li><b>《獨裁者手冊》</b>：【誰點頭才算數；不知道就寫還不知道 → 怎麼查】<span class="tag t-unk">未知</span></li>
+    <li><b>《Getting to Yes》</b>：【關鍵顧慮＋自己就能做的退路；沒有就寫目前沒有】</li>
+  </ul>
 </section>
 
 </div>
