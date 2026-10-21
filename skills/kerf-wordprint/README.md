@@ -1,18 +1,59 @@
-# Wordprint
+<div align="center">
+  <img src="docs/images/logo.svg" width="112" alt="Wordprint" />
+  <h1>Wordprint</h1>
+  <p><b>錄音進去，「誰在幾秒說了什麼」出來。</b></p>
+  <p>繁體中文 · <a href="README_EN.md">English</a></p>
+  <a href="https://github.com/kerfnotes/skills/stargazers"><img src="https://img.shields.io/github/stars/kerfnotes/skills?style=flat-square" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square" alt="Platform">
+  <a href="https://www.youtube.com/@kerfnotes"><img src="https://img.shields.io/badge/YouTube-Kerf-red?style=flat-square&logo=youtube" alt="YouTube"></a>
+</div>
 
-Wordprint 在你自己的電腦上把錄音轉成逐字稿，附時間戳與說話者標記。開始時會開一頁表單，一次選好錄音（語音備忘錄或本機檔案）、引擎、參與者、摘要種類與要不要開 Mail 草稿；之後轉錄、分說話者、產出可點選跳播的閱讀頁，需要時再做摘要報告與 Mail 草稿。也可以合併多段錄音、替既有逐字稿補上說話者，或在確認姓名後改標。
+<br/>
 
-預設全部在本機處理。只有你在表單明確選 Gemini 才會上傳到 Google（計費，上傳前會先告訴你，轉完即刪除 Google 端的檔案），`run.json` 也會記錄用了哪個引擎。選 Colab 則是你用 Google 帳號開啟筆記本，在 Google 的 GPU 上跑 Qwen 並分說話者，本機免安裝模型，也不需要 Hugging Face 帳號。
+<div align="center">
+  <img src="docs/images/overview.svg" width="960" alt="Wordprint 流程：錄音、表單、聽打、對時、分說話者、驗收、閱讀頁、Mail 草稿" />
+</div>
+
+## 為什麼
+
+會議錄音轉成逐字稿，難的不是聽打，是之後那幾步：誰說的、在第幾秒、能不能點回去聽、摘要有沒有亂寫決議。Wordprint 把這整段做成一條流程，交給 Codex 或 Claude Code 跑。你只要在一頁表單上勾選，剩下的它做完，最後交出一頁可以點字回聽的閱讀頁。
+
+預設全部在本機處理。只有你在表單明確選 Gemini 才會上傳到 Google（計費，上傳前會先告訴你，轉完即刪除 Google 端的檔案）；選 Colab 則是你用自己的 Google 帳號開筆記本，在 Google 的 GPU 上跑，本機免裝模型，也不需要 Hugging Face 帳號。
 
 ## 它做什麼
 
-- 用 Qwen3-ASR 轉錄，預設小模型 0.6B；在表單選或說「用大模型」就改用 1.7B。
-- 用 Qwen ForcedAligner 對時間，用 Community-1 分出說話者。
-- 原始辨識文字另存一份，繁體閱讀版由 OpenCC 轉換；改姓名不必重新轉錄。
-- 說話者一律先以「說話者 1、2」標示。提供線索時最多標成「可能是某某」，你確認後才算定案。
-- 閱讀頁 `transcript.html` 是單檔文字頁，可一鍵複製 Markdown 或開寄信。要回聽，閱讀頁得和同資料夾的 `playback.wav` 放在一起，點任一段就跳到該處播放；沒有音訊的那份不顯示播放器。時間完整時另附 `transcript.srt` 字幕。
-- 選了摘要，會依會議／訪談／演講模板寫 `notes.md`；有裝 [Clayprint](../kerf-clayprint/) 就再排成 `notes.html`（和 PDF）。決議只收明確同意的事，負責人與期限沒說就寫「待確認」。
-- Mail 草稿只會打開讓你檢查，不會自動寄出；只附 `transcript.html`、`notes.html`、`notes.pdf`，不附音檔，所以收件人的閱讀頁只能讀、不能回聽。
+| 步驟 | 做什麼 | 由誰負責 |
+| :--- | :--- | :--- |
+| 表單 | 一頁本機網頁：選語音備忘錄或檔案、引擎、參與者、摘要種類、要不要開 Mail 草稿；表單會預選這台電腦現在跑得動的引擎 | `form.py`、`voice_memos.py` |
+| 健檢 | 檢查工具與模型，`--fix` 自動補齊例行安裝；只有密碼、帳號、權限這類事留給你，一次一件 | `doctor.py` |
+| 聽打與對時 | Qwen3-ASR 轉文字（預設 0.6B，說「用大模型」改 1.7B），Qwen ForcedAligner 標出每個字的時間 | `qwen_worker.py`、`torch_worker.py` |
+| 分說話者 | Apple Silicon 用 Community-1，其他電腦與 Colab 用 NVIDIA Nemotron（最多 8 人，不需 token）；一律先標說話者 1、2 | 同上 |
+| 驗收 | 對檔案雜湊、文字是否被改動、完成旗標；缺說話者的半成品不能當成完整稿交出 | `transcript.py validate` |
+| 閱讀頁 | 繁體 `transcript.html`（OpenCC 轉換），點任一段就跳到該處播放；時間完整時另附 `transcript.srt` | `transcript.py render` |
+| 摘要 | 依會議、訪談、演講模板寫 `notes.md`，決議只收明確同意的事；有裝 [Clayprint](../kerf-clayprint/) 就再排成 `notes.html` 與 PDF | agent |
+| Mail 草稿 | 只打開草稿讓你檢查，不會自動寄出；附閱讀頁與摘要，不附音檔 | `mail_draft.py` |
+
+也可以合併多段錄音、替既有逐字稿補上說話者，或在確認姓名後改標，不必重新轉錄。
+
+## 四種引擎
+
+| 引擎 | 在哪跑 | 速度與品質 | 要付出什麼 |
+| :--- | :--- | :--- | :--- |
+| `qwen-0.6b` | 你的電腦 | 本機最快、堪用 | 第一次下載約 3.5 GB |
+| `qwen-1.7b` | 你的電腦 | 約慢 2～3 倍、較準 | 你要求時才下載 |
+| `gemini-3.5-transcribe` | Google 雲端 | 最快、最準 | 音檔上傳並計費，轉完刪除 |
+| `colab` | Google Colab GPU | 同 Qwen（預設 1.7B） | 要登入 Google、開瀏覽器 |
+
+速度與品質是相對描述，不是量測承諾。細節見 [engines.md](references/engines.md)。
+
+## 設計原則
+
+- **不猜身分。** 只標說話者 1、2。提供線索時最多標成「可能是某某」，你確認後才算定案；聲音相似不等於同一人。
+- **半成品不放行。** 缺了哪一段就照實標成部分完成，交出純文字稿並說明缺什麼，不製造完成旗標。
+- **金鑰不進對話。** Gemini 金鑰只讀環境變數或 Wordprint 自建的鑰匙圈項目，檢查時只確認存在，不讀內容。
+- **同一種格式。** 每個引擎都交出同一份 `normalized-run.json`（見 [run-format.md](references/run-format.md)），驗收、閱讀頁和摘要只寫一次。
+- **安裝即用。** 例行安裝由 agent 完成；帳號、條款與權限只請你本人處理，agent 不代為同意。
 
 ## 交給 agent 安裝
 
@@ -24,16 +65,42 @@ Wordprint 在你自己的電腦上把錄音轉成逐字稿，附時間戳與說�
 自行完成環境檢查、模型準備與短音檔驗證，回報安裝路徑、版本及驗證結果。
 ```
 
-Codex 的專案路徑是 `.agents/skills/kerf-wordprint/`；Claude Code 是 `.claude/skills/kerf-wordprint/`。安裝 skill 不會下載模型；[agent 安裝指引](docs/install.md)說明怎麼準備本機工具、模型與驗證。安裝完成後可直接說「把這個音檔轉成逐字稿」；Codex 也可用 `$kerf-wordprint`，Claude Code 可用 `/kerf-wordprint`。
+Codex 的專案路徑是 `.agents/skills/kerf-wordprint/`；Claude Code 是 `.claude/skills/kerf-wordprint/`。安裝 skill 不會下載模型；[agent 安裝指引](docs/install.md)說明怎麼用 `doctor.py --fix` 準備本機工具、模型與驗證。Windows 沒有 Python 時，先 `winget install -e --id astral-sh.uv`，再跑 `uv run --python 3.12 scripts/doctor.py --fix`。
+
+已經在用 [`skills`](https://www.npmjs.com/package/skills) CLI 的話，也可以從整個 repo 挑：
+
+```sh
+npx skills add kerfnotes/skills --list
+```
+
+## 開始使用
+
+安裝完成後直接說：
+
+```text
+把這個音檔轉成逐字稿
+把今天早上兩段語音備忘錄合併，分出說話者，寫一份會議摘要
+```
+
+Codex 也可用 `$kerf-wordprint`，Claude Code 可用 `/kerf-wordprint`。
+
+## 驗證狀態
+
+| 項目 | 狀態 |
+| :--- | :--- |
+| Apple Silicon Mac：表單、語音備忘錄、MLX 轉錄、說話者 | 已驗證 |
+| Gemini 真實 API 呼叫（6 秒兩人合成音） | 已驗證一次 |
+| Colab T4 GPU：1.7B、Nemotron 兩位說話者 | 已驗證一次（短合成音） |
+| PyTorch 路線（Windows、Linux、Intel Mac 用） | 在 macOS 以同一份程式驗證；Windows 與 Linux 實機未測 |
+| 長錄音、多人說話的速度與準確度 | 未測 |
+| Mail 真實建立草稿 | 只驗證 dry-run，等你授權 macOS 自動化權限 |
 
 ## 已知限制
 
-- 表單、語音備忘錄讀取與 MLX 轉錄只在 Apple Silicon Mac 驗證過。Windows、Linux、Intel Mac 用 PyTorch worker（同一份程式在 macOS 驗證過，Windows 與 Linux 尚未實測），或 Colab 筆記本。
-- Gemini 引擎已用真實 API 呼叫驗證一次；金鑰要你自己用 `security add-generic-password -s kerf-wordprint-gemini -a wordprint -w` 存進鑰匙圈（Windows 改設 `GEMINI_API_KEY` 環境變數）。Colab 筆記本已在 T4 GPU 用 1.7B 跑通一次（短合成音、兩位說話者），長錄音尚未實測；「Open in Colab」連結要等 skill 推上 GitHub 後才有效。
-- Mail 草稿目前只驗證過 dry-run（印出 AppleScript）；真實草稿要等你授權 macOS 自動化權限後再驗收。
 - 讀語音備忘錄需要給終端機「完整磁碟取用權」；不想給，就把備忘錄拖到資料夾再選路徑。
 - 第一次開 Mail 草稿時，macOS 會問是否允許控制 Mail，要你本人按允許。
-- 結構檢查只確認時間涵蓋、文字未被改動與標記一致，不代表辨識正確；重要內容仍須回聽。
-- 說話者分群是模型推測，不是身分證明。
+- Gemini 金鑰要你自己用 `security add-generic-password -s kerf-wordprint-gemini -a wordprint -w` 存進鑰匙圈（Windows 改設 `GEMINI_API_KEY` 環境變數）。
+- 沒有 GPU 時，PyTorch 路線處理長錄音很慢。
+- 結構檢查只確認時間涵蓋、文字未被改動與標記一致，不代表辨識正確；重要內容仍須回聽。說話者分群是模型推測，不是身分證明。
 
-授權：[MIT](LICENSE)。模型各有授權，見 [安裝指引](docs/install.md)。
+授權：[MIT](LICENSE)。模型各有授權，見[安裝指引](docs/install.md)。
