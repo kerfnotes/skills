@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 範例：分支（精簡圖）。情境與解說見同名 .md。樣式取自 board-template.html 的零件，未另加。 -->
+<style>
+.pm{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground);line-height:1.5;display:flex;flex-direction:column;gap:16px}
+.pm p{margin:0}
+.pm h1{font-size:17px;line-height:1.4;margin:0;font-weight:700}
+.pm .turn{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:10px 14px;font-size:14px}
+.pm .turn b{color:var(--accent,#3b82f6)}
+.pm svg{display:block;width:100%;max-width:440px;height:auto}
+.pm svg text{font-size:13px;fill:currentColor}
+.pm svg .mu{font-size:12px;fill:var(--muted-foreground,currentColor)}
+.pm svg .nm{font-weight:700}
+.pm svg .bx{fill:none;stroke:currentColor;stroke-width:1.5}
+.pm svg .ln{fill:none;stroke:var(--muted-foreground,currentColor);stroke-width:1.5}
+.pm svg .ah{fill:var(--muted-foreground,currentColor)}
+.pm svg [data-focal]{stroke:var(--accent,#3b82f6);stroke-width:2}
+</style>
+</head>
+<body>
+<div class="pm">
+<h1>卡在借調單有沒有寫結束日，不在先找誰</h1>
+<p class="turn" data-focal><b>第一步：</b>不分開找，兩位主管放在同一封信</p>
+<svg viewBox="0 0 360 360" role="img" aria-labelledby="br-t br-d">
+<title id="br-t">分支：借調單上有沒有寫結束日</title>
+<desc id="br-d">只有你查得到借調單是否寫了結束日。有寫，就在給兩位主管的同一封信附上借調單，請他們照上面的日期排交接；沒寫，就附上你擬的回組日期和交接清單，請兩位直接改。</desc>
+<rect class="bx" data-focal x="12" y="8" width="336" height="76" rx="8"/>
+<text class="nm" x="28" y="40">借調單上寫了結束日嗎？</text>
+<text class="mu" x="28" y="64">〔待問你〕翻借調單就知道</text>
+<path class="ln" d="M36 84V304M36 168H88M36 304H88"/>
+<path class="ah" d="M88 162L96 168L88 174ZM88 298L96 304L88 310Z"/>
+<text class="mu" x="48" y="160">有寫</text>
+<text class="mu" x="48" y="296">沒寫</text>
+<rect class="bx" x="96" y="128" width="252" height="80" rx="8"/>
+<text x="112" y="162">信裡附上借調單，請兩位</text>
+<text x="112" y="186">照上面寫的日期排交接</text>
+<rect class="bx" x="96" y="264" width="252" height="80" rx="8"/>
+<text x="112" y="298">信裡附你擬的回組日期</text>
+<text x="112" y="322">和交接清單，請兩位直接改</text>
+</svg>
+</div>
+</body>
+</html>

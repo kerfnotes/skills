@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 範例：立場四象限（完整面板）。情境與解說見同名 .md。樣式取自 board-template.html 的零件；最後兩條是本例局部補的：深色主題下 --border 太淡看不到中線、格外的人用虛線框。 -->
+<style>
+.pm{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground);line-height:1.5;display:flex;flex-direction:column;gap:16px}
+.pm p{margin:0}
+.pm h1{font-size:17px;line-height:1.4;margin:0;font-weight:700}
+.pm .turn{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:10px 14px;font-size:14px}
+.pm .turn b{color:var(--accent,#3b82f6)}
+.pm .tag{display:inline-block;font-size:11px;line-height:1.3;padding:0 4px;border:1.5px solid;border-radius:4px;margin-left:4px;white-space:nowrap;vertical-align:1px;font-weight:600}
+.pm .t-guess{border-color:var(--warning,#f59e0b);border-style:dashed}
+.pm .tags{font-size:13px}
+.pm .basis{font-size:13px;color:var(--muted-foreground)}
+.pm .basis b{color:var(--foreground)}
+.pm svg{display:block;width:100%;max-width:440px;height:auto}
+.pm svg text{font-size:13px;fill:currentColor}
+.pm svg .mu{font-size:12px;fill:var(--muted-foreground,currentColor)}
+.pm svg .nm{font-weight:700}
+.pm svg .bx{fill:none;stroke:currentColor;stroke-width:1.5}
+.pm svg .ax{fill:none;stroke:var(--border,currentColor)}
+.pm svg .dot{fill:currentColor}
+.pm svg [data-focal]{stroke:var(--accent,#3b82f6);stroke-width:2}
+.pm svg .dot[data-focal]{fill:var(--accent,#3b82f6)}
+.pm svg .ax{stroke:var(--muted-foreground,currentColor);stroke-opacity:.45}
+.pm svg .off{stroke:var(--muted-foreground,currentColor);stroke-dasharray:4 4}
+</style>
+</head>
+<body>
+<div class="pm">
+<h1>這案卡在生產課長怕停線，不在客訴數字不夠</h1>
+<p class="turn" data-focal><b>第一步：</b>會前先找志遠，請他一起訂急件放行規則</p>
+<svg viewBox="0 0 360 448" role="img" aria-labelledby="qd-t qd-d">
+<title id="qd-t">立場四象限：進料抽檢提案，會前先找誰</title>
+<desc id="qd-d">廠長正雄拍板，只說別影響出貨，立場未知，放在格子外。生產課長志遠影響大、反對，擔心待料停線，廠長排產都先問他，要先找。採購怡萱影響中等、可接受抽檢；客服主任佳蓉影響小、支持；倉儲組長影響小、擔心暫存區只剩兩格。</desc>
+<rect class="bx off" x="12" y="8" width="336" height="64" rx="8"/>
+<text class="nm" x="28" y="34">拍板：廠長正雄〔立場未知〕</text>
+<text class="mu" x="28" y="56">只說「別影響出貨」，停線就會影響出貨</text>
+<text class="mu" x="40" y="100">影響力高</text>
+<rect class="ax" x="40" y="112" width="304" height="304"/>
+<path class="ax" d="M192 112V416M40 264H344"/>
+<text class="mu" x="48" y="132">先談：解他的顧慮</text>
+<text class="mu" x="336" y="132" text-anchor="end">請他幫腔</text>
+<text class="mu" x="48" y="404">會前照會</text>
+<text class="mu" x="336" y="404" text-anchor="end">會上請他舉例</text>
+<circle class="dot" data-focal cx="56" cy="176" r="6"/>
+<text class="nm" x="68" y="181">生產課長志遠</text>
+<text class="mu" x="68" y="199">「待料停線誰負責」</text>
+<text class="mu" x="68" y="217">廠長排產先問他</text>
+<circle class="dot" cx="216" cy="216" r="5"/>
+<text class="nm" x="228" y="221">採購怡萱</text>
+<text class="mu" x="228" y="239">抽檢可接受</text>
+<circle class="dot" cx="240" cy="312" r="5"/>
+<text class="nm" x="252" y="317">客服佳蓉</text>
+<text class="mu" x="252" y="335">舉雙手贊成</text>
+<circle class="dot" cx="56" cy="320" r="5"/>
+<text class="nm" x="68" y="325">倉儲組長</text>
+<text class="mu" x="68" y="343">暫存區只剩兩格</text>
+<text class="mu" x="40" y="436">反對</text>
+<text class="mu" x="192" y="436" text-anchor="middle">支持度</text>
+<text class="mu" x="344" y="436" text-anchor="end">支持</text>
+</svg>
+<p class="tags">除了志遠，其他人的影響力高低<span class="tag t-guess">推測</span></p>
+<p class="basis"><b>依據：</b>《Power》讓反對的人參與訂規則，他的顧慮就變成提案的一部分，比在會上說服他容易。</p>
+</div>
+</body>
+</html>
