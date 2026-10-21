@@ -25,6 +25,6 @@
 
 ## Colab
 
-`colab/wordprint.ipynb` 自含：上傳音檔 → ffmpeg 解碼 → `qwen_asr.Qwen3ASRModel` 加 ForcedAligner（qwen-asr 會自己把長音訊切成 ≤180 秒的段並換算成全段時間）→ 有 `HF_TOKEN` 時用 pyannote Community-1 分說話者 → 下載 `normalized-run-*.json`。生成長度碰到 `MAX_NEW_TOKENS` 的結果標 `truncated: true`。沒有 token 時照樣轉錄，`turns: []`、`diarization_complete: false`。
+`colab/wordprint.ipynb` 自含，「全部執行」一次跑完、不用重啟：轉錄寫成 `wordprint_job.py` 在新程序裡跑（qwen-asr 鎖定的 transformers 版本和工作階段已載入的版本不會混在一起）；沒分配到 GPU 時自動從 1.7B 改用 0.6B 並印出提示。流程：上傳音檔 → ffmpeg 解碼 → `qwen_asr.Qwen3ASRModel` 加 ForcedAligner（qwen-asr 會自己把長音訊切成 ≤180 秒的段並換算成全段時間）→ 有 `HF_TOKEN` 時用 pyannote Community-1 分說話者 → 下載 `normalized-run-*.json`。生成長度碰到 `MAX_NEW_TOKENS` 的結果標 `truncated: true`。沒有 token 時照樣轉錄，`turns: []`、`diarization_complete: false`。
 
 說話者是整段錄音一次分完，長的多人錄音從頭到尾是同一組 ID；Gemini 每 25 分鐘一段（`part-N-spk_M`）、本機 Qwen 每 20 分鐘一個視窗（`window-N-speaker-M`），各段各自編號。三者的速度與準確度都沒有實測比較。筆記本不回傳音訊；本機播放器由 agent 重新解碼原檔設定 `pcm`（見 SKILL.md）。
