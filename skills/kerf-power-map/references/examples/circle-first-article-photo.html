@@ -11,12 +11,12 @@
 .pm .turn{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:10px 14px;font-size:14px}
 .pm .turn b{color:var(--accent,#3b82f6)}
 .pm .tag{display:inline-block;font-size:11px;line-height:1.3;padding:0 4px;border:1.5px solid;border-radius:4px;margin-left:4px;white-space:nowrap;vertical-align:1px;font-weight:600}
-.pm .t-guess{border-color:var(--warning,#f59e0b);border-style:dashed}
 .pm .t-unk{border-color:var(--destructive,#ef4444);border-style:dotted}
 .pm .ring{border:1px solid var(--border);border-radius:var(--radius,8px);padding:8px 10px 10px;font-size:13px;display:flex;flex-direction:column;gap:6px}
 .pm .ring .rk{font-size:12px;color:var(--muted-foreground)}
 .pm .ring.r1{border:1.5px solid}
 .pm .ring p[data-focal]{border:2px solid var(--accent,#3b82f6);border-radius:6px;padding:4px 8px}
+.pm .todo{font-size:13px}
 .pm .basis{font-size:13px;color:var(--muted-foreground)}
 .pm .basis b{color:var(--foreground)}
 </style>
@@ -25,17 +25,15 @@
 <div class="pm">
 <h1>首件表改拍照，擋得下的是品保經理，不是廠長</h1>
 <p class="turn" data-focal><b>第一步：</b>今天約品保經理，問「稽核後再改表，現在 A 線紙本照填、加拍照試兩週」行不行</p>
-<div class="ring"><p class="rk">說話有份量</p>
-  <p>你的課長：廠長常先問他意見<span class="tag t-guess">推測</span></p>
-  <div class="ring"><p class="rk">少了誰推不動</p>
-    <p>夜班組長：每天照做的人，嫌拍照多一步</p>
-    <p>IT 窗口：平板帳號要他開，要排多久<span class="tag t-unk">未知</span></p>
-    <div class="ring r1"><p class="rk">能批准或擋下</p>
-      <p>廠長：平板請購要他簽；只說過「方向很好」</p>
-      <p data-focal>品保經理：首件表是程序書附表，改格式要他簽；說過稽核前不動程序</p>
-    </div>
+<div class="ring"><p class="rk">少了誰推不動</p>
+  <p>夜班組長：每天照做的人，嫌拍照多一步</p>
+  <p>IT 窗口：平板帳號要他開，要排多久<span class="tag t-unk">未知</span></p>
+  <div class="ring r1"><p class="rk">能批准或擋下</p>
+    <p>廠長：平板請購要他簽；只說過「方向很好」</p>
+    <p data-focal>品保經理：首件表是程序書附表，改格式要他簽；說過稽核前不動程序</p>
   </div>
 </div>
+<p class="todo"><b>待查：</b>課長沒表態，他會不會在廠長面前替這案說話，還不知道 → 約品保經理前先問課長怎麼看</p>
 <p class="basis"><b>依據：</b>《獨裁者手冊》必要支持：事情成不成看少了就不行的那幾個人，廠長說好不等於品保放行。</p>
 </div>
 </body>

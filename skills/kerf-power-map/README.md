@@ -26,7 +26,7 @@ Codex 的專案路徑是 `.agents/skills/kerf-power-map/`；Claude Code 是 `.cl
 
 - 案例是依書中章節自行改寫的摘要，不是原文；書中沒寫的行動、結果與條件一律標為未知。要核對細節，請回到原書對應章節。
 - 分析只根據你提供的資訊，看不到對方的想法與組織內情；建議裡的推測會標明，需要你實地查證。
-- 推理強度會影響品質與速度：較低強度比較常替你多答應一件事，或把推測講成事實。重要的局面建議用最高強度，照念前自己再看一眼。2026-10-21 改版後的速度與錯誤率尚未重新量測；改版用的情境評測題組放在 repo 根目錄的 [evals/kerf-power-map](../../evals/kerf-power-map/)。
+- 推理強度會影響品質與速度：較低強度比較常替你多答應一件事，或把推測講成事實。重要的局面建議用最高強度，照念前自己再看一眼。2026-10-21 改版後的速度與錯誤率尚未重新量測；改版用的情境評測題組放在 repo 根目錄的 [evals/kerf-power-map](https://github.com/kerfnotes/skills/tree/main/evals/kerf-power-map)。
 - 這是策略思考的輔助，不是法律、人資或心理諮商意見。涉及勞動權益、申訴或健康時，請找專業人士。
 
 授權：[MIT](LICENSE)。書籍資訊見 [sources.md](references/case-library/sources.md)。

@@ -10,8 +10,6 @@
 .pm h1{font-size:17px;line-height:1.4;margin:0;font-weight:700}
 .pm .turn{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:10px 14px;font-size:14px}
 .pm .turn b{color:var(--accent,#3b82f6)}
-.pm .tag{display:inline-block;font-size:11px;line-height:1.3;padding:0 4px;border:1.5px solid;border-radius:4px;margin-left:4px;white-space:nowrap;vertical-align:1px;font-weight:600}
-.pm .t-doc{border-color:var(--success,#22c55e)}
 .pm .route{display:flex;flex-direction:column;gap:8px}
 .pm .hop{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
 .pm .node{border:1.5px solid;border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;text-align:center;max-width:7.5em}
@@ -27,13 +25,13 @@
 </head>
 <body>
 <div class="pm">
-<h1>志豪的彙整刪掉壓測風險，副總週四可能看不到</h1>
-<p class="turn" data-focal><b>第一步：</b>今天當面找志豪，不先越級寫信</p>
+<h1>志豪彙整刪了壓測風險，副總可能看不到</h1>
+<p class="turn" data-focal><b>第一步：</b>今天找志豪，不越級</p>
 <div class="route">
-  <div class="hop"><span class="node">你</span><span class="edge">三週週報都寫「壓測只到六成，七成負載結帳逾時」</span><span class="node">志豪</span></div>
-  <div class="hop"><span class="node">志豪</span><span class="edge">彙整只剩「測試進行中，無重大風險」<span class="tag t-doc">已核對</span></span><span class="node">副總</span></div>
-  <div class="hop"><span class="node">你</span><span class="edge unk">副總看過各組原始週報嗎？</span><span class="node">副總</span></div>
-  <div class="hop"><span class="node">你</span><span class="edge plan" data-focal>請他把一頁風險摘要附進週四會議資料</span><span class="node">志豪</span></div>
+  <div class="hop"><span class="node">你</span><span class="edge">三週週報：「壓測只到六成」</span><span class="node">志豪</span></div>
+  <div class="hop"><span class="node">志豪</span><span class="edge">彙整只剩「測試進行中，無重大風險」</span><span class="node">副總</span></div>
+  <div class="hop"><span class="node">你</span><span class="edge unk">副總看過原始週報嗎？</span><span class="node">副總</span></div>
+  <div class="hop"><span class="node">你</span><span class="edge plan" data-focal>請他把風險摘要附進週四會議資料</span><span class="node">志豪</span></div>
   <p class="key">實線＝已發生　虛線＝建議你做　點線＝不知道有沒有這條路</p>
 </div>
 </div>
