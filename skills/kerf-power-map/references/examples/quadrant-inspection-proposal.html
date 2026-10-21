@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- 範例：立場四象限（完整面板）。情境與解說見同名 .md。樣式取自 board-template.html 的零件；最後兩條是本例局部補的：深色主題下 --border 太淡看不到中線、格外的人用虛線框。 -->
+<!-- 範例：立場四象限（完整面板）。情境與解說見同名 .md。樣式取自 board-template.html 的零件，未另加。 -->
 <style>
 .pm{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground);line-height:1.5;display:flex;flex-direction:column;gap:16px}
 .pm p{margin:0}
@@ -20,11 +20,10 @@
 .pm svg .mu{font-size:12px;fill:var(--muted-foreground,currentColor)}
 .pm svg .nm{font-weight:700}
 .pm svg .bx{fill:none;stroke:currentColor;stroke-width:1.5}
-.pm svg .ax{fill:none;stroke:var(--border,currentColor)}
 .pm svg .dot{fill:currentColor}
 .pm svg [data-focal]{stroke:var(--accent,#3b82f6);stroke-width:2}
 .pm svg .dot[data-focal]{fill:var(--accent,#3b82f6)}
-.pm svg .ax{stroke:var(--muted-foreground,currentColor);stroke-opacity:.45}
+.pm svg .ax{fill:none;stroke:var(--muted-foreground,currentColor);stroke-opacity:.45}
 .pm svg .off{stroke:var(--muted-foreground,currentColor);stroke-dasharray:4 4}
 </style>
 </head>

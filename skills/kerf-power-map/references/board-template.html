@@ -26,6 +26,7 @@
 .pm .ring .rk{font-size:12px;color:var(--muted-foreground)}
 .pm .ring.r1{border:1.5px solid}
 .pm .ring[data-focal]{border:2px solid var(--accent,#3b82f6)}
+.pm .ring p[data-focal]{border:2px solid var(--accent,#3b82f6);border-radius:6px;padding:4px 8px}
 .pm .route{display:flex;flex-direction:column;gap:8px}
 .pm .hop{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
 .pm .node{border:1.5px solid;border-radius:6px;padding:2px 8px;font-size:13px;font-weight:700;text-align:center;max-width:7.5em}
@@ -39,7 +40,7 @@
 .pm .key{font-size:12px;color:var(--muted-foreground)}
 .pm .basis{font-size:13px;color:var(--muted-foreground)}
 .pm .basis b{color:var(--foreground)}
-@media (max-width:480px){.pm .qa-h{display:none}.pm .qa-r{grid-template-columns:1fr}}
+@media (max-width:480px){.pm .qa-h{display:flex;gap:4px}.pm .qa-h span+span::before{content:"→ "}.pm .qa-r{grid-template-columns:1fr}}
 .pm svg{display:block;width:100%;max-width:440px;height:auto}
 .pm svg text{font-size:13px;fill:currentColor}
 .pm svg .mu{font-size:12px;fill:var(--muted-foreground,currentColor)}
@@ -47,7 +48,8 @@
 .pm svg .bx{fill:none;stroke:currentColor;stroke-width:1.5}
 .pm svg .ln{fill:none;stroke:var(--muted-foreground,currentColor);stroke-width:1.5}
 .pm svg .ah{fill:var(--muted-foreground,currentColor)}
-.pm svg .ax{fill:none;stroke:var(--border,currentColor)}
+.pm svg .ax{fill:none;stroke:var(--muted-foreground,currentColor);stroke-opacity:.45}
+.pm svg .off{stroke:var(--muted-foreground,currentColor);stroke-dasharray:4 4}
 .pm svg .dot{fill:currentColor}
 .pm svg [data-focal]{stroke:var(--accent,#3b82f6);stroke-width:2}
 .pm svg .dot[data-focal]{fill:var(--accent,#3b82f6)}
@@ -65,7 +67,7 @@
 <!-- 證據標籤：放在那句話的後面，說明它的依據。已核對＝有文件或紀錄；稿內已有＝使用者草稿已經寫到；推測＝你的判斷；未知＝沒人知道、要查；待問你＝只有使用者知道、這輪就問。使用者自己說的不必標。 -->
 <p class="tags">處長要的是準時<span class="tag t-doc">已核對</span>，他擔心外包品質<span class="tag t-guess">推測</span>；預算誰批<span class="tag t-unk">未知</span>；草稿已寫成本比較<span class="tag t-draft">稿內已有</span>；你上週有沒有口頭答應<span class="tag t-ask">待問你</span></p>
 
-<!-- 疑慮對照格：對方對說明內容有疑慮時用。一列一個對方心裡的問題，右邊是你的回答和依據；草稿已經答到的標「稿內已有」，還沒答到的缺口那一列加 data-focal。窄螢幕自動改成上下排。 -->
+<!-- 疑慮對照格：對方對說明內容有疑慮時用。一列一個對方心裡的問題，右邊是你的回答和依據；草稿已經答到的標「稿內已有」，還沒答到的缺口那一列加 data-focal。窄螢幕自動改成上下排，欄名縮成一行「問題 → 回答」。 -->
 <div class="qa">
   <div class="qa-h"><span>對方心裡的問題</span><span>你的回答</span></div>
   <div class="qa-r"><p class="q">為什麼要改流程？</p><p>舊流程每月重工兩天<span class="tag t-draft">稿內已有</span></p></div>
@@ -73,7 +75,7 @@
   <div class="qa-r" data-focal><p class="q">為什麼連舊案也要改？</p><p>草稿還沒寫。補一句：舊案沿用會產生兩套數字<span class="tag t-guess">推測</span></p></div>
 </div>
 
-<!-- 同心決策圈：卡在誰點頭才算數時用。外圈到內圈越接近拍板，只畫有依據的圈，最內圈是能批准或擋下的人（.r1）。只畫第一步要處理的那一項決定；要強調的那圈加 data-focal。 -->
+<!-- 同心決策圈：卡在誰點頭才算數時用。外圈到內圈越接近拍板，只畫有依據的圈，最內圈是能批准或擋下的人（.r1）。只畫第一步要處理的那一項決定；要強調整圈就把 data-focal 加在那圈，只強調圈內一個人就加在那一行 <p>。 -->
 <div class="ring"><p class="rk">說話有份量</p><p>你的組長：處長常先問他意見<span class="tag t-guess">推測</span></p>
   <div class="ring"><p class="rk">少了誰推不動</p><p>資訊部窗口：要他排工時<span class="tag t-doc">已核對</span></p>
     <div class="ring r1"><p class="rk">能批准或擋下</p><p>營運處長：預算在他手上<span class="tag t-guess">推測</span></p></div>
@@ -110,7 +112,7 @@
 <text x="200" y="208">約主管談十五分鐘</text>
 </svg>
 
-<!-- 四象限畫布（SVG，360 寬直式）：要決定先找誰時用。橫軸支持度、縱軸影響力，每人一點，名字放點的右側、不跨過中線；立場是推測的在名字下方標字。要先找的那個人的點加 data-focal。 -->
+<!-- 四象限畫布（SVG，360 寬直式）：要決定先找誰時用。橫軸支持度、縱軸影響力，每人一點，名字放點的右側、不跨過中線；立場是推測的在名字下方標字。要先找的那個人的點加 data-focal。立場未知的人（例如只開了條件的拍板者）不放進格子，畫在格外，用 class="bx off" 的虛線框並寫〔立場未知〕，不猜成中立。 -->
 <svg viewBox="0 0 360 392" role="img" aria-labelledby="qd-t qd-d">
 <title id="qd-t">立場四象限：誰影響大、誰支持你</title>
 <desc id="qd-d">營運處長影響大但可能反對，要先找；組長影響大且支持；同事小林支持但影響小；法務同仁影響小、可能反對。</desc>
