@@ -1,0 +1,22 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 刻意違規樣本：七項檢查各踩一次，map-check 應全部 FAIL。 -->
+<link rel="stylesheet" href="https://example.invalid/font.css"><!-- 違規 5 -->
+<style>
+@import url("https://example.invalid/more.css"); /* 違規 5 */
+body{background:#fdf6e3} /* 違規 6 */
+.wide{width:600px;border:1px solid var(--border)} /* 違規 1 */
+.cut{width:80px;overflow:hidden;white-space:nowrap} /* 違規 2 */
+</style>
+</head><body><div class="pm">
+<h1 data-focal>判斷：預算卡在財務處</h1>
+<p data-focal>轉折點：先找財務處窗口</p>
+<p data-focal>第三個強調（違規 3）</p>
+<div class="wide">這一列固定 600px 寬，在 375 寬手機上會溢出</div>
+<div class="cut">這段文字被 overflow hidden 截斷了看不到後半</div>
+<svg viewBox="0 0 360 120" width="100%" aria-labelledby="no-such-id"><!-- 違規 4：缺 role、id 不存在、title 不是第一個子元素 -->
+<rect x="10" y="10" width="100" height="40" fill="none" stroke="currentColor"/>
+<title>決策圈</title>
+<text x="300" y="40" font-size="14">這段 SVG 文字超出畫布右緣被切掉</text><!-- 違規 2：SVG 文字截斷 -->
+</svg>
+<p>證據：<span class="tag"></span><span class="tag">推測</span></p><!-- 違規 7 -->
+</div></body></html>

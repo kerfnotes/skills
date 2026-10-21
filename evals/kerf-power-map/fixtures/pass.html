@@ -1,0 +1,24 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 合格樣本：虛構情境，map-check 應全部 PASS。 -->
+<style>
+.pm{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground);line-height:1.5;display:flex;flex-direction:column;gap:12px}
+.pm h1{font-size:16px;margin:0}
+.pm .turn{border:2px solid var(--accent);border-radius:var(--radius,8px);padding:8px 12px}
+.pm .tag{display:inline-block;font-size:11px;padding:0 4px;border:1px solid var(--border);border-radius:4px;margin-left:4px}
+.pm svg{width:100%;height:auto;display:block}
+</style>
+</head><body><div class="pm">
+<h1>這案卡在財務處點頭，不是你主管</h1>
+<p class="turn" data-focal>第一步：今天先問財務窗口「這筆預算歸哪個科目」</p>
+<svg viewBox="0 0 360 200" role="img" aria-labelledby="dc-t dc-d">
+<title id="dc-t">決策圈：誰能批這筆預算</title>
+<desc id="dc-d">財務處在最內圈能批或擋，主管在中圈要支持，同事在外圈只能影響。</desc>
+<rect x="20" y="10" width="320" height="180" rx="12" fill="none" stroke="var(--border)"/>
+<rect x="60" y="50" width="240" height="120" rx="10" fill="none" stroke="var(--border)"/>
+<rect x="110" y="90" width="140" height="60" rx="8" fill="none" stroke="var(--accent)" stroke-width="2" data-focal/>
+<text x="30" y="34" font-size="13" fill="var(--muted-foreground)">同事：能影響</text>
+<text x="70" y="74" font-size="13" fill="var(--muted-foreground)">主管：要支持</text>
+<text x="180" y="125" font-size="14" fill="var(--foreground)" text-anchor="middle">財務處：能批</text>
+</svg>
+<p>財務處要看科目歸屬<span class="tag">已核對</span>；主管會不會背書<span class="tag">推測</span></p>
+</div></body></html>
