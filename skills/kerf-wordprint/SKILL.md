@@ -1,12 +1,12 @@
 ---
 name: kerf-wordprint
-description: "Wordprint: guided local transcription — pick Voice Memos or audio files in a one-page form, transcribe with Qwen, label speakers, then deliver a reading page, an optional summary report, and an optional Mail draft. Also merges recordings or relabels an existing transcript. Use for 音檔轉錄、逐字稿、語音備忘錄、說話者標記、會議錄音整理. Not for summarizing text that is not a recording, voice cloning, or downloading online videos."
-compatibility: "Python 3.10+ (standard library only for the bundled scripts), ffmpeg, ffprobe, OpenCC, and locally cached Qwen ASR/ForcedAligner plus Community-1. The form, Voice Memos reader and worker are verified only on Apple Silicon macOS. The Mail draft is verified as --dry-run only; a real draft awaits the user granting macOS Automation permission. The Windows route is documented but untested."
+description: "Wordprint: guided local transcription — pick Voice Memos or audio files in a one-page form, transcribe with local Qwen, Gemini 3.5 Transcribe or Qwen on Google Colab, label speakers, then deliver a reading page, an optional summary report, and an optional Mail draft. Also merges recordings or relabels an existing transcript. Use for 音檔轉錄、逐字稿、語音備忘錄、說話者標記、會議錄音整理. Not for summarizing text that is not a recording, voice cloning, or downloading online videos."
+compatibility: "Python 3.10+ (standard library only for the bundled scripts), ffmpeg, ffprobe, OpenCC, and locally cached Qwen ASR/ForcedAligner plus Community-1. The form, Voice Memos reader and worker are verified only on Apple Silicon macOS. The Mail draft is verified as --dry-run only; a real draft awaits the user granting macOS Automation permission. Other machines use colab/wordprint.ipynb; running it in local Jupyter is untested. gemini_transcribe.py (standard library + ffmpeg, needs a Gemini API key) is tested only on hand-built responses; a real API call is unverified. The Colab notebook's ASR and alignment cells are verified on CPU only; the GPU runtime, the diarization cell and a full Colab run are unverified."
 ---
 
 # Wordprint
 
-Produce a source-preserving transcript with timestamps and anonymous or user-supplied speaker labels, then the reading page, summary and Mail draft the user chose. Processing stays local; only an explicit Gemini choice may upload, and Gemini is not implemented yet.
+Produce a source-preserving transcript with timestamps and anonymous or user-supplied speaker labels, then the reading page, summary and Mail draft the user chose. Processing stays local by default: only an explicit Gemini pick uploads to Google, and only an explicit Colab pick runs on Google's machines.
 
 `SCRIPTS` below means this skill's installed absolute `scripts/` path. Create a fresh task directory outside the skill and repository for every run.
 
@@ -18,7 +18,9 @@ Skip this step when the request only relabels, renames, or re-times an existing 
 2. `python3 SCRIPTS/form.py --memos TASK/memos.json --out TASK/answers.json`. It opens the browser and prints `answers.json` when the user submits. Exit 2 means it timed out: ask the questions it printed, in text, and write the same answers.json shape yourself.
 3. Read answers.json:
    - `sources` in order. A `path` that is a folder means its audio files sorted by name. With `merge: false`, each source is its own run.
-   - `engine`: `qwen-0.6b` → `--model 0.6B`; `qwen-1.7b` → `--model 1.7B`. `gemini-3.5-transcribe`: tell the user "Gemini 尚未實作，這次改用本機 Qwen 0.6B", then run 0.6B and say so in the final reply. See [engines.md](references/engines.md).
+   - `engine`: `qwen-0.6b` → `--model 0.6B`; `qwen-1.7b` → `--model 1.7B`. See [engines.md](references/engines.md).
+     - `gemini-3.5-transcribe`: first tell the user in one line "音檔會上傳到 Google Gemini 並計費", then run `gemini_transcribe.py` (step 3) and wait for it. Without a key it prints the Keychain one-liner for the user to run themselves; never ask for the key in chat.
+     - `colab`: give the user the link https://colab.research.google.com/github/kerfnotes/skills/blob/main/skills/kerf-wordprint/colab/wordprint.ipynb (works only once the skill is pushed; otherwise Colab → File → Upload notebook from this skill's `colab/wordprint.ipynb`). It opens on a T4 GPU; they sign in to Google, Run all, upload the audio, and get `normalized-run-*.json` downloaded. Take it from `~/Downloads`, set each `sources[].path` to the local original, confirm its SHA-256 matches, and continue at step 4. For playback, decode the original to canonical WAV (`ffmpeg -i ORIGINAL -ac 1 -ar 16000 -c:a pcm_s16le canonical.wav`) and set `pcm`; if validate rejects its sample count, drop `pcm` (no player) rather than force it. Without an `HF_TOKEN` the run has no speakers (`diarization_complete: false`); deliver its text as a raw transcript and name the missing stage. An optional automation is googlecolab/colab-mcp, if the user's client has it.
    - `roster` → `participant_candidates` in step 4. `summary`, `summary_custom`, `recipients`, `mail` drive steps 5–6.
 
 Model rules hold whatever the form says:
@@ -30,10 +32,10 @@ Model rules hold whatever the form says:
 
 ## 2. Check the local runtime
 
-Discover installed executables, model caches, platform, and accelerators; never copy paths from another user's machine. Read [setup.md](references/setup.md) only for missing dependencies, unfamiliar platforms, or model access requirements.
+For `gemini-3.5-transcribe` only ffmpeg/ffprobe matter; `colab` needs nothing local until step 4. Otherwise discover installed executables, model caches, platform, and accelerators; never copy paths from another user's machine. Read [install.md](docs/install.md) §3 only for missing dependencies, unfamiliar platforms, or model access requirements.
 
 - Worker Python: the interpreter on the shebang of `which mlx-qwen3-asr` (`head -1 "$(which mlx-qwen3-asr)"`). The bundled scripts other than the worker run on any `python3`.
-- Speaker backend: `SCRIPTS/community1-bridge/build/community1-bridge` runs offline under `sandbox-exec`. When it is missing, build it with `sh SCRIPTS/community1-bridge/build.sh` (Xcode Command Line Tools). Without it the worker falls back to `speech diarize`, which contacts the network; say so in the reply.
+- Speaker backend: `SCRIPTS/community1-bridge/build/community1-bridge` runs offline under `sandbox-exec`. When it is missing, build it with `sh SCRIPTS/community1-bridge/build.sh` (Xcode Command Line Tools). Without it the run ends `partial` with no speakers.
 - A missing requested model is a setup issue, not permission to silently switch models. Never accept model terms or share credentials on the user's behalf.
 
 ## 3. Transcribe, align, and label
@@ -42,6 +44,8 @@ Discover installed executables, model caches, platform, and accelerators; never 
 WORKER_PYTHON SCRIPTS/qwen_worker.py --audio FILE [--audio FILE2 …] --run-directory TASK/run-N --model 0.6B
 ```
 
+Gemini: `python3 SCRIPTS/gemini_transcribe.py --audio FILE [--audio FILE2 …] --run-directory TASK/run-N` keeps the same run-directory contract and outputs, uploads ≤25-minute parts (speaker IDs `part-N-spk_M` when split) and deletes them from Google afterwards.
+
 Repeat `--audio` only for a merge. `--run-directory` must be new or empty; the worker refuses any other directory and leaves it untouched. The worker decodes each source to canonical mono 16 kHz PCM, concatenates in order and checks the sample-count sum, then runs ASR, ForcedAligner on the unchanged ASR text, and Community-1 in 20-minute windows. It prints `progress:` lines and writes `normalized-run.json`, `state.json` (stage, warnings, network), raw outputs and logs into the run directory; it never downloads models. `state.json` stage `partial` means a stage failed: deliver the raw transcript with the missing stage named; never fabricate word times or speakers. Stage `failed` with a source-changed error means the file was modified mid-decode; `sources.json` holds `sha256_before_decode` and `sha256_after_decode`, so ask the user which version to transcribe.
 
 After it finishes:
@@ -49,7 +53,7 @@ After it finishes:
 - One window yields speaker IDs `S1`, `S2`…. Longer audio keeps `window-N-speaker-M`. Before joining window IDs, compare multiple non-overlapping voice samples with the same embedding model (`speech embed-speaker … --engine coreml --json`). Keep uncertain matches separate; similarity is not identity proof or a calibrated probability. Never infer identity from file boundaries or force speaker count from a candidate name list.
 - Preserve raw turns, embedding-match evidence, and mapping decisions in the run directory. The format is in [run-format.md](references/run-format.md).
 
-Windows or a machine without the worker's backends: run official Qwen/PyTorch and pyannote, write the same normalized run per run-format.md, and continue at step 4.
+Windows or a machine without the worker's backends: use the `colab` route, on Colab or in local Jupyter (untested; fill `AUDIO_FILES`, set `HF_TOKEN` in the environment; the JSON lands beside the notebook).
 
 ## 4. Apply optional names
 
@@ -80,4 +84,4 @@ python3 SCRIPTS/mail_draft.py --title "<recording title>" --summary "<notes.md �
 
 Attach only these text files; the recipient's `transcript.html` reads without playback. It only opens a draft in Mail.app; the user sends it. Use `--dry-run` to show the AppleScript first when the user asks. A real draft is still unverified: the first run waits on macOS Automation permission, which only the user can grant; on timeout, say so and hand over the `--dry-run` output.
 
-Reply with links to `transcript.html`, `notes.html`/`notes.md` and any merged audio, the model actually used, duration, and material limitations (Gemini fallback, network-using diarization, uncertain speakers). After a 0.6B run, mention in one line that 1.7B is available if accuracy matters. Keep the reply short. Summaries and drafts follow the form's choices only; the transcript itself stays unpolished, unpublished and local.
+Reply with links to `transcript.html`, `notes.html`/`notes.md` and any merged audio, the model actually used, duration, and material limitations (Gemini upload, a run without speakers, uncertain speakers). After a 0.6B run, mention in one line that 1.7B is available if accuracy matters. Keep the reply short. Summaries and drafts follow the form's choices only; the transcript itself stays unpolished and unpublished, and local unless the user picked Gemini or Colab.

@@ -15,22 +15,8 @@ import subprocess
 import sys
 import wave
 
-ACTIVE_PROCESS = None
-
-
-class Cancelled(Exception):
-    pass
-
-
-def cancel(_signum, _frame):
-    if ACTIVE_PROCESS is not None and ACTIVE_PROCESS.poll() is None:
-        ACTIVE_PROCESS.terminate()
-        try:
-            ACTIVE_PROCESS.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            ACTIVE_PROCESS.kill()
-            ACTIVE_PROCESS.wait()
-    raise Cancelled("使用者已取消；已完成的原始輸出仍保留。")
+def interrupt(_signum, _frame):
+    raise KeyboardInterrupt  # SIGTERM cleans up like Ctrl-C; subprocess.run kills the running child.
 
 
 def save(path, value):
@@ -43,54 +29,24 @@ def progress(text):
     print("progress:" + text, flush=True)
 
 
-def command(arguments, directory, name, input_text=None, timeout=None):
-    global ACTIVE_PROCESS
+def command(arguments, directory, name, timeout=None):
     with (directory / (name + ".stdout.log")).open("wb") as out, (directory / (name + ".stderr.log")).open("wb") as err:
-        ACTIVE_PROCESS = subprocess.Popen(arguments, stdin=subprocess.PIPE if input_text is not None else subprocess.DEVNULL,
-                                          stdout=out, stderr=err, env=os.environ.copy())
         try:
-            try:
-                ACTIVE_PROCESS.communicate(input_text.encode("utf-8") if input_text is not None else None, timeout=timeout)
-            except subprocess.TimeoutExpired:
-                ACTIVE_PROCESS.terminate()
-                try:
-                    ACTIVE_PROCESS.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    ACTIVE_PROCESS.kill()
-                    ACTIVE_PROCESS.wait()
-                raise RuntimeError(f"{name} 超過 {timeout:.0f} 秒；原始文字與對齊資料已保留。")
-            code = ACTIVE_PROCESS.returncode
-        finally:
-            if ACTIVE_PROCESS.poll() is None:
-                ACTIVE_PROCESS.terminate()
-                ACTIVE_PROCESS.wait()
-            ACTIVE_PROCESS = None
+            code = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=out, stderr=err, timeout=timeout).returncode
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(f"{name} 超過 {timeout:.0f} 秒；原始文字與對齊資料已保留。")
     if code:
-        raise RuntimeError(f"{name} 失敗（{code}）；請查看 {name}.stdout.log／{name}.stderr.log")
+        reason = (directory / (name + ".stderr.log")).read_text(encoding="utf-8", errors="replace").strip().splitlines()[-1:]
+        raise RuntimeError(f"{name} 失敗（{code}）{'：' + reason[0] if reason else ''}；請查看 {name}.stdout.log／{name}.stderr.log")
     return (directory / (name + ".stdout.log")).read_text(encoding="utf-8")
 
 
-def snapshot(home, model_id):
-    root = home / ".cache/huggingface/hub" / ("models--" + model_id.replace("/", "--"))
-    refs = root / "refs/main"
-    candidates = []
-    if refs.is_file():
-        revision = refs.read_text().strip()
-        if revision and "/" not in revision and ".." not in revision:
-            candidates.append(root / "snapshots" / revision)
-    candidates.extend(sorted((root / "snapshots").glob("*")))
-    for path in candidates:
-        if not all((path / name).is_file() for name in ("config.json", "tokenizer_config.json", "vocab.json", "merges.txt")):
-            continue
-        weights = list(path.glob("*.safetensors"))
-        index = path / "model.safetensors.index.json"
-        if index.is_file():
-            index_data = json.loads(index.read_text())
-            if not all((path / name).is_file() for name in set(index_data["weight_map"].values())):
-                continue
-        if weights and all(p.stat().st_size > 0 for p in weights):
-            return path
-    raise RuntimeError(f"本機快取缺少完整 {model_id}；本工作流程不會下載模型。")
+def snapshot(model_id):
+    from huggingface_hub import snapshot_download
+    try:
+        return Path(snapshot_download(model_id, local_files_only=True, ignore_patterns=["*.md", ".gitattributes"]))
+    except Exception as error:
+        raise RuntimeError(f"本機快取缺少完整 {model_id}；本工作流程不會下載模型。（{error}）")
 
 
 def check_chunks(chunks, duration):
@@ -110,56 +66,6 @@ def check_chunks(chunks, duration):
         raise ValueError("ASR 未覆蓋 PCM 結尾。")
 
 
-def parse_json(text):
-    decoder = json.JSONDecoder()
-    for index, char in enumerate(text):
-        if char == "{":
-            try:
-                value, _ = decoder.raw_decode(text[index:])
-                if (isinstance(value, dict) and isinstance(value.get("segments"), list)
-                        and type(value.get("num_speakers")) is int and value["num_speakers"] >= 0):
-                    return value
-            except json.JSONDecodeError:
-                pass
-    raise ValueError("說話者工具沒有有效 JSON。")
-
-
-def check_alignment(chunks, duration, normalize):
-    check_chunks(chunks, duration)
-    for chunk in chunks:
-        previous_start = previous_end = chunk["start"]
-        words = chunk["words"]
-        character_ends, characters, aligned_characters = set(), 0, 0
-        for char in chunk["text"]:
-            characters += len(normalize(char))
-            character_ends.add(characters)
-        for word in words:
-            start, end = word.get("start"), word.get("end")
-            if (type(start) not in (int, float) or type(end) not in (int, float)
-                    or not math.isfinite(start) or not math.isfinite(end)
-                    or not chunk["start"] - .02 <= start <= end <= chunk["end"] + .02
-                    or start < previous_start - .02 or end < previous_end - .02):
-                raise ValueError("對齊詞時間超出原始 chunk 或順序不符。")
-            previous_start, previous_end = start, end
-            token = normalize(word["text"])
-            aligned_characters += len(token)
-            if not token or aligned_characters not in character_ends:
-                raise ValueError("對齊詞拆開原始字元或包含未附屬的標點。")
-        if normalize("".join(word["text"] for word in words)) != normalize(chunk["text"]):
-            raise ValueError("ForcedAligner 文字與原始 ASR 不一致；未編造缺少的詞時間。")
-
-
-def speaker_cache_ready(home):
-    root = home / "Library/Caches/qwen3-speech/models/aufklarer/Pyannote-Community-1-CoreML"
-    for name in ("segmentation.mlmodelc", "embedding.mlmodelc"):
-        bundle = root / name
-        if not all((bundle / file).is_file() and (bundle / file).stat().st_size > 0
-                   for file in ("model.mil", "coremldata.bin", "weights/weight.bin")):
-            return False
-    return all((root / name).is_file() and (root / name).stat().st_size > 0
-               for name in ("config.json", "plda.safetensors"))
-
-
 def read_helper():
     path = Path(__file__).with_name("transcript.py")
     if not path.is_file():
@@ -174,27 +80,13 @@ BRIDGE = Path(__file__).with_name("community1-bridge") / "build/community1-bridg
 SANDBOX = "/usr/bin/sandbox-exec"
 
 
-def diarization_backend(home):
-    """Bridge under sandbox-exec when built; otherwise the installed speech CLI (network not blocked)."""
-    bridge = BRIDGE if BRIDGE.is_file() and os.access(BRIDGE, os.X_OK) else None
-    speech = shutil.which("speech")
-    if not speaker_cache_ready(home):
-        raise RuntimeError("Community-1 本機快取不完整；未下載或執行說話者模型。")
-    if bridge is not None and not Path(SANDBOX).is_file():
-        raise RuntimeError("缺少逐程序網路阻擋工具，已跳過說話者推論。")
-    if bridge is None and speech is None:
-        raise RuntimeError("找不到 community1-bridge 或 speech CLI；請先執行 sh scripts/community1-bridge/build.sh。")
-    if bridge is not None:
-        record = {"id": "aufklarer/Pyannote-Community-1-CoreML", "engine": "community1-bridge (speech-swift v0.0.27 fromLocal CoreML)",
-                  "network": "sandbox deny network*"}
-    else:
-        record = {"id": "aufklarer/Pyannote-Community-1-CoreML", "engine": "speech diarize --engine community1 --community1-compute-units cpu",
-                  "network": "diarization stage not network-blocked"}
-    return bridge, speech, record
-
-
 def diarize(pcm_bytes, directory, home, duration, state):
-    bridge, speech, record = diarization_backend(home)
+    if not (BRIDGE.is_file() and os.access(BRIDGE, os.X_OK)):
+        raise RuntimeError("找不到 community1-bridge；請先執行 sh SCRIPTS/community1-bridge/build.sh。")
+    if not Path(SANDBOX).is_file():
+        raise RuntimeError("缺少逐程序網路阻擋工具，已跳過說話者推論。")
+    record = {"id": "aufklarer/Pyannote-Community-1-CoreML", "engine": "community1-bridge (speech-swift v0.0.27 fromLocal CoreML)",
+              "network": "sandbox deny network*"}
     # Persist the backend before any subprocess so failure, timeout and cancel all keep it.
     state["diarization"] = record
     state["network"] += "; diarization: " + record["network"]
@@ -214,18 +106,13 @@ def diarize(pcm_bytes, directory, home, duration, state):
             audio.setframerate(16000)
             audio.writeframes(pcm_bytes[start * 2:end * 2])
         progress(f"說話者分段 {index + 1}/{len(starts)}")
-        if bridge is not None:
-            arguments = [SANDBOX, "-p", "(version 1)(allow default)(deny network*)", str(bridge),
-                         "--audio", str(file), "--cache-dir", str(cache)]
-        else:
-            arguments = [speech, "diarize", "--engine", "community1", "--community1-compute-units", "cpu", "--json", str(file)]
-        output = command(arguments, directory, f"diarization-{index:03}", timeout=max(120, length * 2))
-        result = parse_json(output)
-        # Only the bridge reports its PCM clock; speech CLI JSON has segments and num_speakers alone.
-        if bridge is not None and (result.get("sample_count") != end - start or result.get("sample_rate") != 16000):
+        arguments = [SANDBOX, "-p", "(version 1)(allow default)(deny network*)", str(BRIDGE),
+                     "--audio", str(file), "--cache-dir", str(cache)]
+        result = json.loads(command(arguments, directory, f"diarization-{index:03}", timeout=max(120, length * 2)))
+        if result.get("sample_count") != end - start or result.get("sample_rate") != 16000:
             raise ValueError("離線說話者 bridge 的 PCM 樣本時鐘與輸入不一致。")
         save(directory / f"diarization-{index:03}.json", result)
-        for segment in result.get("segments", []):
+        for segment in result["segments"]:
             a, b, speaker = segment.get("start"), segment.get("end"), segment.get("speaker")
             if (type(a) not in (int, float) or type(b) not in (int, float) or not math.isfinite(a)
                     or not math.isfinite(b) or not 0 <= a < b <= length + .02 or type(speaker) is not int):
@@ -302,29 +189,14 @@ def claim(directory):
         file.write('{"stage": "start"}\n')
 
 
-def transcribe(arguments):
-    directory, home = Path(arguments.run_directory).resolve(), Path.home()
-    sources = [Path(path).resolve() for path in arguments.audio]
-    missing = [str(path) for path in sources if not path.is_file()]
-    if missing:
-        raise RuntimeError("找不到本機音檔：" + "、".join(missing))
-    model_id = "Qwen/Qwen3-ASR-" + arguments.model
-    model_path = snapshot(home, model_id)
-    ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
-    if not ffmpeg or not ffprobe:
-        raise RuntimeError("缺少已安裝 ffmpeg／ffprobe。")
-    state = {"stage": "decode", "model": model_id, "modelRevision": model_path.name,
-             "backend": "mlx-qwen3-asr", "backendVersion": importlib.metadata.version("mlx-qwen3-asr"),
-             "network": "Hugging Face offline (HF_HUB_OFFLINE=1)", "warnings": []}
-    save(directory / "state.json", state)
+def prepare(sources, directory, ffmpeg, ffprobe):
+    """Decode every source, concatenate in order, write canonical.wav and sources.json; returns (records, PCM bytes)."""
     parts = []
     for index, source in enumerate(sources):
         progress(f"解碼 {index + 1}/{len(sources)} 為單聲道 16 kHz PCM…")
         parts.append(decode_source(source, index, directory, ffmpeg, ffprobe))
     source_records, pcm_bytes = combine(parts)
     del parts
-    count = len(pcm_bytes) // 2
-    duration = count / 16000
     with wave.open(str(directory / "canonical.wav"), "wb") as audio:
         audio.setnchannels(1)
         audio.setsampwidth(2)
@@ -334,6 +206,27 @@ def transcribe(arguments):
         if audio.getnframes() != sum(record["sample_count"] for record in source_records):
             raise ValueError("canonical.wav 樣本數不等於各檔之和。")
     save(directory / "sources.json", source_records)
+    return source_records, pcm_bytes
+
+
+def transcribe(arguments):
+    directory, home = Path(arguments.run_directory).resolve(), Path.home()
+    sources = [Path(path).resolve() for path in arguments.audio]
+    missing = [str(path) for path in sources if not path.is_file()]
+    if missing:
+        raise RuntimeError("找不到本機音檔：" + "、".join(missing))
+    model_id = "Qwen/Qwen3-ASR-" + arguments.model
+    model_path = snapshot(model_id)
+    ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
+    if not ffmpeg or not ffprobe:
+        raise RuntimeError("缺少已安裝 ffmpeg／ffprobe。")
+    state = {"stage": "decode", "model": model_id, "modelRevision": model_path.name,
+             "backend": "mlx-qwen3-asr", "backendVersion": importlib.metadata.version("mlx-qwen3-asr"),
+             "network": "Hugging Face offline (HF_HUB_OFFLINE=1)", "warnings": []}
+    save(directory / "state.json", state)
+    source_records, pcm_bytes = prepare(sources, directory, ffmpeg, ffprobe)
+    count = len(pcm_bytes) // 2
+    duration = count / 16000
     state["stage"] = "asr"
     save(directory / "state.json", state)
     import numpy as np
@@ -357,7 +250,7 @@ def transcribe(arguments):
         check_chunks(chunks, duration)
         if any(chunk.get("finish_reason") == "repetition" for chunk in chunks):
             warnings.append("ASR 曾以重複偵測停止；請人工檢查該段文字。")
-        aligner_path = snapshot(home, "Qwen/Qwen3-ForcedAligner-0.6B")
+        aligner_path = snapshot("Qwen/Qwen3-ForcedAligner-0.6B")
         normalized["alignment_model"] = {"id": "Qwen/Qwen3-ForcedAligner-0.6B", "revision": aligner_path.name}
         aligner = ForcedAligner(model_path=str(aligner_path), backend="mlx")
         state["stage"] = "alignment"
@@ -378,26 +271,15 @@ def transcribe(arguments):
         save(directory / "speaker-turns.json", normalized["turns"])
         if duration > 1200:
             warnings.append("長錄音的每個 20 分鐘視窗使用獨立說話者 ID，未跨窗推定身分。")
-    except Cancelled:
-        raise
     except Exception as error:
         warnings.append(f"{state['stage']} 未完成：{error}")
     save(directory / "normalized-run.json", normalized)
     is_complete = False
     if alignment_complete:
         try:
-            helper = read_helper()
-            check_alignment(normalized["chunks"], duration, helper.normalized)
-            if normalized["diarization_complete"]:
-                _, report = helper.validate(directory / "normalized-run.json")
-            else:
-                report = {"ok": True, "scope": "alignment only", "duration": duration,
-                          "words": sum(len(chunk["words"]) for chunk in normalized["chunks"]),
-                          "text_match": True, "diarization_complete": False}
+            _, report = read_helper().validate(directory / "normalized-run.json", require_speakers=normalized["diarization_complete"])
             save(directory / "validation.json", report)
             is_complete = normalized["diarization_complete"] and not any(chunk.get("finish_reason") == "repetition" for chunk in chunks)
-        except Cancelled:
-            raise
         except Exception as error:
             warnings.append(f"時間／文字驗證未通過：{error}")
     state.update(stage="complete" if is_complete else "partial", warnings=warnings)
@@ -413,8 +295,7 @@ def main():
     args = parser.parse_args()
     for key in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_HUB_DISABLE_TELEMETRY"):
         os.environ[key] = "1"
-    signal.signal(signal.SIGTERM, cancel)
-    signal.signal(signal.SIGINT, cancel)
+    signal.signal(signal.SIGTERM, interrupt)
     directory = Path(args.run_directory).resolve()
     try:
         claim(directory)
@@ -427,10 +308,12 @@ def main():
     except (Exception, KeyboardInterrupt) as error:
         state_path = directory / "state.json"
         state = json.loads(state_path.read_text()) if state_path.is_file() else {}
-        state.update(stage="cancelled" if isinstance(error, (Cancelled, KeyboardInterrupt)) else "failed", error=str(error))
+        cancelled = isinstance(error, KeyboardInterrupt)
+        message = "使用者已取消；已完成的原始輸出仍保留。" if cancelled else str(error)
+        state.update(stage="cancelled" if cancelled else "failed", error=message)
         save(state_path, state)
-        print(str(error), file=sys.stderr, flush=True)
-        return 130 if isinstance(error, (Cancelled, KeyboardInterrupt)) else 1
+        print(message, file=sys.stderr, flush=True)
+        return 130 if cancelled else 1
 
 
 if __name__ == "__main__":

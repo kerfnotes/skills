@@ -62,7 +62,8 @@ def interval(item, where, limit):
     return start, end
 
 
-def validate(path):
+def validate(path, require_speakers=True):
+    """require_speakers=False checks an alignment-only (partial) run: everything except diarization_complete."""
     path = Path(path).resolve()
     run = json.loads(path.read_text(encoding='utf-8-sig'), object_pairs_hook=object_pairs)
     require(isinstance(run, dict) and type(run.get('schema_version')) is int and run['schema_version'] == 1,
@@ -70,10 +71,12 @@ def validate(path):
     model = run.get('model')
     require(isinstance(model, dict), 'model: object required')
     string(model.get('id'), 'model.id')
-    require(model.get('size') in ('0.6B', '1.7B'), 'model.size must be 0.6B or 1.7B')
     named_sizes = {size for size in ('0.6B', '1.7B') if size.casefold() in model['id'].casefold()}
+    # Non-Qwen engines (e.g. gemini-3.5-transcribe) have no size; a Qwen size in the id still requires it.
+    require(model.get('size') in ('0.6B', '1.7B') or (model.get('size') is None and not named_sizes),
+            'model.size must be 0.6B or 1.7B (null only for an id naming no Qwen size)')
     require(not named_sizes or named_sizes == {model['size']}, 'model.id and model.size disagree')
-    require(run.get('diarization_complete') is True, 'diarization_complete must be true; partial runs cannot render as complete')
+    require(not require_speakers or run.get('diarization_complete') is True, 'diarization_complete must be true; partial runs cannot render as complete')
     sources = run.get('sources')
     require(isinstance(sources, list) and sources, 'sources: nonempty array required')
     duration = 0.0
@@ -173,6 +176,7 @@ def validate(path):
     require(abs(cursor - duration) <= EPS, 'chunks do not cover the recording end')
     report = {'ok': True, 'duration': duration, 'sources': len(sources), 'chunks': len(chunks), 'words': word_count,
               'source_sha256_verified': True, 'pcm_verified': 'pcm' in run,
+              'diarization_complete': run.get('diarization_complete') is True,
               'text_match': 'ignore Unicode punctuation, whitespace and case only',
               'limits': 'Structural validation and recorded completion flags cannot prove ASR accuracy or unheard speech.'}
     return run, report
@@ -264,21 +268,6 @@ def markdown(text):
     return re.sub(r'([\\`*_{}\[\]<>()#+.!|~-])', r'\\\1', text)
 
 
-FALLBACK_CSS = """:root { --cp-paper: #FAF9F5; --cp-ink: #141413; --cp-muted: #5E5D59; --cp-title: #141413; --cp-line: #E8E6DC;
-  --cp-accent: #C2553A; --cp-tint: #F5E6DE; --cp-small: 12px; --cp-sub: 18px; --cp-title-size: 28px;
-  --cp-font: "Helvetica Neue", "Segoe UI", "Arial", "PingFang TC", "Microsoft JhengHei", sans-serif; }
-* { box-sizing: border-box; }
-html { color: var(--cp-ink); background: var(--cp-paper); font-family: var(--cp-font); font-size: 16px; line-height: 1.65; }
-body { margin: 0 auto; padding: 0 24px 72px; max-width: 940px; overflow-wrap: anywhere; }
-h1, h2, h3 { color: var(--cp-title); line-height: 1.25; }
-a { color: var(--cp-accent); }
-.report-cover { padding: 48px 0 32px; border-bottom: 3px solid var(--cp-accent); }
-.eyebrow { color: var(--cp-accent); font-size: var(--cp-small); font-weight: 700; letter-spacing: .08em; }
-.cover-meta { display: flex; flex-wrap: wrap; gap: 10px 28px; color: var(--cp-muted); font-size: var(--cp-small); }
-.cover-meta dt { font-weight: 700; } .cover-meta dd { margin: 0; }
-section { margin-top: 40px; }"""
-
-
 def clayprint_dir():
     """Sibling install first, then the current project's Claude/Codex skill folders."""
     for root in (Path(__file__).resolve().parents[2], Path.cwd() / '.claude/skills', Path.cwd() / '.agents/skills'):
@@ -288,14 +277,14 @@ def clayprint_dir():
 
 
 def clayprint_css():
-    """Active Clayprint design-layer CSS, or the bundled clay fallback when Clayprint/node is absent."""
+    """Active Clayprint design-layer CSS, or none when Clayprint/node is absent (page-local rules carry var() fallbacks)."""
     found, node = clayprint_dir(), shutil.which('node')
     if found and node:
         result = subprocess.run([node, str(found / 'scripts/theme-css.js')], capture_output=True, text=True,
                                 encoding='utf-8', check=False)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout
-    return FALLBACK_CSS
+    return ''
 
 
 def srt_stamp(seconds):
@@ -320,12 +309,12 @@ def page(title, rows_html, markdown_text, meta, playback):
 </style>
 <style>
 .player {{ position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
-  padding: 12px 0; background: var(--cp-paper); border-bottom: 1px solid var(--cp-line); }}
+  padding: 12px 0; background: var(--cp-paper, #fff); border-bottom: 1px solid var(--cp-line, #ddd); }}
 .player audio {{ flex: 1 1 320px; }}
-.player button, .player a {{ font: inherit; font-size: var(--cp-small); padding: 6px 12px; border: 1px solid var(--cp-accent);
-  border-radius: 4px; background: none; color: var(--cp-accent); cursor: pointer; text-decoration: none; }}
-.seg {{ max-width: none; margin: 0; padding: 10px 8px; border-bottom: 1px solid var(--cp-line); cursor: pointer; }}
-.seg:hover, .seg:focus, .seg.now {{ background: var(--cp-tint); outline: none; }}
+.player button, .player a {{ font: inherit; font-size: var(--cp-small); padding: 6px 12px; border: 1px solid var(--cp-accent, #C2553A);
+  border-radius: 4px; background: none; color: var(--cp-accent, #C2553A); cursor: pointer; text-decoration: none; }}
+.seg {{ max-width: none; margin: 0; padding: 10px 8px; border-bottom: 1px solid var(--cp-line, #ddd); cursor: pointer; }}
+.seg:hover, .seg:focus, .seg.now {{ background: var(--cp-tint, #eee); outline: none; }}
 .who {{ display: block; color: var(--cp-muted); font-size: var(--cp-small); }}
 </style>
 </head>

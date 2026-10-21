@@ -1,13 +1,13 @@
 # Normalized run and rendering
 
-On Apple Silicon, `qwen_worker.py` writes this format as `normalized-run.json`; on other machines the agent runs installed inference tools and converts their saved output into it. The helper does **not** run models, infer a real person's identity, or establish accuracy. Never manufacture a completion flag to satisfy validation.
+On Apple Silicon, `qwen_worker.py` (and `gemini_transcribe.py`, `colab/wordprint.ipynb`) writes this format as `normalized-run.json`; other machines run the notebook. The helper does **not** run models, infer a real person's identity, or establish accuracy. Never manufacture a completion flag to satisfy validation.
 
 Store `run.json` in the task directory, outside the installed skill. UTF-8 JSON, `schema_version: 1`:
 
 | Field | Required meaning |
 | --- | --- |
 | `sources` | Ordered array of `{path, sha256, duration, offset}`; the worker also records `sha256_before_decode` and `sha256_after_decode` (equal on success). Path/hash identify each original; paths are absolute or relative to run.json. SHA-256 is lowercase hex. Duration is decoded PCM sample count / sample rate, **not container duration**; offsets start at zero and are cumulative. Keep `sample_count`, `sample_rate`, `probe_duration`, and the decode invocation as evidence. Separate recordings use separate runs unless merging was requested. |
-| `model` | `{id, size}` where size is `0.6B` or `1.7B`; retain backend/version, model revision, language and invocation parameters as additional metadata. |
+| `model` | `{id, size}` where size is `0.6B` or `1.7B` for Qwen, or `null` for an engine id that names no Qwen size (e.g. `gemini-3.5-transcribe`); retain backend/version, model revision, language and invocation parameters as additional metadata. |
 | `chunks` | Ordered `{start, end, text, words, complete, truncated}`. Copy exact original text; preserve every chunk including silence. `complete: true` requires successful inference evidence; `truncated: false` requires the backend's stop status or equivalent verified evidence. No gaps between chunks; final end matches total duration. |
 | `chunks[].words` | Ordered `{text, start, end}` from ForcedAligner, with nondecreasing starts and ends (20 ms rounding tolerance). All times use the combined PCM clock, including chunk and source offsets exactly once. Keep punctuation in chunk text; attach punctuation-only aligner tokens to an adjacent word. Preserve symbols and numerals: a nonspoken symbol omitted by alignment may be attached verbatim to its adjacent aligned token without changing times. Do not estimate word times from text length or rewrite spoken content to pass validation. |
 | `turns` | Diarization `{start, end, speaker}` sorted by start, on the same global clock. Preserve overlapping turns; use globally reconciled stable speaker IDs. |
@@ -17,8 +17,6 @@ Store `run.json` in the task directory, outside the installed skill. UTF-8 JSON,
 | `pcm` | Optional path to the canonical mono 16-bit 16 kHz WAV (relative to run.json or absolute). Validation checks its format, that the header frame count matches the data bytes on disk, and that the sample count matches the summed source durations; render copies it to `playback.wav`. The worker always sets it. |
 
 Preserve upstream raw JSON, the source probe result, and speaker matching evidence beside the normalized run. Record alignment and diarization model IDs/versions and parameters as additional metadata. Do not include tokens. Reuse a stage only when source hashes/order, its inputs (including transcript text for alignment), model/revision, and parameters still match; a chunk number alone proves nothing.
-
-For MLX output, keep `chunks[].text`; assign the global aligned `segments` to their corresponding chunks without duplicating/dropping words. Prefer chunk-by-chunk alignment if global boundaries are ambiguous. Add the window offset to `speech diarize` turns, reconcile local IDs by acoustic evidence, then sort. For official PyTorch output, convert its timestamp objects to the same word format; consult the installed API rather than assuming MLX field names. The validator deliberately rejects mismatched text/times.
 
 Use the installed absolute helper path:
 

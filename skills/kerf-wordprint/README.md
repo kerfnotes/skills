@@ -2,7 +2,7 @@
 
 Wordprint 在你自己的電腦上把錄音轉成逐字稿，附時間戳與說話者標記。開始時會開一頁表單，一次選好錄音（語音備忘錄或本機檔案）、引擎、參與者、摘要種類與要不要開 Mail 草稿；之後轉錄、分說話者、產出可點選跳播的閱讀頁，需要時再做摘要報告與 Mail 草稿。也可以合併多段錄音、替既有逐字稿補上說話者，或在確認姓名後改標。
 
-預設全部在本機處理。只有你在表單明確選 Gemini 才會上傳，上傳前會先告訴你，`run.json` 也會記錄用了哪個引擎。Gemini 目前還在規劃中，選了會先改用本機 Qwen 0.6B 並告訴你。
+預設全部在本機處理。只有你在表單明確選 Gemini 才會上傳到 Google（計費，上傳前會先告訴你，轉完即刪除 Google 端的檔案），`run.json` 也會記錄用了哪個引擎。選 Colab 則是你用 Google 帳號開啟筆記本，在 Google 的 GPU 上跑 Qwen，本機免安裝模型；要分說話者需要你自己的 Hugging Face token。
 
 ## 它做什麼
 
@@ -28,12 +28,13 @@ Codex 的專案路徑是 `.agents/skills/kerf-wordprint/`；Claude Code 是 `.cl
 
 ## 已知限制
 
-- 表單、語音備忘錄讀取與轉錄流程只在 Apple Silicon Mac 驗證過；Windows 的安裝路線有寫，但尚未實測。
+- 表單、語音備忘錄讀取與轉錄流程只在 Apple Silicon Mac 驗證過；其他電腦改用 Colab 筆記本（在本機 Jupyter 跑尚未實測）。
+- Gemini 引擎尚未以真實 API 呼叫驗證，金鑰要你自己用 `security add-generic-password -s kerf-wordprint-gemini -a wordprint -w` 存進鑰匙圈。Colab 筆記本只在本機 CPU 驗證過轉錄與對時；GPU 執行、說話者那格與完整 Colab 流程尚未實測，「Open in Colab」連結要等 skill 推上 GitHub 後才有效。
 - Mail 草稿目前只驗證過 dry-run（印出 AppleScript）；真實草稿要等你授權 macOS 自動化權限後再驗收。
 - 讀語音備忘錄需要給終端機「完整磁碟取用權」；不想給，就把備忘錄拖到資料夾再選路徑。
 - 第一次開 Mail 草稿時，macOS 會問是否允許控制 Mail，要你本人按允許。
-- Windows 等使用 pyannote 的路線，Community-1 官方下載需要 Hugging Face 帳號、同意使用條件並設定 token，這一步要你本人完成；Mac 的 CoreML 路線另有模型來源。
+- Colab 筆記本要分說話者時，Community-1 官方下載需要 Hugging Face 帳號、同意使用條件並設定 token，這一步要你本人完成；Mac 的 CoreML 路線另有模型來源。
 - 結構檢查只確認時間涵蓋、文字未被改動與標記一致，不代表辨識正確；重要內容仍須回聽。
 - 說話者分群是模型推測，不是身分證明。
 
-授權：[MIT](LICENSE)。模型各有授權，見 [setup.md](references/setup.md)。
+授權：[MIT](LICENSE)。模型各有授權，見 [安裝指引](docs/install.md)。

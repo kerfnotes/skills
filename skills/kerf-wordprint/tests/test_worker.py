@@ -20,7 +20,7 @@ def load(name):
     return module
 
 
-w, t = load('qwen_worker'), load('transcript')
+w = load('qwen_worker')
 
 
 class WorkerTests(unittest.TestCase):
@@ -37,24 +37,6 @@ class WorkerTests(unittest.TestCase):
         ]:
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
                 w.check_chunks(chunks, duration)
-
-    def test_parse_json_skips_progress_noise(self):
-        text = 'Loading {not json}\n{"num_speakers": 2, "segments": [{"start": 0, "end": 1, "speaker": 0}]}\n'
-        self.assertEqual(w.parse_json(text)['num_speakers'], 2)
-        with self.assertRaisesRegex(ValueError, '有效 JSON'):
-            w.parse_json('{"segments": []}')
-
-    def test_check_alignment(self):
-        chunk = {'start': 0, 'end': 2, 'text': '你好，世界。', 'truncated': False, 'finish_reason': 'eos',
-                 'words': [{'text': '你好', 'start': 0, 'end': 1}, {'text': '世界', 'start': 1, 'end': 2}]}
-        w.check_alignment([chunk], 2, t.normalized)
-        for words, message in [
-            ([{'text': '你好', 'start': 0, 'end': 1}], '不一致'),
-            ([{'text': '你好', 'start': 0, 'end': 1}, {'text': '世界', 'start': 0.5, 'end': 0.6}], '順序'),
-            ([{'text': '你', 'start': 0, 'end': 1}, {'text': '，', 'start': 1, 'end': 1}], '標點'),
-        ]:
-            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
-                w.check_alignment([dict(chunk, words=words)], 2, t.normalized)
 
     def test_combine_offsets_follow_sample_counts(self):
         parts = [{'path': '/a.wav', 'sha256': 'a' * 64, 'pcm': b'\1\0' * 16000, 'probe_duration': '1.02'},
@@ -95,7 +77,7 @@ class WorkerIOTests(unittest.TestCase):
         self.run.mkdir()
 
     def fake_command(self, frames=16000, keep_bytes=None, mutate=False):
-        def command(arguments, directory, name, input_text=None, timeout=None):
+        def command(arguments, directory, name, timeout=None):
             if name.startswith('probe'):
                 return '{"format": {"duration": "1.0"}}'
             write_wav(Path(arguments[-1]), frames, keep_bytes)
@@ -139,18 +121,6 @@ class WorkerIOTests(unittest.TestCase):
         [record], _ = w.combine([part])
         digest = w.hashlib.sha256(b'original audio').hexdigest()
         self.assertEqual((record['sha256'], record['sha256_before_decode'], record['sha256_after_decode']), (digest,) * 3)
-
-    def test_speech_fallback_record_persists_before_subprocess(self):
-        state = {'stage': 'diarization', 'network': 'Hugging Face offline'}
-        def fail(*_args, **_kwargs):
-            raise RuntimeError('speech diarize 超過 120 秒')
-        with mock.patch.object(w, 'BRIDGE', self.root / 'no-bridge'), \
-                mock.patch.object(w, 'speaker_cache_ready', return_value=True), \
-                mock.patch.object(w.shutil, 'which', return_value='/opt/fake/speech'), \
-                mock.patch.object(w, 'command', fail), self.assertRaisesRegex(RuntimeError, '超過'):
-            w.diarize(b'\0\0' * 16000, self.run, self.root, 1.0, state)
-        saved = json.loads((self.run / 'state.json').read_text(encoding='utf-8'))
-        self.assertIn('diarization stage not network-blocked', saved['network'])
 
 
 if __name__ == '__main__':

@@ -70,6 +70,7 @@ class TranscriptTests(unittest.TestCase):
             (lambda r: r['chunks'][0]['words'][0].update(text='錯誤'), 'differs'),
             (lambda r: r['chunks'][0]['words'][0].update(end=float('nan')), 'finite'),
             (lambda r: r['model'].update(size='1.7B'), 'disagree'),
+            (lambda r: r['model'].update(size=None), 'null only'),
             (lambda r: r['chunks'][0]['words'][0].update(end=3.03), 'invalid time'),
             (lambda r: r['chunks'][0]['words'][1].update(start=0.5, end=0.6), 'out of order'),
             (lambda r: r['chunks'][0]['words'][1].update(text='！'), 'standalone punctuation'),
@@ -105,6 +106,9 @@ class TranscriptTests(unittest.TestCase):
         self.run['turns'] = []
         run, _ = self.validate()
         self.assertEqual(list(m.rows(run))[0]['kind'], 'unknown')
+        self.run.update(diarization_complete=False, speakers={})  # The worker's alignment-only partial run.
+        self.path.write_text(json.dumps(self.run, ensure_ascii=False), encoding='utf-8')
+        self.assertFalse(m.validate(self.path, require_speakers=False)[1]['diarization_complete'])
 
     def test_silence_multisource_casefold_and_punctuation(self):
         self.run['sources'][0].update(sample_count=48000, sample_rate=16000)

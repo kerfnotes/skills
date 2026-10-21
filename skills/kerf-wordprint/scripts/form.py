@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """One-page local form that collects every Wordprint choice at once and writes answers.json.
 
-Serves on 127.0.0.1 behind a random token, opens the browser, waits for one submit, prints the
-answers JSON and exits 0; any later submit or browse gets 409. When the --timeout deadline passes, however a connection stalls, exits 2 and
-prints the same questions for a text fallback;
-a request that finishes after the deadline gets 410. Open pickers are closed before exit. The tokened URL reaches stderr only with --no-open or
-when the browser fails to open.
+Serves on 127.0.0.1 behind a random token, one request at a time, opens the browser, waits for one submit, prints the
+answers JSON and exits 0. When the --timeout deadline passes, exits 2 and prints the same questions for a text fallback.
+The tokened URL reaches stderr only with --no-open or when the browser fails to open.
 """
 import argparse
 import html
@@ -15,19 +13,19 @@ import re
 import secrets
 import subprocess
 import sys
-import threading
 import time
 import webbrowser
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 ENGINES = {'qwen-0.6b': 'Qwen 0.6B：最快、堪用（本機）',
            'qwen-1.7b': 'Qwen 1.7B：慢 2～3 倍、較準（本機）',
-           'gemini-3.5-transcribe': 'Gemini 3.5 Transcribe：最快最準；會上傳 Google 並計費；單段 30 分鐘'}
+           'gemini-3.5-transcribe': 'Gemini 3.5 Transcribe：最快最準；會上傳 Google 並計費；含說話者每段 30 分鐘，更長自動切段',
+           'colab': 'Colab：在 Google Colab GPU 跑 Qwen；整段錄音一次分說話者，長的多人錄音 ID 前後一致（Gemini 每 25 分鐘、本機每 20 分鐘各自編號）；速度與準確度未實測；Google 登入、本機免安裝；分說話者需 Hugging Face token'}
 SUMMARIES = {'meeting': '會議', 'interview': '訪談', 'lecture': '演講／課程', 'none': '不要摘要', 'custom': '自訂'}
 QUESTIONS = """表單逾時，請改用文字逐題問使用者：
 1. 要轉哪些錄音？（語音備忘錄最近幾則，或本機檔案／資料夾路徑；多個時問是否合併成一段）
-2. 引擎：qwen-0.6b（預設；最快、堪用）／qwen-1.7b（慢 2～3 倍、較準）／gemini-3.5-transcribe（最快最準；會上傳 Google 並計費；單段 30 分鐘）
+2. 引擎：qwen-0.6b（預設；最快、堪用）／qwen-1.7b（慢 2～3 倍、較準）／gemini-3.5-transcribe（最快最準；會上傳 Google 並計費；含說話者每段 30 分鐘，更長自動切段）／colab（在 Google Colab GPU 跑 Qwen；整段一次分說話者，長的多人錄音 ID 前後一致；速度與準確度未實測；Google 登入、本機免安裝；分說話者需 Hugging Face token）
 3. 參與者名單（可略；只當候選名單，不直接指派給說話者）
 4. 摘要：meeting（預設）／interview／lecture／none／custom（請說明要什麼）
 5. 收件人 email（可略）；要不要開 Mail 草稿（預設不要）"""
@@ -67,18 +65,16 @@ def normalize(data, memos):
             'mail': bool(data.get('mail'))}
 
 
-def browse(kind):
-    """Start the native macOS picker; serve() keeps the handle so it can close a picker still open at exit."""
+def browse(kind, timeout):
+    """POSIX paths from the native macOS picker, or [] when the user cancels or the form's deadline closes it."""
     script = ('POSIX path of (choose folder)' if kind == 'folder' else
               'set out to ""\nrepeat with f in (choose file with multiple selections allowed)\n'
               'set out to out & POSIX path of f & linefeed\nend repeat\nreturn out')
-    return subprocess.Popen(['osascript', '-e', script], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-
-
-def picked(process):
-    """POSIX paths from a picker, or [] when the user cancels or the form closes it."""
-    stdout, _ = process.communicate()
-    return [line for line in stdout.splitlines() if line.strip()] if process.returncode == 0 else []
+    try:
+        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return []
+    return [line for line in result.stdout.splitlines() if line.strip()] if result.returncode == 0 else []
 
 
 def page(memos, css):
@@ -110,9 +106,9 @@ label {{ display: block; padding: 4px 0; }}
 .memo {{ display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; border-bottom: 1px solid var(--cp-line); }}
 .memo small, .hint {{ color: var(--cp-muted); font-size: var(--cp-small); }}
 .memos {{ max-height: 320px; overflow-y: auto; }}
-textarea, input[type=text], input[type=email] {{ width: 100%; font: inherit; padding: 8px; border: 1px solid var(--cp-line); border-radius: 4px; background: #fff; }}
-button {{ font: inherit; padding: 8px 16px; border: 1px solid var(--cp-accent); border-radius: 4px; background: none; color: var(--cp-accent); cursor: pointer; }}
-button.primary {{ margin-top: 28px; background: var(--cp-accent); color: #fff; }}
+textarea, input[type=text], input[type=email] {{ box-sizing: border-box; width: 100%; font: inherit; padding: 8px; border: 1px solid var(--cp-line, #bbb); border-radius: 4px; background: #fff; }}
+button {{ font: inherit; padding: 8px 16px; border: 1px solid var(--cp-accent, #C2553A); border-radius: 4px; background: none; color: var(--cp-accent, #C2553A); cursor: pointer; }}
+button.primary {{ margin-top: 28px; background: var(--cp-accent, #C2553A); color: #fff; }}
 .row {{ display: flex; gap: 10px; margin-top: 8px; }}
 #error {{ color: var(--cp-accent); font-weight: 700; }}
 </style>
@@ -183,20 +179,12 @@ def serve(memos, out, timeout, open_browser=True):
     remaining = lambda: max(0.05, deadline - time.monotonic())
     token = secrets.token_urlsafe(16)
     form_page = page(memos, theme_css()).encode('utf-8')
-    # status moves once, under the lock, from open to accepted or expired; done wakes the main thread.
-    lock, done = threading.Lock(), threading.Event()
-    state = {'status': 'open', 'answers': None, 'pickers': []}
-
-    def refusal():
-        """With the lock held: the (code, message) to refuse with once the form is answered or past its deadline."""
-        if state['status'] == 'open' and time.monotonic() >= deadline:
-            state['status'] = 'expired'
-            done.set()
-        return {'accepted': (409, '表單已送出'), 'expired': (410, '表單已逾時')}.get(state['status'])
+    answers = None
 
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
-            self.timeout = remaining()  # StreamRequestHandler applies it as the socket read timeout.
+            # Socket read timeout: an idle browser preconnect holds the single thread for at most 5 s.
+            self.timeout = min(5, remaining())
             super().setup()
 
         def log_message(self, *_):
@@ -217,6 +205,7 @@ def serve(memos, out, timeout, open_browser=True):
                 self.reply(404, {'error': 'not found'})
 
         def do_POST(self):
+            nonlocal answers
             if self.path not in (f'/{token}/submit', f'/{token}/browse'):
                 return self.reply(404, {'error': 'not found'})
             try:
@@ -224,55 +213,29 @@ def serve(memos, out, timeout, open_browser=True):
                 if not 0 <= length <= MAX_BODY:
                     return self.reply(413, {'error': '表單內容過大'})
                 data = json.loads(self.rfile.read(length) or b'{}')
-                with lock:
-                    refused = refusal()
-                    if refused is None and self.path.endswith('/browse'):
-                        process = browse(data.get('kind'))
-                        state['pickers'].append((process, threading.current_thread()))
-                    elif refused is None:
-                        answers = normalize(data, memos)
-                        Path(out).write_text(json.dumps(answers, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-                        state.update(status='accepted', answers=answers)
-                if refused:
-                    return self.reply(refused[0], {'error': refused[1]})
                 if self.path.endswith('/browse'):
-                    return self.reply(200, {'paths': picked(process)})
-                try:
-                    self.reply(200, {'ok': True})
-                finally:
-                    done.set()
+                    return self.reply(200, {'paths': browse(data.get('kind'), remaining())})
+                if time.monotonic() >= deadline:
+                    raise ValueError('表單已逾時')
+                result = normalize(data, memos)
+                Path(out).write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+                answers = result
+                self.reply(200, {'ok': True})
             except (ValueError, AttributeError) as error:
                 self.reply(400, {'error': str(error)})
             except TimeoutError:
                 self.close_connection = True
 
-    # Threads keep an idle or half-sent connection from blocking the real submit; the main thread owns the deadline.
-    server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-    threading.Thread(target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True).start()
-    url = f'http://127.0.0.1:{server.server_address[1]}/{token}/'
-    if not open_browser:
-        print(f'form: {url}', file=sys.stderr, flush=True)
-    elif not webbrowser.open(url):
-        print(f'瀏覽器沒有自動開啟，請手動開啟：{url}', file=sys.stderr, flush=True)
-    try:
-        done.wait(max(0, deadline - time.monotonic()))
-    finally:
-        with lock:
-            if state['status'] == 'open':
-                state['status'] = 'expired'
-            pickers = list(state['pickers'])
-        server.shutdown()
-        server.server_close()
-        for process, handler in pickers:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-            handler.join()
-        if state['status'] == 'accepted':
-            done.wait()  # The accepting handler sets it after its 200 is written.
-    return state['answers']
+    with HTTPServer(('127.0.0.1', 0), Handler) as server:
+        url = f'http://127.0.0.1:{server.server_address[1]}/{token}/'
+        if not open_browser:
+            print(f'form: {url}', file=sys.stderr, flush=True)
+        elif not webbrowser.open(url):
+            print(f'瀏覽器沒有自動開啟，請手動開啟：{url}', file=sys.stderr, flush=True)
+        while answers is None and deadline > time.monotonic():
+            server.timeout = remaining()
+            server.handle_request()
+    return answers
 
 
 def main():
