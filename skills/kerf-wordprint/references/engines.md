@@ -7,7 +7,7 @@
 | `qwen-0.6b` | 最快的本機選項 | 堪用 | 本機 | 需本機已快取 Qwen3-ASR-0.6B | 可用（預設） |
 | `qwen-1.7b` | 約慢 2～3 倍 | 較準 | 本機 | 需本機已快取 Qwen3-ASR-1.7B | 可用 |
 | `gemini-3.5-transcribe` | 最快 | 最準 | 上傳 Google，計費 | 含說話者與逐詞時間每段 30 分鐘，腳本自動切 25 分鐘段；最多 8 人 | 2026-10-21 真實呼叫一次（6 秒、兩人合成音）：兩位說話者、validate 通過、Google 端已刪除 |
-| `colab` | 視 Colab GPU | 同 Qwen（預設 1.7B） | Google Colab GPU | 要 Google 登入；說話者用 Nemotron，不需 token；整段一次分說話者 | 換 Nemotron 前在 Colab CPU 跑完一次（0.6B、無說話者）；現版只在本機驗證 |
+| `colab` | 視 Colab GPU | 同 Qwen（預設 1.7B） | Google Colab GPU | 要 Google 登入；說話者用 Nemotron，不需 token；整段一次分說話者 | 2026-10-22 在 Colab T4 從頭跑完一次（1.7B、6 秒兩人合成音）：兩位說話者、validate 通過；長錄音未測 |
 
 兩個 Qwen 選項：Apple Silicon 用 `qwen_worker.py`（MLX，ForcedAligner-0.6B 對時、Community-1 CoreML 分說話者）；Windows、Linux、Intel Mac 用 `torch_worker.py`（PyTorch，同一組 Qwen 模型，NVIDIA Nemotron-3-Diarization 分說話者，不需 token，最多 8 人；沒有 GPU 時長錄音很慢）。`run.json` 的 `model` 記實際模型 ID 與 revision。
 

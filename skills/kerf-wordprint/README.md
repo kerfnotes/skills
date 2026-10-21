@@ -29,7 +29,7 @@ Codex 的專案路徑是 `.agents/skills/kerf-wordprint/`；Claude Code 是 `.cl
 ## 已知限制
 
 - 表單、語音備忘錄讀取與 MLX 轉錄只在 Apple Silicon Mac 驗證過。Windows、Linux、Intel Mac 用 PyTorch worker（同一份程式在 macOS 驗證過，Windows 與 Linux 尚未實測），或 Colab 筆記本。
-- Gemini 引擎已用真實 API 呼叫驗證一次；金鑰要你自己用 `security add-generic-password -s kerf-wordprint-gemini -a wordprint -w` 存進鑰匙圈（Windows 改設 `GEMINI_API_KEY` 環境變數）。Colab 筆記本的 GPU 執行與 1.7B 尚未實測，「Open in Colab」連結要等 skill 推上 GitHub 後才有效。
+- Gemini 引擎已用真實 API 呼叫驗證一次；金鑰要你自己用 `security add-generic-password -s kerf-wordprint-gemini -a wordprint -w` 存進鑰匙圈（Windows 改設 `GEMINI_API_KEY` 環境變數）。Colab 筆記本已在 T4 GPU 用 1.7B 跑通一次（短合成音、兩位說話者），長錄音尚未實測；「Open in Colab」連結要等 skill 推上 GitHub 後才有效。
 - Mail 草稿目前只驗證過 dry-run（印出 AppleScript）；真實草稿要等你授權 macOS 自動化權限後再驗收。
 - 讀語音備忘錄需要給終端機「完整磁碟取用權」；不想給，就把備忘錄拖到資料夾再選路徑。
 - 第一次開 Mail 草稿時，macOS 會問是否允許控制 Mail，要你本人按允許。
