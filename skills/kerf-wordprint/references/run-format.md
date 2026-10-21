@@ -1,6 +1,6 @@
 # Normalized run and rendering
 
-On Apple Silicon, `qwen_worker.py` (and `gemini_transcribe.py`, `colab/wordprint.ipynb`) writes this format as `normalized-run.json`; other machines run the notebook. The helper does **not** run models, infer a real person's identity, or establish accuracy. Never manufacture a completion flag to satisfy validation.
+`qwen_worker.py` (Apple Silicon), `torch_worker.py` (other machines and the Colab notebook) and `gemini_transcribe.py` write this format as `normalized-run.json`. The helper does **not** run models, infer a real person's identity, or establish accuracy. Never manufacture a completion flag to satisfy validation.
 
 Store `run.json` in the task directory, outside the installed skill. UTF-8 JSON, `schema_version: 1`:
 

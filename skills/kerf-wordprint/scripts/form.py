@@ -24,11 +24,11 @@ from pathlib import Path
 ENGINES = {'qwen-0.6b': 'Qwen 0.6B：最快、堪用（本機）',
            'qwen-1.7b': 'Qwen 1.7B：慢 2～3 倍、較準（本機）',
            'gemini-3.5-transcribe': 'Gemini 3.5 Transcribe：最快最準；會上傳 Google 並計費；含說話者每段 30 分鐘，更長自動切段',
-           'colab': 'Colab：在 Google Colab GPU 跑 Qwen；整段錄音一次分說話者，長的多人錄音 ID 前後一致（Gemini 每 25 分鐘、本機每 20 分鐘各自編號）；速度與準確度未實測；Google 登入、本機免安裝；分說話者需 Hugging Face token'}
+           'colab': 'Colab：在 Google Colab GPU 跑 Qwen；整段錄音一次分說話者，長的多人錄音 ID 前後一致（Gemini 每 25 分鐘、本機每 20 分鐘各自編號）；速度與準確度未實測；Google 登入、本機免安裝，不需 Hugging Face 帳號'}
 SUMMARIES = {'meeting': '會議', 'interview': '訪談', 'lecture': '演講／課程', 'none': '不要摘要', 'custom': '自訂'}
 QUESTIONS = """表單逾時，請改用文字逐題問使用者：
 1. 要轉哪些錄音？（語音備忘錄最近幾則，或本機檔案／資料夾路徑；多個時問是否合併成一段）
-2. 引擎：qwen-0.6b（預設；最快、堪用）／qwen-1.7b（慢 2～3 倍、較準）／gemini-3.5-transcribe（最快最準；會上傳 Google 並計費；含說話者每段 30 分鐘，更長自動切段）／colab（在 Google Colab GPU 跑 Qwen；整段一次分說話者，長的多人錄音 ID 前後一致；速度與準確度未實測；Google 登入、本機免安裝；分說話者需 Hugging Face token）
+2. 引擎：qwen-0.6b（預設；最快、堪用）／qwen-1.7b（慢 2～3 倍、較準）／gemini-3.5-transcribe（最快最準；會上傳 Google 並計費；含說話者每段 30 分鐘，更長自動切段）／colab（在 Google Colab GPU 跑 Qwen；整段一次分說話者，長的多人錄音 ID 前後一致；速度與準確度未實測；Google 登入、本機免安裝，不需 Hugging Face 帳號）
 3. 參與者名單（可略；只當候選名單，不直接指派給說話者）
 4. 摘要：meeting（預設）／interview／lecture／none／custom（請說明要什麼）
 5. 收件人 email（可略）；要不要開 Mail 草稿（預設不要）"""
@@ -44,9 +44,14 @@ def theme_css():
 
 
 def recommended_engine():
-    """Preselect the route this machine can run now: local Qwen, else Gemini when a key is set up, else Colab."""
-    if platform.system() == 'Darwin' and platform.machine() == 'arm64' and shutil.which('mlx-qwen3-asr'):
-        return 'qwen-0.6b'
+    """Preselect the route this machine can run now: local Qwen (MLX or the torch environment), else Gemini when a key is set up, else Colab."""
+    if platform.system() == 'Darwin' and platform.machine() == 'arm64':
+        if shutil.which('mlx-qwen3-asr'):
+            return 'qwen-0.6b'
+    else:  # The environment doctor.py --fix builds for torch_worker.py.
+        venv = Path(os.environ.get('WORDPRINT_TORCH_VENV') or Path.home() / '.wordprint' / 'torch-venv')
+        if (venv / ('Scripts/python.exe' if platform.system() == 'Windows' else 'bin/python')).is_file():
+            return 'qwen-0.6b'
     if os.environ.get('GEMINI_API_KEY'):
         return 'gemini-3.5-transcribe'
     try:  # Only checks the Keychain item exists; never reads the key.

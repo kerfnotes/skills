@@ -20,19 +20,29 @@ SPEECH_CACHE = Path.home() / 'Library/Caches/qwen3-speech/models/aufklarer'
 VOICE_MEMOS = Path.home() / 'Library/Group Containers/group.com.apple.VoiceMemos.shared/Recordings'
 MODELS = ['Qwen/Qwen3-ASR-0.6B', 'Qwen/Qwen3-ForcedAligner-0.6B']
 NEED_FREE_GB = 6  # Two 0.6B models are about 3.5 GB in the Hugging Face cache.
+# Windows, Linux and Intel Macs run scripts/torch_worker.py from this environment (also the Colab notebook's versions).
+TORCH_VENV = Path(os.environ.get('WORDPRINT_TORCH_VENV') or Path.home() / '.wordprint' / 'torch-venv')
+NEMO = 'nemo-toolkit[asr] @ https://github.com/NVIDIA/NeMo/archive/16b0ff2584c6355c53cbd6c28f0f431a76b24956.zip'
+TORCH_PACKAGES = ['qwen-asr', 'transformers==4.57.6', 'Cython', 'packaging', 'opencc', NEMO]  # One resolve keeps the pin.
 
 
-def run(*command, stdin=None):
+def run(*command, stdin=None, timeout=20):
     """Exit code 0 and stdout, or (False, '') when the command is missing or hangs."""
     try:
-        result = subprocess.run(command, input=stdin, capture_output=True, text=True, timeout=20)
+        result = subprocess.run(command, input=stdin, capture_output=True, text=True, timeout=timeout)
         return result.returncode == 0, result.stdout.strip()
     except (OSError, subprocess.TimeoutExpired):
         return False, ''
 
 
+def torch_python():
+    return TORCH_VENV / ('Scripts/python.exe' if platform.system() == 'Windows' else 'bin/python')
+
+
 def worker_python():
-    """The interpreter on the mlx-qwen3-asr shebang, where huggingface_hub is installed."""
+    """The interpreter where huggingface_hub is installed: the mlx-qwen3-asr shebang, else the torch environment."""
+    if not (platform.system() == 'Darwin' and platform.machine() == 'arm64'):
+        return str(torch_python())
     tool = shutil.which('mlx-qwen3-asr')
     first = Path(tool).read_text(errors='replace').splitlines()[0] if tool else ''
     return first[2:].strip() if first.startswith('#!') else None
@@ -62,6 +72,14 @@ def download_models():
     subprocess.run([worker_python(), '-c', code, *MODELS], check=True)
 
 
+def build_torch_venv():
+    free = shutil.disk_usage(Path.home()).free / 1e9
+    if free < NEED_FREE_GB + 2:
+        raise SystemExit(f'only {free:.1f} GB free; the environment and models need about {NEED_FREE_GB + 2} GB')
+    subprocess.run(['uv', 'venv', '--python', '3.12', str(TORCH_VENV)], check=True)
+    subprocess.run(['uv', 'pip', 'install', '--python', str(torch_python()), *TORCH_PACKAGES], check=True)
+
+
 def checks():
     """(name, ok, who, next step, fix) in install order; fix is a callable or an argv list for `agent` items."""
     mac = platform.system() == 'Darwin'
@@ -69,17 +87,35 @@ def checks():
     brew = shutil.which('brew')
     no_brew = (False, 'you', 'install Homebrew from https://brew.sh (asks for your password)', None)
 
+    windows = platform.system() == 'Windows'
+    winget = {'ffmpeg': 'Gyan.FFmpeg', 'uv': 'astral-sh.uv'}
+
     def formula(name):
-        if not mac:  # Windows: winget (ffmpeg: Gyan.FFmpeg); OpenCC: the release zip from github.com/BYVoid/OpenCC.
-            return bool(shutil.which(name)), 'agent', f'install {name} with winget or the package manager, then put it on PATH', None
-        return (bool(shutil.which(name)), 'agent', f'brew install {name}', ['brew', 'install', name]) if brew else no_brew
+        found = bool(shutil.which(name))
+        if mac:
+            return (found, 'agent', f'brew install {name}', ['brew', 'install', name]) if brew else no_brew
+        if windows and name in winget:
+            return found, 'agent', f'winget install -e --id {winget[name]} (then reopen the terminal)', \
+                ['winget', 'install', '-e', '--id', winget[name], '--accept-source-agreements', '--accept-package-agreements']
+        if name == 'uv':  # The official installer needs no administrator rights.
+            return found, 'agent', 'install uv from https://astral.sh/uv', ['sh', '-c', 'curl -LsSf https://astral.sh/uv/install.sh | sh']
+        return found, 'you', f'install {name} with your package manager (for example sudo apt install {name})', None
     items = [('python', sys.version_info >= (3, 10), 'you', 'Python 3.10+ is needed', None)]
     if mac:
         items.append(('homebrew', bool(brew), *no_brew[1:]))
     ffmpeg = formula('ffmpeg')
     items.append(('ffmpeg', bool(shutil.which('ffmpeg') and shutil.which('ffprobe')), *ffmpeg[1:]))
-    opencc = formula('opencc')
-    items.append(('opencc', run('opencc', '-c', 's2twp.json', stdin='测试') == (True, '測試'), *opencc[1:]))
+    if mac_arm:
+        opencc = formula('opencc')
+        items.append(('opencc', run('opencc', '-c', 's2twp.json', stdin='测试') == (True, '測試'), *opencc[1:]))
+    if not mac_arm:
+        ready = run(str(torch_python()), '-c', 'import qwen_asr, opencc, nemo.collections.asr', timeout=300)[0]
+        items += [('uv', *formula('uv')),
+                  ('torch-worker', ready, 'agent', f'create {TORCH_VENV} with qwen-asr, NeMo and OpenCC (about 1.7 GB)',
+                   build_torch_venv),
+                  ('qwen-models', all((HUB / ('models--' + m.replace('/', '--'))).is_dir() for m in MODELS), 'agent',
+                   f'download {" and ".join(MODELS)} (about 3.5 GB; the 189 MB speaker model downloads on first run)',
+                   download_models)]
     if mac_arm:
         items += [
             ('uv', *formula('uv')),
@@ -103,20 +139,24 @@ def checks():
             memos_ok = False
         items.append(('voice-memos-access', memos_ok, 'you', 'optional: System Settings → Privacy & Security → Full '
                       'Disk Access → enable your terminal or agent app (otherwise drag recordings into a folder)', None))
-    key = bool(os.environ.get('GEMINI_API_KEY')) or run('security', 'find-generic-password', '-s', 'kerf-wordprint-gemini',
-                                                         '-a', 'wordprint')[0]  # Existence only; the key is never read.
-    items.append(('gemini-key', key, 'you', 'optional: create a key at https://aistudio.google.com/apikey, then run '
-                  'security add-generic-password -s kerf-wordprint-gemini -a wordprint -w', None))
+    key = bool(os.environ.get('GEMINI_API_KEY')) or mac and run('security', 'find-generic-password', '-s',
+                                                                 'kerf-wordprint-gemini', '-a', 'wordprint')[0]  # Existence only.
+    store = ('run security add-generic-password -s kerf-wordprint-gemini -a wordprint -w' if mac else
+             'save it as the GEMINI_API_KEY user environment variable')
+    items.append(('gemini-key', key, 'you', f'optional: create a key at https://aistudio.google.com/apikey, then {store}', None))
     return items, mac_arm
 
 
 def report(items, mac_arm):
     ok = {name: good for name, good, *_ in items}
-    base = ok['python'] and ok['ffmpeg'] and ok['opencc']
-    local = ('mlx-qwen3-asr', 'qwen-models')
-    routes = {'local': base and mac_arm and all(ok[n] for n in local),
-              'local-speakers': base and mac_arm and all(ok[n] for n in local + ('speaker-models', 'speaker-bridge')),
-              'gemini': base and ok['gemini-key'], 'colab': base}
+    if mac_arm:
+        base = ok['python'] and ok['ffmpeg'] and ok['opencc']
+        local = base and ok['mlx-qwen3-asr'] and ok['qwen-models']
+        speakers = local and ok['speaker-models'] and ok['speaker-bridge']
+    else:  # OpenCC comes with the torch environment; render with its python.
+        base = ok['python'] and ok['ffmpeg'] and ok['torch-worker']
+        local = speakers = base and ok['qwen-models']
+    routes = {'local': local, 'local-speakers': speakers, 'gemini': base and ok['gemini-key'], 'colab': ok['python']}
     rows = [{'check': name, 'ok': good, 'who': None if good else who, 'next': None if good else step}
             for name, good, who, step, _ in items]
     return routes, rows

@@ -361,10 +361,17 @@ def render(run, report, output, original_script=False, opencc='opencc', title=No
     texts = [row['text'] for row in rendered]
     if not original_script:
         binary = shutil.which(opencc)
-        require(binary is not None, 'OpenCC not found; install it or explicitly pass --original-script')
+        try:  # Windows has no OpenCC CLI package; the torch worker's environment ships the official Python binding.
+            module = None if binary else __import__('opencc').OpenCC('s2twp.json')
+        except ImportError:
+            module = None
+        require(binary or module, 'OpenCC not found; install it or explicitly pass --original-script')
         # Convert only transcript text; identity labels and source evidence remain untouched.
         # ponytail: one OpenCC process per row; batch conversion if measured startup cost dominates.
         for i, text in enumerate(texts):
+            if module:
+                texts[i] = module.convert(text)
+                continue
             result = subprocess.run([binary, '-c', 's2twp.json'], input=text, text=True, encoding='utf-8',
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
             require(result.returncode == 0 and (not text or bool(result.stdout)), f'OpenCC failed: {result.stderr.strip()}')

@@ -129,7 +129,13 @@ class RecommendedEngineTests(unittest.TestCase):
                 mock.patch.object(form.platform, 'machine', return_value='arm64'), \
                 mock.patch.object(form.shutil, 'which', return_value='/bin/mlx-qwen3-asr'):
             self.assertEqual(form.recommended_engine(), 'qwen-0.6b')
-        with mock.patch.object(form.platform, 'system', return_value='Windows'), mock.patch.dict(form.os.environ, clear=True):
+        with tempfile.TemporaryDirectory() as venv, mock.patch.object(form.platform, 'system', return_value='Linux'), \
+                mock.patch.dict(form.os.environ, {'WORDPRINT_TORCH_VENV': venv}, clear=True):
+            (Path(venv) / 'bin').mkdir()
+            (Path(venv) / 'bin/python').touch()
+            self.assertEqual(form.recommended_engine(), 'qwen-0.6b')
+        with mock.patch.object(form.platform, 'system', return_value='Windows'), \
+                mock.patch.dict(form.os.environ, {'WORDPRINT_TORCH_VENV': '/nonexistent'}, clear=True):
             with mock.patch.object(form.subprocess, 'run', return_value=mock.Mock(returncode=0)):
                 self.assertEqual(form.recommended_engine(), 'gemini-3.5-transcribe')
             with mock.patch.object(form.subprocess, 'run', return_value=missing):
