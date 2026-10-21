@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 範例：疑慮對照（精簡圖，短答用）。說明見 concern-installment-fee.md。 -->
+<style>
+.pm{font-family:var(--font-sans,system-ui,sans-serif);color:var(--foreground);line-height:1.5;display:flex;flex-direction:column;gap:16px}
+.pm p{margin:0}
+.pm h1{font-size:17px;line-height:1.4;margin:0;font-weight:700}
+.pm .turn{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:10px 14px;font-size:14px}
+.pm .turn b{color:var(--accent,#3b82f6)}
+.pm .tag{display:inline-block;font-size:11px;line-height:1.3;padding:0 4px;border:1.5px solid;border-radius:4px;margin-left:4px;white-space:nowrap;vertical-align:1px;font-weight:600}
+.pm .t-draft{border-color:var(--muted-foreground,currentColor)}
+.pm .t-ask{border-color:var(--destructive,#ef4444)}
+.pm .qa-h,.pm .qa-r{display:grid;grid-template-columns:2fr 3fr;gap:4px 12px;font-size:13px}
+.pm .qa-h{font-size:12px;color:var(--muted-foreground)}
+.pm .qa-r{border-top:1px solid var(--border);padding:8px 0}
+.pm .qa-r .q{font-weight:700}
+.pm .qa-r[data-focal]{border:2px solid var(--accent,#3b82f6);border-radius:var(--radius,8px);padding:8px 10px}
+/* 局部補：窄螢幕不隱藏欄名，改成一行，讓讀者知道粗體句是法務的疑問 */
+@media (max-width:480px){.pm .qa-h{display:flex;gap:4px}.pm .qa-h span+span::before{content:"→ "}.pm .qa-r{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="pm">
+<h1>品妤的稿支柱都在，只缺「其他期為何也改」</h1>
+<p class="turn" data-focal><b>第一步：</b>補這句，今天回法務</p>
+<div class="qa">
+  <div class="qa-h"><span>法務心裡的問題</span><span>回答與依據</span></div>
+  <div class="qa-r"><p class="q">四捨五入是藉口？</p><p>主管機關對第 12 期的認定<span class="tag t-draft">稿內已有</span></p></div>
+  <div class="qa-r"><p class="q">其他期偷改了？</p><p>剩餘本金、比率都沒變<span class="tag t-draft">稿內已有</span></p></div>
+  <div class="qa-r" data-focal><p class="q">其他期為何也改？</p><p>補：為讓第 12 期按剩餘本金算，全期同一算式<span class="tag t-ask">待問你</span></p></div>
+  <div class="qa-r"><p class="q">1 元哪來？</p><p>新舊算式各一行<span class="tag t-draft">稿內已有</span></p></div>
+</div>
+</div>
+</body>
+</html>
