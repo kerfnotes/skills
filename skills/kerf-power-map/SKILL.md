@@ -42,7 +42,7 @@ compatibility: "Bundled Markdown story file and case pages are read directly wit
 
 ## 4. 地圖
 
-- 每輪附一張圖，只道謝收尾除外。短答與判讀輪用精簡圖（3～5 列、約 100 字），完整策略用一到兩塊面板。
+- 每輪附一張圖，續作時圖還適用就沿用。短答與判讀輪用精簡圖（3～5 列、約 100 字），完整策略用一到兩塊面板。
 - 正文寫說什麼、做什麼；圖寫為什麼站得住、該選哪一步。照念稿不搬進圖。
 - 每次畫圖前讀 [board.md](references/board.md)：先判卡點，再從六種圖型（疑慮對照、決策圈、傳遞路線、分支、立場四象限、利益交集）挑一種；先寫一句「這張圖幫使用者選哪一步」，寫不出就換圖型。再讀 [examples/index.md](references/examples/index.md) 指向的最接近一例。
 - 圖的確定程度跟正文一致。人名換成別的案子還能照用，就重畫。
