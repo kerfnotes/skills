@@ -16,7 +16,7 @@
 `scripts/gemini_transcribe.py`，只用標準庫與 ffmpeg，run 目錄規則與輸出和 worker 相同。
 
 - 解碼成 canonical PCM 後切成 ≤25 分鐘的 WAV 段，經 Files API 上傳，再呼叫 Interactions API `POST /v1beta/interactions`，`transcription_config.mode = {"type": "verbatim", "diarization_mode": "speaker", "timestamp_granularities": ["word"]}`；狀態為 `in_progress`／`queued` 時輪詢。
-- `word_info` 的 `start_offset`／`end_offset` 加上段落 offset。chunk 一段一個；`complete`／`truncated` 由互動狀態決定（`completed` 才算未截斷）。output_text 與逐詞不一致時 chunk 文字取自逐詞並在 state.json 警示。
+- `word_info` 的 `start_offset`／`end_offset` 加上段落 offset。chunk 一段一個；`complete`／`truncated` 由互動狀態決定（`completed` 才算未截斷）。output_text 與逐詞不一致時保留 output_text、整份標為 partial 並在 state.json 警示。
 - 說話者：單段為 S1、S2…（依首次發言）；多段為 `part-N-spk_M`，不跨段推定是同一人。
 - 不送 custom vocabulary（官方確認不能與說話者或逐詞時間併用），參與者名單只當 `participant_candidates`。
 - 轉完刪除 Google 端的上傳檔與互動紀錄（否則檔案留 48 小時、互動最多留 55 天）；刪不掉會寫進警示。

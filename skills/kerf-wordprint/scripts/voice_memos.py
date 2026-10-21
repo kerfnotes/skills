@@ -52,6 +52,9 @@ def main():
     try:
         print(json.dumps(memos(), ensure_ascii=False, indent=2))
         return 0
+    except FileNotFoundError:  # Voice Memos never used on this Mac.
+        print('[]')
+        return 0
     except PermissionError:
         print('需要完整磁碟取用權，或把備忘錄拖到資料夾', file=sys.stderr)
         return 3

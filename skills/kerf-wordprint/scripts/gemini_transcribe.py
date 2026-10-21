@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -198,6 +199,7 @@ def main():
     parser.add_argument("--audio", required=True, action="append", help="repeat to merge recordings in this order")
     parser.add_argument("--run-directory", required=True)
     args = parser.parse_args()
+    signal.signal(signal.SIGTERM, worker.interrupt)  # A killed run still deletes its Google files in finally.
     key = api_key()  # Before claim(), so a missing key leaves no run directory behind.
     directory = Path(args.run_directory).resolve()
     try:
