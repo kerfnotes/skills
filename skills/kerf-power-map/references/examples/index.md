@@ -4,11 +4,11 @@
 
 | 卡點 | 圖型 | 範例 | 交付 | 這例要學的 |
 |---|---|---|---|---|
-| 對方對說明內容有疑慮 | 疑慮對照 | [concern-installment-fee.md](concern-installment-fee.md) | 短答＋精簡圖 | 先列草稿已有的支柱，只把缺的那一列標成轉折 |
+| 對方對說明內容有疑慮 | 疑慮對照 | [concern-nutrition-label.md](concern-nutrition-label.md) | 短答＋精簡圖 | 先列草稿已有的支柱，只把缺的那一列標成轉折 |
 | 誰點頭才算數 | 決策圈 | [circle-first-article-photo.md](circle-first-article-photo.md) | 完整策略＋完整面板 | 圈照「少了誰不行」分，不照職級；口頭說好不等於簽核 |
 | 拍板者看到什麼 | 傳遞路線 | [relay-go-live-risk.md](relay-go-live-risk.md) | 短答＋精簡圖 | 被刪的原話寫在被過濾的那一段；不知道有沒有收到就畫成問句 |
 | 關鍵事實未知 | 分支 | [branch-secondment-end-date.md](branch-secondment-end-date.md) | 判讀輪＋精簡圖 | 把「先找誰」換成只有使用者知道的那個事實，兩支各寫第一步 |
-| 各方立場 | 立場四象限 | [quadrant-inspection-proposal.md](quadrant-inspection-proposal.md) | 完整策略＋完整面板 | 排會前找人的順序；只開條件、沒表態的拍板者放格外，標立場未知 |
+| 各方立場 | 立場四象限 | [quadrant-inspection-proposal.md](quadrant-inspection-proposal.md) | 完整策略＋完整面板 | 排會前找人的順序；立場位置標推測，只開條件或只講限制、沒表態的人放格外，標立場未知 |
 | 交換條件與退路 | 利益交集 | [venn-design-support.md](venn-design-support.md) | 完整策略＋完整面板 | 重疊處寫雙方都要的；退路只寫不用對方點頭就能做的事 |
 
 ## 容易混的兩例
