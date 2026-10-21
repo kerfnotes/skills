@@ -119,3 +119,20 @@ class FormTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class RecommendedEngineTests(unittest.TestCase):
+    def test_local_then_gemini_key_then_colab(self):
+        form = load_form()
+        missing = mock.Mock(returncode=44)
+        with mock.patch.object(form.platform, 'system', return_value='Darwin'), \
+                mock.patch.object(form.platform, 'machine', return_value='arm64'), \
+                mock.patch.object(form.shutil, 'which', return_value='/bin/mlx-qwen3-asr'):
+            self.assertEqual(form.recommended_engine(), 'qwen-0.6b')
+        with mock.patch.object(form.platform, 'system', return_value='Windows'), mock.patch.dict(form.os.environ, clear=True):
+            with mock.patch.object(form.subprocess, 'run', return_value=mock.Mock(returncode=0)):
+                self.assertEqual(form.recommended_engine(), 'gemini-3.5-transcribe')
+            with mock.patch.object(form.subprocess, 'run', return_value=missing):
+                self.assertEqual(form.recommended_engine(), 'colab')
+            with mock.patch.object(form.subprocess, 'run', side_effect=OSError):
+                self.assertEqual(form.recommended_engine(), 'colab')

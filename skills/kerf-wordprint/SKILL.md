@@ -1,7 +1,7 @@
 ---
 name: kerf-wordprint
 description: "Wordprint: guided local transcription — pick Voice Memos or audio files in a one-page form, transcribe with local Qwen, Gemini 3.5 Transcribe or Qwen on Google Colab, label speakers, then deliver a reading page, an optional summary report, and an optional Mail draft. Also merges recordings or relabels an existing transcript. Use for 音檔轉錄、逐字稿、語音備忘錄、說話者標記、會議錄音整理. Not for summarizing text that is not a recording, voice cloning, or downloading online videos."
-compatibility: "Python 3.10+ (standard library only for the bundled scripts), ffmpeg, ffprobe, OpenCC, and locally cached Qwen ASR/ForcedAligner plus Community-1. The form, Voice Memos reader and worker are verified only on Apple Silicon macOS. The Mail draft is verified as --dry-run only; a real draft awaits the user granting macOS Automation permission. Other machines use colab/wordprint.ipynb; running it in local Jupyter is untested. gemini_transcribe.py (standard library + ffmpeg, needs a Gemini API key) is tested only on hand-built responses; a real API call is unverified. The Colab notebook's ASR and alignment cells are verified on CPU only; the GPU runtime, the diarization cell and a full Colab run are unverified."
+compatibility: "Python 3.10+ (standard library only for the bundled scripts), ffmpeg, ffprobe, OpenCC, and locally cached Qwen ASR/ForcedAligner plus Community-1. The form, Voice Memos reader and worker are verified only on Apple Silicon macOS. The Mail draft is verified as --dry-run only; a real draft awaits the user granting macOS Automation permission. Other machines use colab/wordprint.ipynb; running it in local Jupyter is untested. gemini_transcribe.py (standard library + ffmpeg, needs a Gemini API key) is verified by one real call on a 6-second two-speaker synthetic clip (2026-10-21). The Colab notebook's ASR and alignment cells are verified on CPU only; the GPU runtime, the diarization cell and a full Colab run are unverified."
 ---
 
 # Wordprint
@@ -15,7 +15,7 @@ Produce a source-preserving transcript with timestamps and anonymous or user-sup
 Skip this step when the request only relabels, renames, or re-times an existing transcript; go to step 4 with its run.json.
 
 1. `python3 SCRIPTS/voice_memos.py > TASK/memos.json`. Exit 3 means no Full Disk Access: pass its message to the user and continue without `--memos`.
-2. `python3 SCRIPTS/form.py --memos TASK/memos.json --out TASK/answers.json`. Run it in the background (it waits up to 10 minutes, longer than a foreground tool call); it opens the browser and prints `answers.json` when the user submits. Exit 2 means it timed out: ask the questions it printed, in text, and write the same answers.json shape yourself.
+2. `python3 SCRIPTS/form.py --memos TASK/memos.json --out TASK/answers.json`. Run it in the background (it waits up to 10 minutes, longer than a foreground tool call); it preselects the route this machine can run now (local Qwen, else Gemini when a key exists, else Colab), opens the browser and prints `answers.json` when the user submits. Exit 2 means it timed out: ask the questions it printed, in text, and write the same answers.json shape yourself.
 3. Read answers.json:
    - `sources` in order. A `path` that is a folder means its audio files sorted by name. With `merge: false`, each source is its own run.
    - `engine`: `qwen-0.6b` → `--model 0.6B`; `qwen-1.7b` → `--model 1.7B`. See [engines.md](references/engines.md).
@@ -32,7 +32,7 @@ Model rules hold whatever the form says:
 
 ## 2. Check the local runtime
 
-For `gemini-3.5-transcribe` only ffmpeg/ffprobe matter; `colab` needs nothing local until step 4. Otherwise discover installed executables, model caches, platform, and accelerators; never copy paths from another user's machine. Read [install.md](docs/install.md) §3 only for missing dependencies, unfamiliar platforms, or model access requirements.
+Start with `python3 SCRIPTS/doctor.py` (read-only): each missing piece is marked `agent` (a routine install you run) or `you` (pass that single step to the user), plus which routes are ready. For `gemini-3.5-transcribe` only ffmpeg/ffprobe matter; `colab` needs nothing local until step 4. Otherwise discover installed executables, model caches, platform, and accelerators; never copy paths from another user's machine. Read [install.md](docs/install.md) §3 only for missing dependencies, unfamiliar platforms, or model access requirements.
 
 - Worker Python: the interpreter on the shebang of `which mlx-qwen3-asr` (`head -1 "$(which mlx-qwen3-asr)"`). The bundled scripts other than the worker run on any `python3`.
 - Speaker backend: `SCRIPTS/community1-bridge/build/community1-bridge` runs offline under `sandbox-exec`. When it is missing, build it with `sh SCRIPTS/community1-bridge/build.sh` (Xcode Command Line Tools). Without it the run ends `partial` with no speakers.

@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `qwen-0.6b` | 最快的本機選項 | 堪用 | 本機 | 需本機已快取 Qwen3-ASR-0.6B | 可用（預設） |
 | `qwen-1.7b` | 約慢 2～3 倍 | 較準 | 本機 | 需本機已快取 Qwen3-ASR-1.7B | 可用 |
-| `gemini-3.5-transcribe` | 最快 | 最準 | 上傳 Google，計費 | 含說話者與逐詞時間每段 30 分鐘，腳本自動切 25 分鐘段；最多 8 人 | 已實作，真實 API 呼叫未驗證 |
+| `gemini-3.5-transcribe` | 最快 | 最準 | 上傳 Google，計費 | 含說話者與逐詞時間每段 30 分鐘，腳本自動切 25 分鐘段；最多 8 人 | 2026-10-21 真實呼叫一次（6 秒、兩人合成音）：兩位說話者、validate 通過、Google 端已刪除 |
 | `colab` | 視 Colab GPU | 同 Qwen（預設 1.7B） | Google Colab GPU | 要 Google 登入；分說話者要 Hugging Face token；整段一次分說話者 | ASR／對時本機 CPU 驗證；GPU、說話者與完整 Colab 未驗證 |
 
 兩個 Qwen 選項共用同一條 worker 管線：ForcedAligner-0.6B 對時、Community-1 分說話者，`run.json` 的 `model` 記實際模型 ID 與 revision。

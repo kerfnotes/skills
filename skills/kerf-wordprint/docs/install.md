@@ -47,7 +47,7 @@ python3 -m unittest discover -s tests
 
 ## 3. 準備本機工具與模型
 
-先偵測作業系統與晶片，沿用已能用的工具，只補缺少的項目。例行安裝由 agent 完成；帳號、同意條款與 token 只請使用者本人處理，agent 不代為同意，token 不進指令、檔案、run 紀錄或 Git。工具裝在獨立環境，不放進 skill 資料夾。
+先跑 `python3 "$WORDPRINT_SKILL/scripts/doctor.py"`（唯讀）：逐項列出缺什麼，標 `agent` 的由 agent 補，標 `you` 的只把那一步交給使用者，最後列出哪些路線已能用。沿用已能用的工具，只補缺少的項目。例行安裝由 agent 完成；帳號、同意條款與 token 只請使用者本人處理，agent 不代為同意，token 不進指令、檔案、run 紀錄或 Git。工具裝在獨立環境，不放進 skill 資料夾。
 
 - Apple Silicon Mac：本機 worker，`mlx-qwen3-asr` 跑 Qwen3-ASR 0.6B／1.7B 與 ForcedAligner 0.6B，說話者用下方離線 bridge。
 - Windows、Intel Mac、Linux 等：跑 `colab/wordprint.ipynb`，在 Google Colab 或本機 Jupyter（未實測）；本機只需 FFmpeg、OpenCC 與 Python。Gemini 引擎在哪都能用，只需 FFmpeg。

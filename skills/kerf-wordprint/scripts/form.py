@@ -9,8 +9,11 @@ import argparse
 import html
 import importlib.util
 import json
+import os
+import platform
 import re
 import secrets
+import shutil
 import subprocess
 import sys
 import time
@@ -38,6 +41,20 @@ def theme_css():
     helper = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(helper)
     return helper.clayprint_css()
+
+
+def recommended_engine():
+    """Preselect the route this machine can run now: local Qwen, else Gemini when a key is set up, else Colab."""
+    if platform.system() == 'Darwin' and platform.machine() == 'arm64' and shutil.which('mlx-qwen3-asr'):
+        return 'qwen-0.6b'
+    if os.environ.get('GEMINI_API_KEY'):
+        return 'gemini-3.5-transcribe'
+    try:  # Only checks the Keychain item exists; never reads the key.
+        found = subprocess.run(['security', 'find-generic-password', '-s', 'kerf-wordprint-gemini', '-a', 'wordprint'],
+                               capture_output=True).returncode == 0
+    except OSError:
+        found = False
+    return 'gemini-3.5-transcribe' if found else 'colab'
 
 
 def normalize(data, memos):
@@ -77,7 +94,7 @@ def browse(kind, timeout):
     return [line for line in result.stdout.splitlines() if line.strip()] if result.returncode == 0 else []
 
 
-def page(memos, css):
+def page(memos, css, engine='qwen-0.6b'):
     rows = []
     for i, memo in enumerate(memos[:20]):
         minutes, seconds = divmod(round(memo.get('duration') or 0), 60)
@@ -85,8 +102,9 @@ def page(memos, css):
         rows.append(f'<label class="memo"><input type="checkbox" name="memo" value="{i}"{" checked" if i == 0 else ""}>'
                     f'<span>{html.escape(memo["title"])}</span><small>{html.escape(when)}・{minutes}:{seconds:02}</small></label>')
     memo_html = '\n'.join(rows) or '<p class="hint">沒有讀到語音備忘錄；請用下方路徑。</p>'
-    engines = ''.join(f'<label><input type="radio" name="engine" value="{k}"{" checked" if k == "qwen-0.6b" else ""}> {html.escape(v)}</label>'
-                      for k, v in ENGINES.items())
+    unavailable = '（這台電腦還沒裝好）' if engine != 'qwen-0.6b' else ''
+    engines = ''.join(f'<label><input type="radio" name="engine" value="{k}"{" checked" if k == engine else ""}> '
+                      f'{html.escape(v + (unavailable if k.startswith("qwen") else ""))}</label>' for k, v in ENGINES.items())
     summaries = ''.join(f'<label><input type="radio" name="summary" value="{k}"{" checked" if k == "meeting" else ""}> {html.escape(v)}</label>'
                         for k, v in SUMMARIES.items())
     return f"""<!doctype html>
@@ -178,7 +196,7 @@ def serve(memos, out, timeout, open_browser=True):
     deadline = time.monotonic() + timeout
     remaining = lambda: max(0.05, deadline - time.monotonic())
     token = secrets.token_urlsafe(16)
-    form_page = page(memos, theme_css()).encode('utf-8')
+    form_page = page(memos, theme_css(), recommended_engine()).encode('utf-8')
     answers = None
 
     class Handler(BaseHTTPRequestHandler):
