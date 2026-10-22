@@ -95,6 +95,24 @@
 | `columns` | 2～4 欄 | 2～5 欄 |
 | `evidence` 的 `table` | 依可用高度 | 至多 14 列 |
 | `close` | 依可用高度 | 至多 14 列 |
+| `panels` | 不支援 | 恰好 2 格，每格 `note` 至多 3 行 |
+
+`panels` 只在閱讀型使用，一頁並排兩格，各放一張圖、一張表、一份清單或一段文字；現場簡報用到會驗收失敗。`visual` 為 `{items: [{title, visual, note?}, {title, visual, note?}], split?}`：`items` 恰好兩格；格標題 10 pt；格內 `visual` 是圖表或表格的 `{kind, …}`（同[圖表欄位](charts.md)，表格用 `table` 圖種）、清單 `{items: [{heading, body?}]}` 或一段文字字串（正文 11 pt）；`note` 10 pt、至多 3 行，超出警告。預設兩格等寬，`split: [3, 2]` 依比例分寬。格內數字與註一樣要能在原稿找到；兩格都是文字或清單時也套用 70% 填滿警告。
+
+```json
+{
+  "type": "panels",
+  "claim": "河東與河西的騎乘量都成長，河東增量最大",
+  "visual": {
+    "split": [3, 2],
+    "items": [
+      { "title": "各區 2025 年騎乘量", "visual": { "kind": "rank", "unit": "萬次", "rows": [{ "label": "河東區", "value": 398 }, { "label": "河西區", "value": 301 }] }, "note": "河東區 398 萬次最高。" },
+      { "title": "主要風險", "visual": { "items": [{ "heading": "司機招募不易", "body": "尖峰補車延遲。" }] } }
+    ]
+  },
+  "sources": { "source": "河港市交通局營運報表" }
+}
+```
 
 沒有講者，要說的話就要寫在頁面上：
 

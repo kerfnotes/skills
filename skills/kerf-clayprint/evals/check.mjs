@@ -36,12 +36,14 @@ export async function check(story, script) {
       throw new Error(`第 ${n} 頁：文字稿沒有可核對的數字，不能放量化圖表；請改用 statement、compare、close 或純文字 table。`);
     }
     const allowed = [...original, ...calculations(page, original, n)];
+    // panels' split is a width ratio, not a measurement.
+    const shown = (field) => field === 'visual' && page.type === 'panels' ? { ...page.visual, split: undefined } : page[field];
     const visible = [
       ...['claim', 'kicker', 'lede', 'note'].map((field) => [field, page[field]]),
       ...['value', 'label', 'unit'].map((field) => [`metric.${field}`, page.metric?.[field]]),
       // period holds date ranges such as 2025.01–2025.12; dates are reviewed by hand, not as measured values.
       ...['source', 'unit', 'more'].map((field) => [`sources.${field}`, page.sources[field]]),
-      ['visual', page.visual],
+      ['visual', shown('visual')],
     ].flatMap(([path, value]) => visibleText(value, path));
     for (const { text, path } of visible) {
       // 已驗算的片段由算式語法處理正負號，避免將減號誤認為原稿負數。
@@ -56,7 +58,7 @@ export async function check(story, script) {
     if (page.type === 'evidence') fields.push('metric');
     if (['cover', 'section', 'statement', 'evidence'].includes(page.type)) fields.push('note');
     const picture = fields.filter((field) => field !== 'visual' || page.type !== 'evidence')
-      .flatMap((field) => visibleText(page[field], field))
+      .flatMap((field) => visibleText(shown(field), field))
       .filter(({ path }) => !/\.(?:focus|digits|source|period|prev)(?:[.\[]|$)/.test(path))
       .flatMap(({ text }) => numbers(text));
     if (page.type === 'evidence') {
