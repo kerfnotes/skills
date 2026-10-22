@@ -13,7 +13,7 @@
 
 ## report.json
 
-根物件有 `title`、`message`（讀者要帶走的一句話）、選用的 `kicker`、`meta`（封面資訊，至多三項 `{label, value}`）、`summary` 和依閱讀順序排列的 `sections`。三節以上自動加目錄。
+根物件有 `title`、`message`（讀者要帶走的一句話）、選用的 `kicker`、`meta`（封面資訊，至多三項 `{label, value}`）、`summary` 和依閱讀順序排列的 `sections`。三節以上自動加目錄（只列節標題，不印頁碼）。列印時第一頁是印到紙邊的封面色帶加目錄與摘要，各節從第二頁開始並在頁中接續；選用 `cover: "page"` 改成整頁封面，目錄與摘要移到第二頁。
 
 `summary` 是 `{kicker?, claim, body?, items}`：`claim` 寫建議，`items` 建議 2～3 格 `{label, value, unit?, digits?}`。`value` 填數字或文字；`null` 在原位標「未提供」，`0` 是觀察值。
 
@@ -22,9 +22,9 @@
 | `type` | 用途 | 欄位 |
 | --- | --- | --- |
 | `text` | 段落，說明原因、限制或下一步。 | `text` |
-| `callout` | 需要讀者停下來記住的一句結論。 | `text` |
+| `callout` | 需要讀者停下來記住的一句結論；列印時是 24 pt 強調色、無框的引言。 | `text` |
 | `chart` | 有數據可畫時。 | `title`（圖說開頭與無障礙名稱）、`chart`（圖表 JSON 路徑或物件） |
-| `table` | 需要逐格比對精確數值。 | 同[表格圖種](charts.md#表格-table)：`columns`、`rows`、選用 `total`、`emphasis`、`caption` |
+| `table` | 需要逐格比對精確數值；列印時八列以內不分頁，超過八列才分頁並重複表頭。 | 同[表格圖種](charts.md#表格-table)：`columns`、`rows`、選用 `total`、`emphasis`、`caption` |
 | `compare` | 在幾個方案間取捨。 | 同簡報 `compare`：`rows`、`options: [{name, recommended?, values}]`、選用 `caption` |
 | `list` | 逐項列出原因、觀察或待查問題。 | `items: [{heading, body?}]` |
 | `process` | 有先後順序與目前位置。 | `steps: [{heading, body?}]`、選用 `focus`（零起算） |

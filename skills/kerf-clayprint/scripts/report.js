@@ -24,6 +24,7 @@ function validate(report) {
   need(isObject(report), 'report', '提供包含 title、message 與 sections 的 JSON 物件');
   str(report.title, 'title');
   str(report.message, 'message');
+  need(report.cover == null || report.cover === 'page', 'cover', '填 "page" 改成整頁封面，或省略使用橫幅封面');
   if (report.meta != null) { list(report.meta, 'meta'); report.meta.forEach((m, i) => { str(m?.label, `meta[${i}].label`); str(m?.value, `meta[${i}].value`); }); }
   if (report.summary != null) {
     str(report.summary.claim, 'summary.claim');
@@ -166,6 +167,9 @@ ${items.map((it) => `<div><dt>${esc(it.label)}</dt><dd>${shown(it.value, it)}</d
 </dl>
 </section>`);
   }
+  // Page 1 holds the cover band, contents and summary, then breaks; with cover: "page" it holds the cover only.
+  const front = parts.splice(0, report.cover === 'page' ? 1 : parts.length);
+  parts.unshift(`<div class="report-front"${report.cover === 'page' ? ' data-cover="page"' : ''}>\n${front.join('\n')}\n</div>`);
   report.sections.forEach((s, i) => {
     const body = s.blocks.map((b, j) => {
       if (b.type === 'chart') figures += 1;
