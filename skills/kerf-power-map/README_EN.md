@@ -43,12 +43,12 @@ Length follows purpose, not how much background you wrote. The draft fits the ch
 
 ## House rules
 
-- **Your draft comes first.** The first sentence names what your draft already has and the one line it lacks; the assistant's own earlier reply does not count as your draft.
-- **Facts, guesses and unknowns stay apart.** Numbers, durations and dates must come from your material; silence, "seen" or "let's see" is not agreement.
+- **The first sentence says where it is stuck and what to do today.** When you bring a draft, that sentence names what the draft already has and the one line it lacks; the assistant's own earlier reply does not count as your draft.
+- **Facts trace back to your own words.** Guesses and unknowns are marked; one person's words are not widened to a whole department, "let's see" is not agreement, and no number or duration is added that you did not give.
 - **It asks when it does not know.** If only one sentence depends on it, it writes the likeliest version and asks: "Is X right? If not, swap in 'Y'." Drafts never contain blanks to fill.
 - **Aim at the real worry.** When the other side only needs reassurance, one reason beats a derivation or a table.
-- **No promises on your behalf.** Overtime, new deadlines, presenting, slides, redoing work or vouching for others go under "only if you want", with a limit or cost.
-- **Ask today what you can ask today.** Who decides, scope and deadlines need no "get organised first" gate.
+- **You choose what you give.** Anything that costs you time or effort, gives up your terms or vouches for someone goes under "only if you want", with a limit or cost, even when it is phrased as an option for the other side.
+- **Ask today what you can ask today.** Questions like who decides or the deadline need no "get organised first" gate.
 - **A fallback must stand alone.** It counts only if you can do it without the same approvers; otherwise it says "none for now".
 
 ## Six map types
