@@ -152,7 +152,7 @@ test('panels：格數不是 2、格內缺 title、visual 種類不支援或 spli
 test('panels：簡報版 story 使用時，validateStory 與驗收器都說明只有閱讀版支援', () => {
   const { mode, ...present } = fixture();
   assert.equal(mode, 'read');
-  assert.throws(() => validateStory(present), /第 1 頁：pages\[0\]\.type .*只有閱讀版（"mode": "read"）支援 panels/);
+  assert.throws(() => validateStory(present), /第 1 頁：pages\[0\]\.type 格式不正確；請在根層填 "mode": "read"（只有閱讀版支援 panels）/);
   const result = checkCli(present);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /驗收失敗：第 1 頁：.*只有閱讀版/);

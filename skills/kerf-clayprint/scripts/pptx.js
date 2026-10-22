@@ -333,7 +333,7 @@ export function validateStory(story) {
         if (page.metric.digits !== undefined) digits(page.metric.digits, 'metric.digits');
       }
     }
-    if (page.type === 'panels') check(story.mode === 'read', 'type', '只有閱讀版（"mode": "read"）支援 panels：在根層填 "mode": "read"，或改用 evidence、columns 等版型');
+    if (page.type === 'panels') check(story.mode === 'read', 'type', '在根層填 "mode": "read"（只有閱讀版支援 panels），或改用 evidence、columns 等版型');
     if (!['evidence', 'numbers', 'summary', 'compare', 'steps', 'close', 'list', 'process', 'kpi', 'flow', 'columns', 'panels'].includes(page.type)) {
       if (page.visual != null) check(emptyCell(page.visual), 'visual', '將主視覺移至 evidence 等對應版型，或省略此頁不使用的 visual');
       return;
@@ -472,7 +472,7 @@ export function validateStory(story) {
         const c = cell.visual;
         if (typeof c === 'string') return check(c.trim().length > 0, `${path}.visual`, `為${nth}填入非空白文字`);
         if (isObject(c) && c.kind !== undefined) {
-          check(CHART_KINDS.has(c.kind), `${path}.visual.kind`, `${nth}選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
+          check(CHART_KINDS.has(c.kind), `${path}.visual.kind`, `為${nth}選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
           if (c.native !== undefined) check(typeof c.native === 'boolean', `${path}.visual.native`, '填入 true 或 false');
           if (c.digits !== undefined) digits(c.digits, `${path}.visual.digits`);
           try { prepare(c); }
@@ -490,7 +490,7 @@ export function validateStory(story) {
             optional(item, ['body'], `${path}.visual.items[${k}].`);
           });
         }
-        check(false, `${path}.visual`, `${nth}的 visual 種類不支援；請用 chart、table、list 或 text：圖表與表格填 {kind, …}，清單填 {items: [{heading, body?}]}，文字填字串`);
+        check(false, `${path}.visual`, `為${nth}改用支援的種類 chart、table、list 或 text：圖表與表格填 {kind, …}，清單填 {items: [{heading, body?}]}，文字填字串`);
       });
     } else {
       objects(v.rows, 'visual.rows');
