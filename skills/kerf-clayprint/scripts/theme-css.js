@@ -53,7 +53,10 @@ a { color: var(--cp-accent); text-underline-offset: .16em; }
 figure { margin: 32px 0; }
 figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .chart-scroll { max-width: 100%; overflow-x: auto; }
-figcaption, .sources { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
+/* Figures and tables: generated 「圖 N」「表 N」 label and title above, notes and source below. */
+.exhibit-title, caption { margin-bottom: 10px; color: var(--cp-title); font-weight: 700; line-height: 1.4; }
+.exhibit-label { display: block; color: var(--cp-accent); font-size: var(--cp-small); letter-spacing: .08em; }
+figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
 .chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
 .chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
 .chart-grid { stroke: var(--cp-line); }
@@ -99,21 +102,44 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   body { max-width: none; padding: 0 11mm 0 28mm; }
   h2 { font-size: 24pt; }
   h3 { font-size: 12pt; }
-  figcaption, .sources { font-size: 7pt; }
-  .report-cover { break-after: page; }
-  .section-heading { break-after: avoid; }
-  /* A short section stays on one page so its heading never sits alone; Chrome breaks sections taller than a page anyway. */
-  section { break-inside: avoid; }
+  .exhibit-note, figcaption, .sources { font-size: 7pt; }
+  .exhibit-title, caption { font-size: 12pt; }
+  /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
+     the cover band cancels that again to reach the paper edge. Sections always start on the next page.
+     ponytail: front matter longer than one page keeps the 50 mm padding on top of page 2's margin; shorten the summary if it spills. */
+  .report-front { margin: 0 -11mm 0 -28mm; padding: 0 25mm 15mm 50mm; break-after: page; }
+  .report-cover { margin: 0 -25mm 10mm -50mm; padding: 24mm 25mm 12mm 50mm; background: var(--cp-tint); }
+  .report-cover h1 { font-size: 30pt; line-height: 1.2; }
+  /* A full-page cover fills the paper; 1 mm short so it never spills onto a second page. */
+  .report-front[data-cover="page"] { padding-bottom: 0; }
+  .report-front[data-cover="page"] .report-cover { min-height: 296mm; margin-bottom: 0; padding-top: 80mm; }
+  html[data-size="letter"] .report-front[data-cover="page"] .report-cover { min-height: 278mm; }
+  .toc { margin-top: 0; }
+  section { margin-top: 8mm; }
+  .toc h2 { font-size: 12pt; }
+  /* Section headings, contents and pull quotes sit on the 22 mm line, the inner edge of @page. */
+  .toc, .section-heading, .callout { margin-left: -28mm; }
+  .section-heading { break-inside: avoid; break-after: avoid; margin-bottom: 4mm; border-top: 1.5pt solid var(--cp-accent); padding-top: 4mm; }
+  .section-heading .eyebrow { margin-bottom: 1mm; }
+  .section-heading h2 { color: var(--cp-accent); margin-bottom: 3mm; }
+  .callout { margin-top: 6mm; margin-bottom: 6mm; padding: 0; background: none; border: 0; }
+  .callout p { font-size: 24pt; line-height: 1.3; color: var(--cp-accent); font-weight: 700; max-width: none; }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
+  /* Tables over eight rows may break; the header repeats on the next page. */
+  .table-scroll:has(tbody tr:nth-child(9)), .table-scroll:has(tbody tr:nth-child(9)) table { break-inside: auto; }
+  thead { display: table-header-group; }
+  caption, thead { break-after: avoid; }
   tr { break-inside: avoid; }
   /* Charts and tables may run into the body padding, to 14 mm from the right edge (146 mm on A4). */
   figure, .table-scroll { margin-right: -11mm; max-width: none; }
+  /* wide: true starts on the 22 mm line, the @page edge, for 174 mm on A4; going past it would clip the block. */
+  figure.wide, .table-scroll.wide { margin-left: -28mm; }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
   /* SVG text is in viewBox units (979 wide); 19 units at 146 mm is about 8 pt. */
   .chart-scroll svg [data-tick] { font-size: 19px; }
-  .sources { break-before: avoid; }
+  .sources, .exhibit-note { break-before: avoid; }
   a { color: inherit; }
 }`;
 }

@@ -6,14 +6,14 @@
 
 1. 讀原稿，寫下讀者要帶走的一句話；替每節先寫一句判斷。確認對象、單位、期間、來源與缺口，不補造數字。
 2. 寫 `out/report.json`：封面、摘要，再依判斷寫各節的元件。摘要左側放建議，右側只放支撐它的數字。欄位見下方〈report.json〉。
-3. 有數據才放圖。每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），在 `chart` 元件填相對於 `report.json` 的路徑；圖說會由圖表 JSON 的單位、期間、來源與 `note` 自動組成，所以圖表 JSON 必須填 `source`。無數字時使用段落、清單或流程。
-4. 執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再執行 `node evals/check-report.mjs out/report.html script.md`，核對可見文字與 SVG 數字、未填範本標記及每圖來源。座標軸刻度（`data-tick`）和簡報驗收一樣不核對；資料標籤與衍生值仍須來自原稿，或在同節寫出可核對的加減算式。範例：`node scripts/report.js examples/report.json out/report.html`，再 `node evals/check-report.mjs out/report.html evals/fixtures/explain-script.md`。
+3. 有數據才放圖。每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），在 `chart` 元件填相對於 `report.json` 的路徑。圖與表各自自動編號：圖上方是「圖 N」標籤與標題，圖下方的圖說由圖表 JSON 的單位、期間、`note`、元件的 `note` 與來源自動組成，所以圖表 JSON 必須填 `source`；表格同樣「表 N」與標題在上，元件填了 `note` 或 `source` 就在表下方列出。無數字時使用段落、清單或流程。
+4. 執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再執行 `node evals/check-report.mjs out/report.html script.md`，核對可見文字與 SVG 數字、未填範本標記及每圖來源。座標軸刻度（`data-tick`）和簡報驗收一樣不核對，產生器加的「圖 N」「表 N」標籤（`data-label`）也不核對；資料標籤與衍生值仍須來自原稿，或在同節寫出可核對的加減算式。範例：`node scripts/report.js examples/report.json out/report.html`，再 `node evals/check-report.mjs out/report.html evals/fixtures/explain-script.md`。
 5. 要列印就依下列指令輸出 PDF 並逐頁看 PDF，檢查分頁、圖表與表格有無切斷；要轉寄就用瀏覽器看手機寬度，檢查閱讀順序與表格橫向捲動。驗收器無法代替視覺檢查。
 6. 交付 HTML、`report.json` 與每張圖的輸入 JSON。和簡報一樣，交付說明集中列出：讀者要帶走的那句話、缺的資料、時間不夠還沒修好的地方。
 
 ## report.json
 
-根物件有 `title`、`message`（讀者要帶走的一句話）、選用的 `kicker`、`meta`（封面資訊，至多三項 `{label, value}`）、`summary` 和依閱讀順序排列的 `sections`。三節以上自動加目錄。
+根物件有 `title`、`message`（讀者要帶走的一句話）、選用的 `kicker`、`meta`（封面資訊，至多三項 `{label, value}`）、`summary` 和依閱讀順序排列的 `sections`。三節以上自動加目錄（只列節標題，不印頁碼）。列印時第一頁是印到紙邊的封面色帶加目錄與摘要，各節從第二頁開始並在頁中接續；選用 `cover: "page"` 改成整頁封面，目錄與摘要移到第二頁。
 
 `summary` 是 `{kicker?, claim, body?, items}`：`claim` 寫建議，`items` 建議 2～3 格 `{label, value, unit?, digits?}`。`value` 填數字或文字；`null` 在原位標「未提供」，`0` 是觀察值。
 
@@ -22,9 +22,9 @@
 | `type` | 用途 | 欄位 |
 | --- | --- | --- |
 | `text` | 段落，說明原因、限制或下一步。 | `text` |
-| `callout` | 需要讀者停下來記住的一句結論。 | `text` |
-| `chart` | 有數據可畫時。 | `title`（圖說開頭與無障礙名稱）、`chart`（圖表 JSON 路徑或物件） |
-| `table` | 需要逐格比對精確數值。 | 同[表格圖種](charts.md#表格-table)：`columns`、`rows`、選用 `total`、`emphasis`、`caption` |
+| `callout` | 需要讀者停下來記住的一句結論；列印時是 24 pt 強調色、無框的引言。 | `text` |
+| `chart` | 有數據可畫時。 | `title`（圖上方標題與無障礙名稱）、`chart`（圖表 JSON 路徑或物件）、選用 `note`（圖下方附註）、`wide`（`true` 時列印從左 22 mm 起全寬） |
+| `table` | 需要逐格比對精確數值；列印時八列以內不分頁，超過八列才分頁並重複表頭。 | 同[表格圖種](charts.md#表格-table)：`columns`、`rows`、選用 `total`、`emphasis`、`caption`（表上方標題）；另可選 `source`、`note`（表下方小字）與 `wide` |
 | `compare` | 在幾個方案間取捨。 | 同簡報 `compare`：`rows`、`options: [{name, recommended?, values}]`、選用 `caption` |
 | `list` | 逐項列出原因、觀察或待查問題。 | `items: [{heading, body?}]` |
 | `process` | 有先後順序與目前位置。 | `steps: [{heading, body?}]`、選用 `focus`（零起算） |
