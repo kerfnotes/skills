@@ -5,7 +5,7 @@ import { isMain } from '../scripts/main.js';
 
 const hiddenTags = new Set(['head', 'style', 'script', 'template', 'noscript', 'defs', 'title', 'desc']);
 const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'path', 'rect', 'line', 'circle', 'polygon', 'polyline', 'ellipse', 'use']);
-const blockTags = new Set(['p', 'div', 'li', 'tr', 'table', 'header', 'footer', 'section', 'article', 'figure', 'figcaption', 'h1', 'h2', 'h3', 'br']);
+const blockTags = new Set(['p', 'div', 'li', 'tr', 'table', 'header', 'footer', 'section', 'article', 'figure', 'figcaption', 'h1', 'h2', 'h3', 'br', 'th', 'td', 'dt', 'dd', 'text']);
 
 function decode(text) {
   const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };

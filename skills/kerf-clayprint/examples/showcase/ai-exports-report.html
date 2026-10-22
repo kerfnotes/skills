@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>台灣出口的 AI 伺服器潮（示範分析）</title>
+  <style id="clayprint-theme">
+:root {
+  --cp-paper: #FAF9F5;
+  --cp-ink: #141413;
+  --cp-muted: #5E5D59;
+  --cp-title: #141413;
+  --cp-line: #E8E6DC;
+  --cp-accent: #C2553A;
+  --cp-tint: #F5E6DE;
+  --cp-soft: #B0AEA5;
+  --cp-font: "Helvetica Neue", "Segoe UI", "Arial", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --cp-body: 16px;
+  --cp-small: 12px;
+  --cp-sub: 18px;
+  --cp-title-size: 28px;
+  --cp-display: 52px;
+}
+* { box-sizing: border-box; }
+html { color: var(--cp-ink); background: var(--cp-paper); font-family: var(--cp-font); font-size: var(--cp-body); line-height: 1.65; }
+body { margin: 0 auto; padding: 0 24px 72px; max-width: 940px; overflow-wrap: anywhere; }
+main, article, section { min-width: 0; }
+h1, h2, h3, p { margin-top: 0; }
+h1, h2, h3 { color: var(--cp-title); line-height: 1.25; }
+h1 { font-size: clamp(32px, 7vw, var(--cp-display)); letter-spacing: -.035em; }
+h2 { font-size: var(--cp-title-size); letter-spacing: -.02em; }
+h3 { font-size: var(--cp-sub); }
+p, li { max-width: 72ch; }
+a { color: var(--cp-accent); text-underline-offset: .16em; }
+.report-cover { padding: 72px 0 64px; border-bottom: 3px solid var(--cp-accent); }
+.eyebrow { color: var(--cp-accent); font-size: var(--cp-small); font-weight: 700; letter-spacing: .08em; }
+.report-cover > p:not(:first-child) { font-size: var(--cp-sub); }
+.cover-meta { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 40px; color: var(--cp-muted); font-size: var(--cp-small); }
+.cover-meta dt { font-weight: 700; }
+.cover-meta dd, .summary-metrics dd { margin: 0; }
+.toc, section { margin-top: 52px; }
+.toc ol { padding-left: 1.4em; }
+.toc li { border-bottom: 1px solid var(--cp-line); padding: 7px 0; }
+.summary { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; padding: 30px; background: var(--cp-tint); }
+.summary h2 { margin-bottom: 12px; }
+.summary-metrics { display: grid; gap: 12px; align-content: center; }
+.summary-metrics dt { color: var(--cp-muted); font-size: var(--cp-small); }
+.summary-metrics dd { color: var(--cp-accent); font-size: var(--cp-title-size); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.section-heading { margin-bottom: 22px; border-top: 1px solid var(--cp-line); padding-top: 24px; }
+.section-heading > p:last-child { color: var(--cp-muted); }
+.callout { margin: 28px 0; padding: 20px 24px; background: var(--cp-tint); }
+figure { margin: 32px 0; }
+figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
+.chart-scroll { max-width: 100%; overflow-x: auto; }
+figcaption, .sources { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
+.chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
+.chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
+.chart-grid { stroke: var(--cp-line); }
+.chart-text { fill: var(--cp-ink); }
+.chart-subtle { fill: var(--cp-muted); }
+.table-scroll { max-width: 100%; overflow-x: auto; box-shadow: inset -12px 0 10px -12px var(--cp-accent); }
+table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
+caption { text-align: left; }
+th, td { padding: 11px 14px; border-bottom: 1px solid var(--cp-line); vertical-align: top; }
+thead th { border-bottom: 2px solid var(--cp-ink); font-size: var(--cp-small); }
+.num, td[data-type="number"], th[data-type="number"] { text-align: right; white-space: nowrap; }
+tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
+.comparison .recommended { background: var(--cp-tint); }
+.diagnosis, .flow { padding-left: 1.4em; }
+.diagnosis li, .flow li { padding: 9px 0; border-bottom: 1px solid var(--cp-line); }
+.flow li::marker { color: var(--cp-accent); font-weight: 700; }
+.missing { display: inline-block; padding: 0 .4em; border: 1px solid var(--cp-muted); color: var(--cp-muted); font-size: var(--cp-small); }
+@media (max-width: 640px) {
+  body { padding: 0 18px 44px; }
+  .report-cover { padding: 48px 0 42px; }
+  .summary { grid-template-columns: 1fr; padding: 20px; }
+  .summary-metrics { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .chart-scroll svg { min-width: 640px; max-width: none; }
+}
+@page { size: A4; margin: 18mm 19mm; }
+@media print {
+  html { background: var(--cp-paper); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body { max-width: none; padding: 0; }
+  .report-cover { break-after: page; }
+  .section-heading { break-after: avoid; }
+  /* A short section stays on one page so its heading never sits alone; Chrome breaks sections taller than a page anyway. */
+  section { break-inside: avoid; }
+  figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
+  tr { break-inside: avoid; }
+  .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
+  .chart-scroll svg { min-width: 0; max-width: 100%; }
+  .sources { break-before: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<main class="report">
+  <header class="report-cover">
+    <p class="eyebrow">Clayprint 示範分析</p>
+    <h1>台灣出口的 AI 伺服器潮：成長很快，也越來越集中</h1>
+    <p class="cover-message">把這波成長當成結構性需求規劃，同時按月追蹤集中訊號。</p>
+    <dl class="cover-meta">
+      <div><dt>資料</dt><dd>財政部海關統計、主計總處國民所得統計</dd></div>
+      <div><dt>期間</dt><dd>2019 年至 2026 年 1–9 月</dd></div>
+      <div><dt>查核日</dt><dd>2026-10-22</dd></div>
+    </dl>
+  </header>
+
+  <nav class="toc" aria-label="目錄">
+    <h2>目錄</h2>
+    <ol>
+      <li><a href="#scale">出口規模：前九月已超過 2025 年全年</a></li>
+      <li><a href="#goods">貨品：電腦類首度超過積體電路</a></li>
+      <li><a href="#markets">市場：美國成為最大出口市場</a></li>
+      <li><a href="#growth">經濟成長：輸出貢獻最大，輸入抵掉一大半</a></li>
+      <li><a href="#next">判斷與追蹤</a></li>
+    </ol>
+  </nav>
+
+  <section class="summary" aria-labelledby="summary-title">
+    <div>
+      <p class="eyebrow">摘要</p>
+      <h2 id="summary-title">當成結構性需求規劃，但按月追蹤集中訊號</h2>
+      <p>出口已超過 2025 年全年，成長集中在一類貨品、一個市場。伺服器所在的電腦類貨品首度超過積體電路，美國取代中國大陸與香港成為最大出口市場。</p>
+    </div>
+    <dl class="summary-metrics">
+      <div><dt>2026 年 1–9 月出口</dt><dd>6,615.5 億美元</dd></div>
+      <div><dt>美國占出口（2026 年 1–9 月）</dt><dd>31.4%</dd></div>
+      <div><dt>HS 8471 占出口（2026 年 1–8 月）</dt><dd>33.5%</dd></div>
+    </dl>
+  </section>
+
+  <section aria-labelledby="scale">
+    <header class="section-heading">
+      <p class="eyebrow">出口規模</p>
+      <h2 id="scale">2023 年後連兩年成長，前九月已超過 2025 年全年</h2>
+      <p>出口金額，全年，億美元。</p>
+    </header>
+    <p>出口在 2023 年降到 4,324.2 億美元後連兩年成長，2025 年達 6,399.6 億美元，年增 34.8%。2023 年到 2025 年增加 2,075.4 億美元。計算：6,399.6 − 4,324.2 = 2,075.4；單位億美元。2026 年 1–9 月已有 6,615.5 億美元，年增 46.2%。</p>
+    <figure>
+      <div class="chart-scroll" tabindex="0" role="region" aria-label="2019–2025 年出口金額，可橫向捲動"><svg role="img" aria-labelledby="exports-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 979 520" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><title id="exports-title">2019–2025 年出口金額</title><line x1="84.32" y1="469" x2="805.24" y2="469" stroke="#E8E6DC" stroke-width="1"/><line x1="84.32" y1="362.5" x2="805.24" y2="362.5" stroke="#E8E6DC" stroke-width="1"/><line x1="84.32" y1="256" x2="805.24" y2="256" stroke="#E8E6DC" stroke-width="1"/><line x1="84.32" y1="149.5" x2="805.24" y2="149.5" stroke="#E8E6DC" stroke-width="1"/><line x1="84.32" y1="43" x2="805.24" y2="43" stroke="#E8E6DC" stroke-width="1"/><line x1="84.32" y1="469" x2="805.24" y2="469" stroke="#8F8D86" stroke-width="1"/><line x1="84.32" y1="469" x2="84.32" y2="477" stroke="#8F8D86" stroke-width="1"/><text x="84.32" y="505" font-size="24" fill="#5E5D59" text-anchor="middle">2019</text><line x1="204.47" y1="469" x2="204.47" y2="477" stroke="#8F8D86" stroke-width="1"/><text x="204.47" y="505" font-size="24" fill="#5E5D59" text-anchor="middle">2020</text><line x1="324.63" y1="469" x2="324.63" y2="477" stroke="#8F8D86" stroke-width="1"/><text x="324.63" y="505" font-size="24" fill="#5E5D59" text-anchor="middle">2021</text><line x1="444.78" y1="469" x2="444.78" y2="477" stroke="#8F8D86" stroke-width="1"/><text x="444.78" y="505" font-size="24" fill="#5E5D59" text-anchor="middle">2022</text><line x1="564.93" y1="469" x2="564.93" y2="477" stroke="#8F8D86" stroke-width="1"/><text x="564.93" y="505" font-size="24" fill="#5E5D59" text-anchor="middle">2023</text><line x1="685.09" y1="469" x2="685.09" y2="477" stroke="#8F8D86" stroke-width="1"/><text x="685.09" y="505" font-size="24" fill="#5E5D59" text-anchor="middle">2024</text><line x1="805.24" y1="469" x2="805.24" y2="477" stroke="#8F8D86" stroke-width="1"/><text x="805.24" y="505" font-size="24" fill="#5E5D59" text-anchor="middle">2025</text><path d="M84.32 293.72 L204.47 285.22 L324.63 231.31 L444.78 213.71 L564.93 238.74 L685.09 216.1 L805.24 128.22" fill="none" stroke="#C2553A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><text x="819.24" y="136.62" font-size="24" fill="#C2553A" font-weight="600">出口</text><text x="883.56" y="136.62" font-size="24" fill="#C2553A" font-weight="600">6,399.6</text></svg></div>
+      <figcaption>出口金額｜單位：億美元｜期間：2019–2025 年｜來源：財政部「115 年 9 月海關進出口貿易初步統計」表 1｜附註：2025 年為修正值。</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="goods">
+    <header class="section-heading">
+      <p class="eyebrow">貨品</p>
+      <h2 id="goods">電腦類貨品占出口比重，首度超過積體電路</h2>
+      <p>占總出口比重，%。</p>
+    </header>
+    <p>財政部說明「電腦及其附屬單元」（HS 8471）涵蓋伺服器、顯示卡。它占出口比重從 2023 年的 8.9% 升到 2025 年的 28.7%，2026 年 1–8 月達 33.5%，首度超過積體電路的 33.1%。積體電路出口金額仍在成長，只是占比被追過。HS 8471 出口金額 2023 年 386.8 億美元，2025 年 1,834.8 億美元，2026 年 1–9 月 2,226.5 億美元。</p>
+    <figure>
+      <div class="chart-scroll" tabindex="0" role="region" aria-label="電腦及其附屬單元與積體電路占出口比重，可橫向捲動"><svg role="img" aria-labelledby="goods-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 979 520" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><title id="goods-title">電腦及其附屬單元與積體電路占出口比重</title><line x1="52.8" y1="465" x2="967" y2="465" stroke="#E8E6DC" stroke-width="1"/><line x1="52.8" y1="362" x2="967" y2="362" stroke="#E8E6DC" stroke-width="1"/><line x1="52.8" y1="259" x2="967" y2="259" stroke="#E8E6DC" stroke-width="1"/><line x1="52.8" y1="156" x2="967" y2="156" stroke="#E8E6DC" stroke-width="1"/><line x1="52.8" y1="53" x2="967" y2="53" stroke="#E8E6DC" stroke-width="1"/><rect x="52.8" y="2" width="16" height="16" fill="#C2553A"/><text x="76.8" y="28" font-size="24" fill="#141413">電腦及其附屬單元</text><rect x="509.9" y="2" width="16" height="16" fill="#3F78B5"/><text x="533.9" y="28" font-size="24" fill="#141413">積體電路</text><text x="205.17" y="501" font-size="24" fill="#5E5D59" text-anchor="middle">2023</text><rect x="89.37" y="373.33" width="111.8" height="91.67" fill="#C2553A"/><text x="145.27" y="365.33" font-size="24" fill="#141413" text-anchor="middle">8.9</text><rect x="209.17" y="68.45" width="111.8" height="396.55" fill="#3F78B5"/><text x="265.07" y="60.45" font-size="24" fill="#141413" text-anchor="middle">38.5</text><text x="509.9" y="501" font-size="24" fill="#5E5D59" text-anchor="middle">2025</text><rect x="394.1" y="169.39" width="111.8" height="295.61" fill="#C2553A"/><text x="450" y="161.39" font-size="24" fill="#141413" text-anchor="middle">28.7</text><rect x="513.9" y="128.19" width="111.8" height="336.81" fill="#3F78B5"/><text x="569.8" y="120.19" font-size="24" fill="#141413" text-anchor="middle">32.7</text><text x="814.63" y="501" font-size="24" fill="#5E5D59" text-anchor="middle">2026 年 1–8 月</text><rect x="698.83" y="119.95" width="111.8" height="345.05" fill="#C2553A"/><text x="754.73" y="111.95" font-size="24" fill="#141413" text-anchor="middle">33.5</text><rect x="818.63" y="124.07" width="111.8" height="340.93" fill="#3F78B5"/><text x="874.53" y="116.07" font-size="24" fill="#141413" text-anchor="middle">33.1</text><line x1="52.8" y1="465" x2="967" y2="465" stroke="#8F8D86" stroke-width="1"/></svg></div>
+      <figcaption>占總出口比重｜單位：%｜期間：2023 年、2025 年、2026 年 1–8 月｜來源：財政部統計處「財政統計通報（第 15 號）」</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="markets">
+    <header class="section-heading">
+      <p class="eyebrow">市場</p>
+      <h2 id="markets">美國取代中國大陸與香港，成為最大出口市場</h2>
+      <p>出口目的地占比，%。</p>
+    </header>
+    <p>2025 年美國占 31.0%、中國大陸與香港占 26.6%，美國已是最大出口市場。到 2026 年 1–9 月，差距再拉大。</p>
+    <figure>
+      <div class="chart-scroll" tabindex="0" role="region" aria-label="2023 年與 2026 年 1–9 月出口目的地占比，可橫向捲動"><svg role="img" aria-labelledby="markets-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 979 360" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><title id="markets-title">2023 年與 2026 年 1–9 月出口目的地占比</title><circle cx="259.92" cy="20" r="6" fill="#E39A7C"/><text x="271.92" y="28" font-size="24" fill="#5E5D59">2023</text><circle cx="367.52" cy="20" r="6" fill="#7F2F1B"/><text x="379.52" y="28" font-size="24" fill="#5E5D59">2026 年 1–9 月</text><line x1="253.92" y1="63" x2="253.92" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="253.92" y1="309" x2="253.92" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="418.71" y1="63" x2="418.71" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="418.71" y1="309" x2="418.71" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="583.5" y1="63" x2="583.5" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="583.5" y1="309" x2="583.5" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="748.29" y1="63" x2="748.29" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="748.29" y1="309" x2="748.29" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="913.08" y1="63" x2="913.08" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="913.08" y1="309" x2="913.08" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="253.92" y1="309" x2="913.08" y2="309" stroke="#8F8D86" stroke-width="1"/><line x1="253.92" y1="63" x2="253.92" y2="309" stroke="#8F8D86" stroke-width="1"/><text x="979" y="345" font-size="24" fill="#5E5D59" text-anchor="end">%</text><text x="0" y="112.4" font-size="24" fill="#141413">美國</text><line x1="543.95" y1="104" x2="771.36" y2="104" stroke="#8F8D86" stroke-width="1.5"/><circle cx="543.95" cy="104" r="7" fill="#E39A7C"/><text x="529.95" y="112.4" font-size="24" fill="#5E5D59" text-anchor="end">17.6</text><circle cx="771.36" cy="104" r="7" fill="#7F2F1B"/><text x="785.36" y="112.4" font-size="24" fill="#C2553A" font-weight="600">31.4</text><text x="0" y="194.4" font-size="24" fill="#141413">中國大陸與香港</text><line x1="833.98" y1="186" x2="652.71" y2="186" stroke="#8F8D86" stroke-width="1.5"/><circle cx="652.71" cy="186" r="7" fill="#7F2F1B"/><text x="638.71" y="194.4" font-size="24" fill="#C2553A" font-weight="600" text-anchor="end">24.2</text><circle cx="833.98" cy="186" r="7" fill="#E39A7C"/><text x="847.98" y="194.4" font-size="24" fill="#5E5D59">35.2</text><text x="0" y="276.4" font-size="24" fill="#141413">東協</text><line x1="543.95" y1="268" x2="586.8" y2="268" stroke="#8F8D86" stroke-width="1.5"/><circle cx="543.95" cy="268" r="7" fill="#E39A7C"/><text x="529.95" y="276.4" font-size="24" fill="#5E5D59" text-anchor="end">17.6</text><circle cx="586.8" cy="268" r="7" fill="#7F2F1B"/><text x="600.8" y="276.4" font-size="24" fill="#C2553A" font-weight="600">20.2</text></svg></div>
+      <figcaption>出口目的地占比｜單位：%｜期間：2023 年、2026 年 1–9 月｜來源：財政部「115 年 9 月海關進出口貿易初步統計」表 8｜附註：東協為 11 國。</figcaption>
+    </figure>
+    <ul class="diagnosis">
+      <li><strong>電子及資通產品</strong><span>2026 年 1–9 月占出口 79.0%（2025 年 74.0%）。</span></li>
+      <li><strong>前 10 大貨品</strong><span>2026 年 1–8 月合計占出口 80.5%（2023 年 62.8%）。</span></li>
+      <li><strong>HS 8471 銷往美國</strong><span>2026 年 1–8 月占 HS 8471 出口的 62.8%。</span></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="growth">
+    <header class="section-heading">
+      <p class="eyebrow">經濟成長</p>
+      <h2 id="growth">2025 年經濟成長 8.76%，輸出貢獻最大，輸入抵掉一大半</h2>
+      <p>對經濟成長的貢獻，百分點，2025 年。</p>
+    </header>
+    <p>2025 年經濟成長率 8.76%（2023 年 1.08%，2024 年 5.27%）。輸出貢獻 20.22 個百分點，輸入 −13.53 個百分點，兩者相抵的國外淨需求 6.69 個百分點；民間投資 2.33 個百分點，民間消費 0.64 個百分點。2026 年最新預測 11.05%，歷次由 3.54% 上修到 7.71%、9.64%。</p>
+    <figure>
+      <div class="chart-scroll" tabindex="0" role="region" aria-label="2025 年各需求項目對經濟成長的貢獻，可橫向捲動"><svg role="img" aria-labelledby="gdp-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 979 360" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><title id="gdp-title">2025 年各需求項目對經濟成長的貢獻</title><line x1="218.24" y1="0" x2="218.24" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="218.24" y1="309" x2="218.24" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="349.94" y1="0" x2="349.94" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="349.94" y1="309" x2="349.94" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="481.65" y1="0" x2="481.65" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="481.65" y1="309" x2="481.65" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="613.35" y1="0" x2="613.35" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="613.35" y1="309" x2="613.35" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="745.06" y1="0" x2="745.06" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="745.06" y1="309" x2="745.06" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="876.76" y1="0" x2="876.76" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="876.76" y1="309" x2="876.76" y2="317" stroke="#8F8D86" stroke-width="1"/><line x1="218.24" y1="309" x2="876.76" y2="309" stroke="#8F8D86" stroke-width="1"/><rect x="481.65" y="19.31" width="266.31" height="38.63" fill="#C2553A"/><text x="0" y="47.03" font-size="24" fill="#141413">輸出</text><text x="757.95" y="47.03" font-size="24" fill="#C2553A" font-weight="600">20.22</text><rect x="303.45" y="96.56" width="178.2" height="38.63" fill="#8F8D86"/><text x="0" y="124.28" font-size="24" fill="#141413">輸入</text><text x="293.45" y="124.28" font-size="24" fill="#141413" text-anchor="end">−13.53</text><rect x="481.65" y="173.81" width="30.69" height="38.63" fill="#8F8D86"/><text x="0" y="201.53" font-size="24" fill="#141413">民間投資</text><text x="522.34" y="201.53" font-size="24" fill="#141413">2.33</text><rect x="481.65" y="251.06" width="8.43" height="38.63" fill="#8F8D86"/><text x="0" y="278.77" font-size="24" fill="#141413">民間消費</text><text x="500.08" y="278.77" font-size="24" fill="#141413">0.64</text><line x1="481.65" y1="0" x2="481.65" y2="309" stroke="#8F8D86" stroke-width="1"/></svg></div>
+      <figcaption>對經濟成長的貢獻｜單位：百分點｜期間：2025 年｜來源：主計總處國民所得統計｜附註：國民所得的輸出為實質、以新台幣計，與海關名目美元出口口徑不同，不能直接相加或相除。</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="next">
+    <header class="section-heading">
+      <p class="eyebrow">判斷與追蹤</p>
+      <h2 id="next">當成結構性需求規劃，用集中訊號當煞車</h2>
+      <p>以下是本示範分析的判斷，不是官方結論。</p>
+    </header>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="兩種看法比較表格，可橫向捲動">
+      <table>
+        <caption>兩種看法</caption>
+        <thead><tr><th scope="col">項目</th> <th scope="col">結構性需求（建議）</th> <th scope="col">週期高峰</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">假設</th> <td>資料中心建置持續數年</td> <td>拉貨會回落</td></tr>
+          <tr><th scope="row">產能與人力</th> <td>照多年需求規劃</td> <td>保守，以加班與外包因應</td></tr>
+          <tr><th scope="row">主要風險</th> <td>單一市場、單一貨品的訂單變化</td> <td>錯過持續的訂單</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="追蹤事項表格，可橫向捲動">
+      <table class="decisions">
+        <caption>接下來要追蹤的事</caption>
+        <thead><tr><th scope="col">事項</th> <th scope="col">資料來源</th> <th scope="col">頻率</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">美國占出口比重、HS 8471 年增率</th> <td>財政部海關統計</td> <td>每月</td></tr>
+          <tr><th scope="row">前 10 大貨品集中度是否繼續上升</th> <td>財政部海關統計</td> <td>每月</td></tr>
+          <tr><th scope="row">國外淨需求對經濟成長的貢獻</th> <td>主計總處</td> <td>每季</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <footer class="sources">
+      <h3>來源與附註</h3>
+      <p>財政部「115 年 9 月海關進出口貿易初步統計」表 1、表 4、表 8；財政部統計處「財政統計通報（第 15 號）」；主計總處國民所得統計及國內經濟情勢展望。授權：政府資料開放授權條款第 1 版。</p>
+      <p>本稿核對的財政部與主計總處統計，沒有單獨列出 AI 對經濟成長的貢獻或 AI 相關出口總額，本稿不推算這類數字。本報告為 Clayprint 示範分析，不構成投資或政策建議。</p>
+    </footer>
+  </section>
+</main>
+</body>
+</html>

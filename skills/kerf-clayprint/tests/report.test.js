@@ -42,6 +42,12 @@ test('只查可見文字，含 SVG；殘留示意文字與缺來源圖說會失�
   assert.throws(() => checkReport(`${html}{{尚未填}}`, '甲 12 件。'), /示意文字/);
 });
 
+test('相鄰表格格與 SVG 文字分開核對，不會黏成一個數字', () => {
+  const source = '2024 年 12 件，2025 年 8 件。';
+  assert.doesNotThrow(() => checkReport('<section><table><tr><th>2024</th><th>2025</th></tr><tr><td>12</td><td>8</td></tr></table></section>', source));
+  assert.doesNotThrow(() => checkReport('<section><figure><svg><text>2024</text><text>2025</text></svg><figcaption>來源：原稿</figcaption></figure></section>', source));
+});
+
 test('推導值沿用簡報的完整加減算式，且只在同節有效', () => {
   const source = '甲 12 件，乙 8 件。';
   assert.doesNotThrow(() => checkReport('<section><p>計算：12 + 8 = 20</p><p>合計 20 件</p></section>', source));

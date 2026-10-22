@@ -1,46 +1,86 @@
-# Clayprint
+<div align="center">
+  <img src="docs/images/logo.svg" width="112" alt="Clayprint" />
+  <h1>Clayprint</h1>
+  <p><b>文字稿進去，每頁都有判斷、附上來源的簡報與報告出來。</b></p>
+  <p>繁體中文 · <a href="README_EN.md">English</a></p>
+  <a href="https://github.com/kerfnotes/skills/stargazers"><img src="https://img.shields.io/github/stars/kerfnotes/skills?style=flat-square" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"></a>
+  <img src="https://img.shields.io/badge/node-%E2%89%A522.7-555?style=flat-square" alt="Node 22.7+">
+  <a href="https://youtu.be/dIQ2amlA6HY"><img src="https://img.shields.io/badge/YouTube-Kerf-red?style=flat-square&logo=youtube" alt="YouTube"></a>
+</div>
 
-Clayprint 把文字稿整理成提出判斷、附上來源的簡報或 HTML 報告，也能替既有檔案套用設計層。三種用法：[文字稿 → 簡報](SKILL.md)、[文字稿 → HTML 報告](references/report.md)、[既有檔案套用設計層](references/formats.md)。
+<br/>
 
-介紹影片：[從需要，到自己的工具](https://youtu.be/dIQ2amlA6HY)（YouTube，8 分 39 秒）。講 Clayprint 怎麼從一次次不滿意整理出來，也講怎麼檢查 AI 做出來的成品；下方表格的「片中說法」就是影片裡的用詞。
+<div align="center">
+  <img src="docs/images/overview.svg" width="960" alt="Clayprint 一趟流程：文字稿、寫判斷、選版型、選圖種、產檔、核數字、看預覽、交付" />
+</div>
+
+## 為什麼
+
+AI 做簡報不難，難的是做出能拿去開會的簡報：每頁標題要是一句判斷，不是「背景」「分析結果」；圖上的數字要對得回原稿；頁尾要交代來源、單位與期間。Clayprint 把這些要求寫進流程與檢查程式，交給 Codex 或 Claude Code 跑。你給文字稿和用途，它交出 PowerPoint（原生圖可在 PowerPoint 裡改數字）、HTML 報告或 SVG 圖，並在交付前逐頁看過預覽。
+
+介紹影片：[從需要，到自己的工具](https://youtu.be/dIQ2amlA6HY)（YouTube，8 分 39 秒），講 Clayprint 怎麼從一次次不滿意整理出來，也講怎麼檢查 AI 做出來的成品。
 
 ## 範例
 
-以下都由 `examples/` 裡的虛構範例直接產生，沒有手工修圖。每頁標題就是那一頁要支持的判斷，頁尾附資料來源、單位與期間。
+三份示範稿都用公開資料，數字逐一對回一手來源，再由另一個模型獨立複核。以下圖片都由 `examples/showcase/` 直接產生，沒有手工修圖。
+
+**AI 伺服器出口潮與台灣經濟**（決策型，[文字稿](examples/showcase/ai-exports.md)・[story.json](examples/showcase/ai-exports.json)）：財政部海關統計、主計總處
 
 | | |
 | --- | --- |
-| ![兩期斜線圖：五個行政區騎乘量都成長](docs/images/deck-slope.png) | ![方案比較表：建議方案以色塊標出](docs/images/deck-compare.png) |
-| 斜線圖加重點數字（[營運檢討](examples/story.json) 第 5 頁） | 方案比較，建議選項整欄標色（第 7 頁） |
-| ![四階段推行時程](docs/images/deck-timeline.png) | ![因果拆解：欄位重填加口頭交接等於登錄延遲](docs/images/explain-cause.png) |
-| 推行時程（第 8 頁） | 沒有數據時用因果拆解（[流程說明](examples/story-explain.json) 第 6 頁） |
-| ![Mekko 圖：各區總量與管道組成](docs/images/chart-mekko.png) | ![柏拉圖：客訴集中在前三類](docs/images/chart-pareto.png) |
-| 規模與組成一張圖看（[圖表範例](examples/story-charts.json) 第 7 頁） | 柏拉圖標出 80% 門檻（第 8 頁） |
+| ![主管摘要：當成結構性需求規劃，但按月追蹤集中訊號](docs/images/ai-summary.png) | ![分組長條：電腦類貨品占出口比重首度超過積體電路](docs/images/ai-goods.png) |
+| 主管摘要：左邊建議，右邊三個支撐數字 | 分組長條：電腦類貨品首度超過積體電路 |
+| ![啞鈴圖：美國取代中國大陸與香港成為最大出口市場](docs/images/ai-markets.png) | ![含負值的長條：2025 年各需求項目對經濟成長的貢獻](docs/images/ai-growth.png) |
+| 啞鈴圖：兩期占比與差距 | 正負長條：輸出貢獻最大，輸入抵掉一大半 |
 
-同一份流程說明也能做成 HTML 報告（[examples/report.html](examples/report.html)）：
+**颱風假怎麼決定**（說明型，[文字稿](examples/showcase/typhoon-day.md)・[story.json](examples/showcase/typhoon-day.json)）：天然災害停止上班及上課作業辦法
 
-<img src="docs/images/report.png" alt="HTML 報告：標題、目錄、摘要數字與長條圖" width="480">
+| | |
+| --- | --- |
+| ![一句話頁：颱風假不是達標就放，第 4 條寫的是得發布](docs/images/typhoon-statement.png) | ![表格：22 個縣市的雨量門檻分成三種](docs/images/typhoon-table.png) |
+| 沒有數據時，先用一句話記住判斷 | 表格：22 個縣市的雨量門檻 |
+| ![流程：從預報到公告的五步](docs/images/typhoon-process.png) | ![流程：前一晚、清晨、上午三個發布期限](docs/images/typhoon-deadlines.png) |
+| 流程：標出拍板的那一步 | 三個發布期限 |
 
-要自己重現，安裝後執行 `node scripts/pptx.js examples/story.json out/deck.pptx`，再用 `node scripts/preview.js out/deck.pptx out/preview` 看整頁預覽。
+**全球能源轉型**（圖表展示，[文字稿](examples/showcase/energy.md)・[story.json](examples/showcase/energy.json)）：Ember、IEA（CC BY 4.0）
+
+| | |
+| --- | --- |
+| ![斜線圖：十年間太陽能裝置容量超過風電](docs/images/energy-slope.png) | ![占比堆疊：風電加太陽能占比從 4.5% 升到 17.3%](docs/images/energy-mix.png) |
+| 斜線圖：兩期的交叉 | 占比堆疊：發電結構的變化 |
+| ![小倍數折線：四個市場的電動車占比](docs/images/energy-ev.png) | ![瀑布圖：2025 年新增用電各電源補了多少](docs/images/energy-bridge.png) |
+| 小倍數：共用縱軸，各看各的走勢 | 瀑布圖：新增用電從哪裡來 |
+| ![排名長條：2025 年太陽能發電前五名](docs/images/energy-rank.png) | ![方案比較：結構性需求與週期高峰](docs/images/ai-compare.png) |
+| 排名長條：右側放計算出的重點數字 | 方案比較：建議欄整欄標色（AI 那份第 8 頁） |
+
+同一份 AI 出口稿也能做成 HTML 報告（[ai-exports-report.html](examples/showcase/ai-exports-report.html)），可以列印或轉寄：
+
+<img src="docs/images/report.png" alt="HTML 報告：封面、目錄、摘要數字與出口折線圖" width="480">
+
+示範稿只整理公開數字，不構成投資或政策建議；查核日 2026-10-22，之後官方修正的數字不會自動更新。要自己重現，安裝後執行：
+
+```sh
+node evals/check.mjs examples/showcase/energy.json examples/showcase/energy.md
+node scripts/pptx.js examples/showcase/energy.json out/energy.pptx
+node scripts/preview.js out/energy.pptx out/energy
+```
+
+## 它怎麼把關
+
+| 環節 | 做什麼 | 由誰負責 |
+| :--- | :--- | :--- |
+| 寫判斷 | 每頁先寫一句能被內容支持的 `claim`，再挑能撐住它的版型；撐不住就換版型或刪頁 | `SKILL.md`、[layouts.md](references/layouts.md) |
+| 選圖種 | 24 種圖依「要回答什麼問題」分組：排名、趨勢、組成、分布、敏感度、關係、流失、逐格查 | [charts.md](references/charts.md) |
+| 核數字 | 畫面上每個數字都要出現在原稿，或寫成同頁可核對的加減算式；找不到就擋下 | `evals/check.mjs`、`evals/check-report.mjs` |
+| 估容量 | 依設計層字寬估算每格放不放得下，警告孤字與溢出，不自動縮字 | `scripts/pptx.js` |
+| 看預覽 | 用 PowerPoint 或 LibreOffice 輸出每頁 PNG 與整份概覽，逐頁看主張、強調與閱讀順序 | `scripts/preview.js` |
+
+檢查通過只代表數字和容量沒問題；頁面語意、遮擋與故事是否成立，仍要看圖。
 
 ## 怎麼一起工作
 
 交給 AI 時，連同文字稿說明背景：給誰看、要支持什麼判斷或決定。同一份稿，目的不同，取捨也不同。
-
-```mermaid
-flowchart LR
-  A[文字稿] --> B["給 AI 的指引<br/>SKILL.md、references/"]
-  B --> C[story.json／報告 HTML／圖表 JSON]
-  D["設計設定<br/>design/tokens.json、design/brief.md"] --> E
-  C --> E["程式<br/>scripts/"]
-  E --> F[PPTX／HTML／SVG]
-  F --> G["檢查成品<br/>evals/check.mjs、scripts/check-design.js、tests/"]
-  G --> H[人看預覽，修改最弱的一頁]
-  H --> B
-  H --> D
-```
-
-簡報由 `scripts/pptx.js` 讀 `story.json` 與設計層；報告 HTML 依文字稿組成，再由 `scripts/theme-css.js` 套色；SVG 另讀圖表 JSON 與設計層。
 
 | 片中說法 | 對應檔案 | 什麼時候改 |
 | --- | --- | --- |
@@ -49,9 +89,11 @@ flowchart LR
 | 程式 | `scripts/` | 改圖種、版型或輸出方式時 |
 | 檢查成品 | `tests/`、`examples/`、`evals/` | 發現新問題或需要新範例時 |
 
+簡報由 `scripts/pptx.js` 讀 `story.json` 與設計層；報告 HTML 依文字稿組成，再由 `scripts/theme-css.js` 套色；SVG 另讀圖表 JSON 與設計層。換外觀或改流程，見[改造步驟](docs/make-it-yours.md)。
+
 ## 交給 agent 安裝
 
-把這段交給 Codex 或 Claude Code，由 agent 下載、安裝與驗證：
+把這段交給 Codex 或 Claude Code：
 
 ```text
 請把 https://github.com/kerfnotes/skills 裡的 Clayprint（skills/kerf-clayprint）安裝到目前專案。
@@ -59,19 +101,30 @@ flowchart LR
 自行完成環境檢查、套件安裝與範例驗證，回報安裝路徑、版本及驗證結果。
 ```
 
-需要 Node **22.7.0 以上**，不需要 API key 或額外建置。Codex 的專案路徑是 `.agents/skills/kerf-clayprint/`；Claude Code 是 `.claude/skills/kerf-clayprint/`。整個 `skills/kerf-clayprint/` 資料夾就是 skill，需保留 `SKILL.md`、`scripts/`、`references/`、`design/` 等檔案。
+需要 Node **22.7.0 以上**，不需要 API key 或額外建置。Codex 的專案路徑是 `.agents/skills/kerf-clayprint/`；Claude Code 是 `.claude/skills/kerf-clayprint/`。整個 `skills/kerf-clayprint/` 資料夾就是 skill，需保留 `SKILL.md`、`scripts/`、`references/`、`design/` 等檔案。[agent 安裝指引](docs/install.md)說明下載、重複安裝、缺少 Node 時的做法，以及產檔與整頁預覽的驗收條件。
 
-[agent 安裝指引](docs/install.md)包含下載指令、重複安裝的處理、缺少 Node 時的做法，以及產檔與整頁預覽的驗收條件。安裝完成後可直接說「用 Clayprint 把這份文字稿做成簡報」；Codex 也可用 `$kerf-clayprint`，Claude Code 可用 `/kerf-clayprint`。
+也可以用 [`skills`](https://www.npmjs.com/package/skills) CLI 從整個 repo 挑：
 
-## 改成你的
+```sh
+npx skills add kerfnotes/skills --list
+```
 
-[改造步驟](docs/make-it-yours.md)：換外觀先改設計層；改內容流程、版型或圖種時，也要調整指引、參考文件與程式。
+## 開始使用
+
+安裝完成後直接說：
+
+```text
+用 Clayprint 把這份文字稿做成簡報，給主管決定要不要擴大試行
+把這份會議紀錄做成 HTML 報告，要能列印
+```
+
+Codex 也可用 `$kerf-clayprint`，Claude Code 可用 `/kerf-clayprint`。
 
 ## 已知限制
 
 - [PowerPoint 編輯限制](docs/design-diff.md)：只有部分圖表能用「編輯資料」；SVG 圖表須改資料後重產。
 - LibreOffice 預覽可能使用替代字型。PowerPoint 內的字型由設計層的 `font.slide` 決定（預設微軟正黑體）；字寬估算以正黑體校準，換字型後請看預覽確認換行，收件者電腦也要有該字型。
 - 中文數詞與日期區間不自動核對，須回原稿人工查證。
-- 檢查通過仍須看每頁的語意、遮擋與閱讀順序。
+- 數字檢查只確認畫面數字出自原稿，不確認原稿本身正確；原稿的數字仍要回一手來源查證。
 
-授權：[MIT](LICENSE)。範例資料均為虛構示意。
+授權：[MIT](LICENSE)。`examples/showcase/` 的資料來源與授權寫在各份文字稿的「來源」一節；`examples/` 其他範例為虛構示意資料，供測試使用。
