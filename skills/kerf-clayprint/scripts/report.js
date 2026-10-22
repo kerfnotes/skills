@@ -179,8 +179,10 @@ ${s.kicker ? `<p class="eyebrow">${esc(s.kicker)}</p>\n` : ''}<h2 id="${ids[i]}"
 ${body.join('\n')}${sources}
 </section>`);
   });
+  // The print footer reads the title from this CSS string; escape it for CSS first, then for the attribute.
+  const footerTitle = report.title.replace(/[\\']/g, '\\$&').replace(/\s+/g, ' ');
   const html = `<!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" style="--report-title: '${esc(footerTitle)}'">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
