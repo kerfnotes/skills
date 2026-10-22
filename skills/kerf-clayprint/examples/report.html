@@ -52,7 +52,10 @@ a { color: var(--cp-accent); text-underline-offset: .16em; }
 figure { margin: 32px 0; }
 figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .chart-scroll { max-width: 100%; overflow-x: auto; }
-figcaption, .sources { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
+/* Figures and tables: generated 「圖 N」「表 N」 label and title above, notes and source below. */
+.exhibit-title, caption { margin-bottom: 10px; color: var(--cp-title); font-weight: 700; line-height: 1.4; }
+.exhibit-label { display: block; color: var(--cp-accent); font-size: var(--cp-small); letter-spacing: .08em; }
+figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
 .chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
 .chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
 .chart-grid { stroke: var(--cp-line); }
@@ -98,7 +101,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   body { max-width: none; padding: 0 11mm 0 28mm; }
   h2 { font-size: 24pt; }
   h3 { font-size: 12pt; }
-  figcaption, .sources { font-size: 7pt; }
+  .exhibit-note, figcaption, .sources { font-size: 7pt; }
+  .exhibit-title, caption { font-size: 12pt; }
   .report-cover { break-after: page; }
   .section-heading { break-after: avoid; }
   /* A short section stays on one page so its heading never sits alone; Chrome breaks sections taller than a page anyway. */
@@ -107,12 +111,14 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   tr { break-inside: avoid; }
   /* Charts and tables may run into the body padding, to 14 mm from the right edge (146 mm on A4). */
   figure, .table-scroll { margin-right: -11mm; max-width: none; }
+  /* wide: true starts on the 22 mm line, the @page edge, for 174 mm on A4; going past it would clip the block. */
+  figure.wide, .table-scroll.wide { margin-left: -28mm; }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
   /* SVG text is in viewBox units (979 wide); 19 units at 146 mm is about 8 pt. */
   .chart-scroll svg [data-tick] { font-size: 19px; }
-  .sources { break-before: avoid; }
+  .sources, .exhibit-note { break-before: avoid; }
   a { color: inherit; }
 }
 </style>
@@ -160,13 +166,14 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 </header>
 <p>調整前需要 36 小時；這次試行把目標設為 24 小時，實際完成時間為 18 小時。這些數字支持在同一館區持續觀察，但還不能代表其他館區也會得到相同結果。</p>
 <figure>
+<p class="exhibit-title"><span class="exhibit-label" data-label>圖 1</span>登錄時間比較</p>
 <div class="chart-scroll" tabindex="0" role="region" aria-label="登錄時間比較，可橫向捲動">
 <svg role="img" aria-label="登錄時間比較" xmlns="http://www.w3.org/2000/svg" width="979" height="360" viewBox="0 0 979 360" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><line x1="116" y1="0" x2="116" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="116" y1="309" x2="116" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="116" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">0</text><line x1="320.05" y1="0" x2="320.05" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="320.05" y1="309" x2="320.05" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="320.05" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">10</text><line x1="524.1" y1="0" x2="524.1" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="524.1" y1="309" x2="524.1" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="524.1" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">20</text><line x1="728.15" y1="0" x2="728.15" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="728.15" y1="309" x2="728.15" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="728.15" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">30</text><line x1="932.2" y1="0" x2="932.2" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="932.2" y1="309" x2="932.2" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="932.2" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">40</text><line x1="116" y1="309" x2="932.2" y2="309" stroke="#8F8D86" stroke-width="1"/><rect x="116" y="29.5" width="734.58" height="44" fill="#8F8D86"/><text x="0" y="59.9" font-size="24" fill="#141413">調整前</text><text x="860.58" y="59.9" font-size="24" fill="#141413">36</text><rect x="116" y="132.5" width="489.72" height="44" fill="#8F8D86"/><text x="0" y="162.9" font-size="24" fill="#141413">試行目標</text><text x="615.72" y="162.9" font-size="24" fill="#141413">24</text><rect x="116" y="235.5" width="367.29" height="44" fill="#C2553A"/><text x="0" y="265.9" font-size="24" fill="#141413">試行實際</text><text x="493.29" y="265.9" font-size="24" fill="#C2553A" font-weight="600">18</text><line x1="116" y1="0" x2="116" y2="309" stroke="#8F8D86" stroke-width="1"/></svg>
 </div>
-<figcaption>登錄時間比較｜單位：小時｜期間：調整前與試行週｜來源：青林標本館流程試行稿（虛構示意資料）｜附註：24 小時是試行目標，非觀察值。</figcaption>
+<figcaption>單位：小時｜期間：調整前與試行週｜附註：24 小時是試行目標，非觀察值。｜來源：青林標本館流程試行稿（虛構示意資料）</figcaption>
 </figure>
 <div class="table-scroll" tabindex="0" role="region" aria-label="同一流程的時間對照，可橫向捲動">
-<table><caption>同一流程的時間對照</caption>
+<table><caption><span class="exhibit-label" data-label>表 1</span>同一流程的時間對照</caption>
 <thead><tr><th scope="col">口徑</th><th scope="col" class="num">時間</th><th scope="col">性質</th></tr></thead>
 <tbody>
 <tr><th scope="row">調整前</th><td class="num">36 小時</td><td>觀察值</td></tr>
@@ -175,6 +182,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 </tbody>
 </table>
 </div>
+<p class="exhibit-note">來源：青林標本館流程試行稿（虛構示意資料）</p>
 </section>
 
 <section aria-labelledby="process">
@@ -188,11 +196,12 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 <li><strong>欄位重填</strong><span>同一資訊反覆登錄；先統一收件欄位。</span></li>
 <li><strong>口頭交接</strong><span>下一站等待說明；固定交接順序。</span></li>
 </ul>
-<figure>
+<figure class="wide">
+<p class="exhibit-title"><span class="exhibit-label" data-label>圖 2</span>試行週處理與品質檢核</p>
 <div class="chart-scroll" tabindex="0" role="region" aria-label="試行週處理與品質檢核，可橫向捲動">
 <svg role="img" aria-label="試行週處理與品質檢核" xmlns="http://www.w3.org/2000/svg" width="979" height="360" viewBox="0 0 979 360" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><line x1="116" y1="0" x2="116" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="116" y1="309" x2="116" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="116" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">0</text><line x1="276.36" y1="0" x2="276.36" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="276.36" y1="309" x2="276.36" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="276.36" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">50</text><line x1="436.72" y1="0" x2="436.72" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="436.72" y1="309" x2="436.72" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="436.72" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">100</text><line x1="597.08" y1="0" x2="597.08" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="597.08" y1="309" x2="597.08" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="597.08" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">150</text><line x1="757.44" y1="0" x2="757.44" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="757.44" y1="309" x2="757.44" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="757.44" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">200</text><line x1="917.8" y1="0" x2="917.8" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="917.8" y1="309" x2="917.8" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="917.8" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">250</text><line x1="116" y1="309" x2="917.8" y2="309" stroke="#8F8D86" stroke-width="1"/><rect x="116" y="55.25" width="769.73" height="44" fill="#C2553A"/><text x="0" y="85.65" font-size="24" fill="#141413">試行處理</text><text x="895.73" y="85.65" font-size="24" fill="#C2553A" font-weight="600">240</text><rect x="116" y="209.75" width="0" height="44" fill="#8F8D86"/><text x="0" y="240.15" font-size="24" fill="#141413">遺漏欄位</text><text x="126" y="240.15" font-size="24" fill="#141413">0</text><line x1="116" y1="0" x2="116" y2="309" stroke="#8F8D86" stroke-width="1"/></svg>
 </div>
-<figcaption>試行週處理與品質檢核｜單位：件｜期間：試行週｜來源：青林標本館流程試行稿（虛構示意資料）｜附註：240 件是處理總量，0 件是遺漏欄位件數，兩者不是互斥分類。</figcaption>
+<figcaption>單位：件｜期間：試行週｜附註：240 件是處理總量，0 件是遺漏欄位件數，兩者不是互斥分類。｜來源：青林標本館流程試行稿（虛構示意資料）</figcaption>
 </figure>
 <p>試行週共處理 240 件，遺漏欄位為 0 件。這是同一館區試行週的紀錄；接下來仍須回看登錄時間。</p>
 <ol class="flow">
