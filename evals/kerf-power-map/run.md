@@ -14,10 +14,12 @@
 | [venn-workload-trade.md](scenarios/venn-workload-trade.md) | 代理工作量與交換條件 | 利益交集 | 不限 |
 | [followup-how-to-reply.md](scenarios/followup-how-to-reply.md) | 策略給過後再問「那怎麼回」 | 疑慮對照（精簡） | 短答 |
 | [no-long-form.md](scenarios/no-long-form.md) | 明說「不要長篇」 | 傳遞路線（精簡） | 短答 |
+| [commitment-verbal-support.md](scenarios/commitment-verbal-support.md) | 口頭支持沒落成可檢查的承諾 | 不指定（§3 退路） | 不限 |
+| [dependence-boss-wont-release.md](scenarios/dependence-boss-wont-release.md) | 現職少不了你，主管不放人 | 不指定（§3 退路） | 不限 |
 
-8 則、6 種圖型，必有兩則圖型重疊：最後兩則測交付分流，處境和前六則都不同，圖型借用疑慮對照與傳遞路線。
+10 則。前 8 則涵蓋 6 種圖型，必有兩則圖型重疊：第 7、8 則測交付分流，處境和前六則都不同，圖型借用疑慮對照與傳遞路線。最後兩則（2026-10-22 加）刻意落在六種圖型以外，不指定圖型，測 board.md §3「六種都不合時，挑最小、最能說清卡點的結構」夠不夠用。
 
-每則固定四節：`## 使用者輸入`、`## 預期卡點與圖型`、`## 通過條件`、`## 舊版預期`。條件末尾的〔US n〕是 spec User Stories 編號；〔要點二〕〔要點三〕指 spec Implementation Decisions 的三要點（不替使用者承諾或背書、今天就能提的請求不設門檻）。
+每則固定四節：`## 使用者輸入`、`## 預期卡點與圖型`、`## 通過條件`、`## 舊版預期`。條件末尾的〔US n〕是 spec User Stories 編號；〔要點二〕〔要點三〕指 spec Implementation Decisions 的三要點（不替使用者承諾或背書、今天就能提的請求不設門檻）。spec 不在這個 repo，最後兩則改標 skill 的章節，例如〔SKILL.md §2〕〔board.md §3〕。
 
 ## 三個角色
 
