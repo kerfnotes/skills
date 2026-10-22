@@ -47,7 +47,7 @@ Length follows purpose, not how much background you wrote. The draft fits the ch
 - **Facts trace back to your own words.** Guesses and unknowns are marked; one person's words are not widened to a whole department, "let's see" is not agreement, and no number or duration is added that you did not give.
 - **It asks when it does not know.** If only one sentence depends on it, it writes the likeliest version that does no harm if wrong and asks: "Is X right? If not, swap in 'Y'." A sentence that would hurt you if wrong, such as admitting a mistake for you, is left out. Drafts never contain blanks to fill.
 - **Aim at the real worry.** When the other side only needs reassurance, one reason beats a derivation or a table.
-- **You choose what you give.** Anything that costs you time or effort, gives up your terms or vouches for someone goes under "only if you want", with a limit or cost, even when it is phrased as an option for the other side.
+- **You choose what you give.** Anything that costs you time or effort, gives up your terms or vouches for someone goes under "only if you want", with a limit or cost, even when it is phrased as an option for the other side. The exception: when the other side names what blocks your request and this cost removes exactly that, it stays in the draft, with a note beside it on what reading it commits you to and what it may cost.
 - **Ask today what you can ask today.** Questions like who decides or the deadline need no "get organised first" gate.
 - **A fallback must stand alone.** It counts only if you can do it without the same approvers; otherwise it says "none for now".
 
