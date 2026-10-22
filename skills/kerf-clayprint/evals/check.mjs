@@ -36,8 +36,11 @@ export async function check(story, script) {
       throw new Error(`第 ${n} 頁：文字稿沒有可核對的數字，不能放量化圖表；請改用 statement、compare、close 或純文字 table。`);
     }
     const allowed = [...original, ...calculations(page, original, n)];
+    // Footnote markers (1)…(N) are references, not measurements; a marker past the page's footnote count is still checked.
+    const marks = page.footnotes?.length ?? 0;
+    const unmark = (text) => normalize(text).replace(/\((\d+)\)/g, (m, d) => Number(d) >= 1 && Number(d) <= marks ? ' ' : m);
     const visible = [
-      ...['claim', 'kicker', 'lede', 'note'].map((field) => [field, page[field]]),
+      ...['claim', 'kicker', 'lede', 'note', 'takeaway', 'points', 'footnotes'].map((field) => [field, page[field]]),
       ...['value', 'label', 'unit'].map((field) => [`metric.${field}`, page.metric?.[field]]),
       // period holds date ranges such as 2025.01–2025.12; dates are reviewed by hand, not as measured values.
       ...['source', 'unit', 'more'].map((field) => [`sources.${field}`, page.sources[field]]),
@@ -45,14 +48,14 @@ export async function check(story, script) {
     ].flatMap(([path, value]) => visibleText(value, path));
     for (const { text, path } of visible) {
       // 已驗算的片段由算式語法處理正負號，避免將減號誤認為原稿負數。
-      const unverified = path.startsWith('sources.more[') ? normalize(text).replace(calculationPattern, '') : text;
+      const unverified = path.startsWith('sources.more[') ? unmark(text).replace(calculationPattern, '') : unmark(text);
       for (const value of numbers(unverified)) {
         if (!found(value, allowed)) {
           throw new Error(`第 ${n} 頁 ${path}：原稿找不到數字 ${value.text}；請改回原稿數字，或在當頁 notes／sources.more 寫出可核對的加減算式（如「計算：1200 + 800 = 2000」）。`);
         }
       }
     }
-    const fields = ['visual', 'lede'];
+    const fields = ['visual', 'lede', 'takeaway', 'points', 'footnotes'];
     if (page.type === 'evidence') fields.push('metric');
     if (['cover', 'section', 'statement', 'evidence'].includes(page.type)) fields.push('note');
     const picture = fields.filter((field) => field !== 'visual' || page.type !== 'evidence')
@@ -74,14 +77,12 @@ export async function check(story, script) {
       const labels = numbers(change?.text ?? '');
       picture.push(...labels, ...labels.map((n) => ({ ...n, value: Math.abs(n.value) })));
     }
-    for (const value of numbers(page.claim)) {
+    for (const value of numbers(unmark(page.claim))) {
       if (!found(value, picture)) warnings.push(`第 ${n} 頁 claim：數字 ${value.text} 未出現在當頁畫面；請補入 visual／metric／lede／body，讓主張與畫面可核對。`);
     }
     const noteLines = (Array.isArray(page.notes) ? page.notes : [page.notes ?? '']).flatMap((text) => normalize(text).split(/\r\n|\r|\n/));
-    // A read deck has no presenter: how to read the chart belongs on the page, not in speaker notes.
-    if (story.mode === 'read') {
-      if (page.type === 'evidence' && !page.note?.trim()) warnings.push(`第 ${n} 頁 note：閱讀型簡報沒有講者；請在 note 寫出這張圖怎麼讀與資料限制。`);
-    } else if (page.type !== 'cover' && !noteLines.some((line) => line.trim() && !/^(?:計算|算法)\s*:/.test(line.trim()))) {
+    // A read deck has no presenter: the build warns when an evidence page's right column is blank instead of asking for speaker notes.
+    if (story.mode !== 'read' && page.type !== 'cover' && !noteLines.some((line) => line.trim() && !/^(?:計算|算法)\s*:/.test(line.trim()))) {
       warnings.push(`第 ${n} 頁 notes：缺少講稿或只有計算行；請另寫 1～3 句要說的話與資料限制。`);
     }
   }
