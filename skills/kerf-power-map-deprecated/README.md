@@ -68,19 +68,19 @@
 
 ## 怎麼確認它有變好
 
-每次改版都用情境題組重跑：作答者只讀 skill 的隔離複本，看不到評分條件；評分交給沒參與改版的另一個模型逐條判；地圖另跑手機寬度與深淺色檢查。沒過就照實寫，不改條件湊分數。題組與結果在 repo 根目錄的 [evals/kerf-power-map](https://github.com/kerfnotes/skills/tree/main/evals/kerf-power-map)。
+每次改版都用情境題組重跑：作答者只讀 skill 的隔離複本，看不到評分條件；評分交給沒參與改版的另一個模型逐條判；地圖另跑手機寬度與深淺色檢查。沒過就照實寫，不改條件湊分數。題組與結果在 repo 根目錄的 [evals/kerf-power-map-deprecated](https://github.com/kerfnotes/skills/tree/main/evals/kerf-power-map-deprecated)。
 
 ## 交給 agent 安裝
 
 把這段交給 Codex 或 Claude Code：
 
 ```text
-請把 https://github.com/kerfnotes/skills 裡的 Power Map（skills/kerf-power-map）安裝到目前專案。
-先讀 skills/kerf-power-map/docs/install.md，依目前使用的 agent 選擇安裝路徑，
+請把 https://github.com/kerfnotes/skills 裡的 Power Map（skills/kerf-power-map-deprecated）安裝到目前專案。
+先讀 skills/kerf-power-map-deprecated/docs/install.md，依目前使用的 agent 選擇安裝路徑，
 完成檢查後回報安裝路徑、來源 commit 及驗證結果。
 ```
 
-Codex 的專案路徑是 `.agents/skills/kerf-power-map/`；Claude Code 是 `.claude/skills/kerf-power-map/`。不需要額外工具或模型。也可以用 [`skills`](https://www.npmjs.com/package/skills) CLI 從整個 repo 挑：
+Codex 的專案路徑是 `.agents/skills/kerf-power-map-deprecated/`；Claude Code 是 `.claude/skills/kerf-power-map-deprecated/`。不需要額外工具或模型。也可以用 [`skills`](https://www.npmjs.com/package/skills) CLI 從整個 repo 挑：
 
 ```sh
 npx skills add kerfnotes/skills --list
@@ -95,7 +95,7 @@ npx skills add kerfnotes/skills --list
 跨部門會議上我的提案被擋，下週要再提一次，我該先找誰？
 ```
 
-Codex 也可用 `$kerf-power-map`，Claude Code 可用 `/kerf-power-map`。
+Codex 也可用 `$kerf-power-map-deprecated`，Claude Code 可用 `/kerf-power-map-deprecated`。
 
 ## 已知限制
 

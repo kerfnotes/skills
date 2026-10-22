@@ -11,7 +11,7 @@
 5. 沒有外部資源：`src`、`srcset`、`href`、`data`、`poster` 不指向 `http(s)://` 或 `//`；`<style>` 和 `style` 屬性裡沒有網址或 `@import`。`<a>` 連結不算。
 6. `html`、`body` 和 body 底下的最外層容器沒有設背景色或背景圖。
 7. 每個證據標籤 `.tag` 都有文字。
-8. 列數與每列字數，只報不判（印成 `INFO 8`，不算進總結）：HTML 的 `.qa-r`、`.hop`、`.ring` 裡的人各算一列，字數不含空白、標點、證據標籤和圈名；超過 20 字的列另外點名。SVG 不分列，只報方框、點的個數和文字總數。精簡圖拿來對 [board.md](../../skills/kerf-power-map/references/board.md) §1「最多 5 列，每列 20 字內」；完整面板不受這條限制。
+8. 列數與每列字數，只報不判（印成 `INFO 8`，不算進總結）：HTML 的 `.qa-r`、`.hop`、`.ring` 裡的人各算一列，字數不含空白、標點、證據標籤和圈名；超過 20 字的列另外點名。SVG 不分列，只報方框、點的個數和文字總數。精簡圖拿來對 [board.md](../../skills/kerf-power-map-deprecated/references/board.md) §1「最多 5 列，每列 20 字內」；完整面板不受這條限制。
 
 ## 在 html_preview 怎麼用
 

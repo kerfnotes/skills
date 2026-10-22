@@ -68,19 +68,19 @@ Specs and examples: [board.md](references/board.md) and [examples](references/ex
 
 ## How changes are checked
 
-Every revision reruns a scenario set: answerers read only an isolated copy of the skill and never see the grading criteria; a model that took no part in the revision grades each criterion; maps also go through phone-width and light/dark checks. Failures are recorded as failures, never fixed by loosening the criteria. The scenarios and results live in [evals/kerf-power-map](https://github.com/kerfnotes/skills/tree/main/evals/kerf-power-map) at the repo root.
+Every revision reruns a scenario set: answerers read only an isolated copy of the skill and never see the grading criteria; a model that took no part in the revision grades each criterion; maps also go through phone-width and light/dark checks. Failures are recorded as failures, never fixed by loosening the criteria. The scenarios and results live in [evals/kerf-power-map-deprecated](https://github.com/kerfnotes/skills/tree/main/evals/kerf-power-map-deprecated) at the repo root.
 
 ## Install with your agent
 
 Give this to Codex or Claude Code:
 
 ```text
-Install Power Map (skills/kerf-power-map) from https://github.com/kerfnotes/skills into this project.
-Read skills/kerf-power-map/docs/install.md first, pick the install path for the agent in use,
+Install Power Map (skills/kerf-power-map-deprecated) from https://github.com/kerfnotes/skills into this project.
+Read skills/kerf-power-map-deprecated/docs/install.md first, pick the install path for the agent in use,
 then report the install path, source commit and verification results.
 ```
 
-The project path is `.agents/skills/kerf-power-map/` for Codex and `.claude/skills/kerf-power-map/` for Claude Code. No extra tools or models are needed. With the [`skills`](https://www.npmjs.com/package/skills) CLI you can also pick from the whole repo:
+The project path is `.agents/skills/kerf-power-map-deprecated/` for Codex and `.claude/skills/kerf-power-map-deprecated/` for Claude Code. No extra tools or models are needed. With the [`skills`](https://www.npmjs.com/package/skills) CLI you can also pick from the whole repo:
 
 ```sh
 npx skills add kerfnotes/skills --list
@@ -95,7 +95,7 @@ My manager wants me to explain the project delay to the client. Here is my draft
 My proposal was blocked at a cross-team meeting and I am raising it again next week. Whom should I talk to first?
 ```
 
-Or invoke `$kerf-power-map` in Codex and `/kerf-power-map` in Claude Code.
+Or invoke `$kerf-power-map-deprecated` in Codex and `/kerf-power-map-deprecated` in Claude Code.
 
 ## Known limits
 

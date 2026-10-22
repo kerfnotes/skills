@@ -1,6 +1,0 @@
-interface:
-  display_name: "Power Map"
-  short_description: "Workplace strategist: book-backed advice, ready wording, a map every turn"
-  default_prompt: "Use $kerf-power-map to read my workplace situation and give me advice I can act on today: size the answer to what I will use it for (a ready-to-send draft when I need to reply, write for someone, or explain a concern; a full strategy only when I ask for one or need to compare paths), tie each recommendation to a mechanism or case from Power, Getting to Yes, or The Dictator's Handbook, attach a visual map every turn, and on follow-ups update only the affected parts."
-policy:
-  allow_implicit_invocation: true
