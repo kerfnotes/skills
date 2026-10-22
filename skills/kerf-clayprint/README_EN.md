@@ -89,7 +89,7 @@ When you hand over a script, say who it is for and what judgement or decision it
 | Code | `scripts/` | Chart types, layouts or outputs change |
 | Checks | `tests/`, `examples/`, `evals/` | A new problem appears or a new example is needed |
 
-`scripts/pptx.js` reads `story.json` and the design layer; the HTML report is assembled from the script and themed by `scripts/theme-css.js`; SVG charts read chart JSON and the design layer. To change the look or the workflow, see [make it yours](docs/make-it-yours.md) (Traditional Chinese).
+`scripts/pptx.js` reads `story.json` and the design layer; `scripts/report.js` reads `report.json` and the design layer for the HTML report; SVG charts read chart JSON and the design layer. To change the look or the workflow, see [make it yours](docs/make-it-yours.md) (Traditional Chinese).
 
 ## Install with your agent
 
@@ -117,7 +117,10 @@ After installing, just ask:
 ```text
 Use Clayprint to turn this script into a deck for my manager to decide whether to extend the pilot
 Turn these meeting notes into a printable HTML report
+Make this script a pre-read deck; people will read it on their own before the meeting, with no presenter
 ```
+
+A pre-read deck uses smaller type and fits more on each page, and what a presenter would say goes on the page itself; see [read decks](references/layouts.md#閱讀型簡報) (Traditional Chinese).
 
 Or invoke `$kerf-clayprint` in Codex and `/kerf-clayprint` in Claude Code.
 

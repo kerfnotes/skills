@@ -89,7 +89,7 @@ node scripts/preview.js out/energy.pptx out/energy
 | 程式 | `scripts/` | 改圖種、版型或輸出方式時 |
 | 檢查成品 | `tests/`、`examples/`、`evals/` | 發現新問題或需要新範例時 |
 
-簡報由 `scripts/pptx.js` 讀 `story.json` 與設計層；報告 HTML 依文字稿組成，再由 `scripts/theme-css.js` 套色；SVG 另讀圖表 JSON 與設計層。換外觀或改流程，見[改造步驟](docs/make-it-yours.md)。
+簡報由 `scripts/pptx.js` 讀 `story.json` 與設計層；報告由 `scripts/report.js` 讀 `report.json` 與設計層；SVG 另讀圖表 JSON 與設計層。換外觀或改流程，見[改造步驟](docs/make-it-yours.md)。
 
 ## 交給 agent 安裝
 
@@ -116,7 +116,10 @@ npx skills add kerfnotes/skills --list
 ```text
 用 Clayprint 把這份文字稿做成簡報，給主管決定要不要擴大試行
 把這份會議紀錄做成 HTML 報告，要能列印
+把這份稿子做成會前閱讀版簡報，大家先自己看，不會有人講解
 ```
+
+閱讀版簡報字級較小、每頁容量較大，要說的話直接寫在頁面上，見[閱讀型簡報](references/layouts.md#閱讀型簡報)。
 
 Codex 也可用 `$kerf-clayprint`，Claude Code 可用 `/kerf-clayprint`。
 

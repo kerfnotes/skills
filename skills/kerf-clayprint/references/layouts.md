@@ -6,7 +6,7 @@
 
 ## 整份簡報與共通欄位
 
-根物件有 `title`、選用的 `date`、`author` 和依播放順序排列的 `pages`。沒有日期就省略 `date`，封面不顯示日期。每頁填 `type`、一句 `claim` 與 `sources.source`；有內容才填該版型的選用欄位。
+根物件有 `title`、選用的 `date`、`author`、`mode` 和依播放順序排列的 `pages`。`mode` 省略或填 `present` 是現場簡報；填 `read` 是[閱讀型簡報](#閱讀型簡報)。沒有日期就省略 `date`，封面不顯示日期。每頁填 `type`、一句 `claim` 與 `sources.source`；有內容才填該版型的選用欄位。
 
 | 欄位 | 用法 |
 | --- | --- |
@@ -49,7 +49,7 @@
 
 預設設計層的 `body` 每行約 25 個中文字、最多三行約 75 字；標點與手動換行也佔容量，末行孤字需調整斷點。
 
-`numbers.visual.items` 的每項是 `{label, value, unit?, prev?, mode?, digits?, better?, deltaSuffix?}`。`value` 可為數字、顯示字串或 `null`；數字依 `digits` 格式化。四格時使用設計層較小的固定數字字級，過長仍警告而不自動縮字。數字搭 `prev` 時可算增減，須明寫 `better: "higher"` 或 `"lower"`；`mode` 預設 `abs`（差額），另有 `pct`（相對百分比）、`pp`（百分點）。前期為 0 時改用差額；字串值不計算增減。
+`numbers.visual.items` 的每項是 `{label, value, unit?, prev?, mode?, digits?, better?, deltaSuffix?, note?}`；`note` 是數字下方的一行說明，交代口徑或比較基準。`value` 可為數字、顯示字串或 `null`；數字依 `digits` 格式化。四格時使用設計層較小的固定數字字級，過長仍警告而不自動縮字。數字搭 `prev` 時可算增減，須明寫 `better: "higher"` 或 `"lower"`；`mode` 預設 `abs`（差額），另有 `pct`（相對百分比）、`pp`（百分點）。前期為 0 時改用差額；字串值不計算增減。
 
 `kpi.visual` 為 `{main: {label, value, unit?, digits?, benchmarks: [{label, value, unit?, digits?}]}, secondary?: [{label, value, unit?, digits?}]}`。主數字在左，1～3 個對照逐列置於下方，右側直排 0～4 個次要指標。每個 `value` 可為數字或顯示字串，數字依該項的 `digits` 格式化；論證必要但缺值時可用 `null`，畫面標「未提供」並列入來源列。
 
@@ -79,8 +79,32 @@
 
 表格、比較頁及收尾頁會依可用高度調整資料列，字級不變。若文字仍放不下，刪內容或拆頁。建檔成功只證明檔案能產生；字級、重疊、圖文關係與故事是否成立，仍須逐頁預覽驗收。
 
+## 閱讀型簡報
+
+會前先寄、讀者自己看、沒有人講解時，根層填 `"mode": "read"`。整份改用 [design/read.json](../design/read.json) 的字級與證據圖寬：頁標題 20 pt、正文 12 pt；標籤文字（頁首、`lede`、來源列、軸標、表頭）10 pt，也是最小字級。13.33 吋投影片印在 A4 橫式約縮為 0.88 倍，10 pt 印出約 9 pt；讀者會印出細看時，先預覽 PDF 確認可讀。字級是整份一致的設計，不是逐頁縮字；放不下仍刪內容或拆頁。證據頁圖表縮窄，右側 `note` 欄加寬，每行約 24 個中文字。
+
+`node evals/check.mjs` 與 `node scripts/pptx.js` 讀到 `mode` 會自動用對應字級建檔，指令不變。下表是放寬後的容量，其餘版型同上：
+
+| 版型 | 現場簡報 | 閱讀型 |
+| --- | --- | --- |
+| `numbers` | 2～4 格，`note` 1 行 | 2～5 格，4 格以上排兩列，`note` 至多 2 行 |
+| `summary` | 2～3 格，理由至多 3 行 | 2～4 格，理由至多 6 行 |
+| `compare` | 2～4 個方案 | 2～5 個方案 |
+| `list` | 3～5 項，`body` 1 行 | 3～6 項，`body` 至多 2 行（項數多時仍受高度限制） |
+| `process` | 3～6 步 | 3～8 步 |
+| `columns` | 2～4 欄 | 2～5 欄 |
+
+沒有講者，要說的話就要寫在頁面上：
+
+- 每張證據頁都填 `note`，寫這張圖怎麼讀、結論和資料限制；缺 `note` 時驗收器會警告。
+- `lede` 交代指標、範圍、期間與單位；清單與流程的 `body` 寫原因或做法，不只寫名詞。
+- 現場簡報用來鋪陳的 `statement`、`section` 頁，改把判斷併入相鄰內容頁的 `claim` 或 `note`，頁數通常比現場版少。內容不到內容區一半的頁面同樣併入相鄰頁或刪頁，不湊字、不放大字級；驗收器會警告。
+- `notes` 不會被讀者看到，只放計算行與資料限制，不必寫講稿。
+
+範例見 [story-read.json](../examples/story-read.json)，和現場版 [story.json](../examples/story.json) 用同一份原稿。
+
 ## 預覽與交付
 
 有 PowerPoint 的 Mac 使用 PowerPoint；沒有 PowerPoint 但有 LibreOffice（`soffice`）時使用 LibreOffice。執行 `node scripts/preview.js out/deck.pptx out/preview`，需要 `pdftoppm`、`ffmpeg`，輸出 `page-N.png`、`sheet.png`（整份概覽）與 `deck.pdf`。LibreOffice 可能替換字型，正式字型仍需在 PowerPoint 複查。兩者都沒有時交代安裝需求；[SVG／PNG 圖表預覽](charts.md#共通欄位與輸出)可驗圖表，整頁版面仍標未驗。
 
-每張內容頁的 `notes` 寫 1～3 句要說的話與資料限制，計算行另列。預覽逐頁核對主張、強調項目、口徑、空間分配與閱讀順序，找出末行單一中文字、過短末行或不均勻斷行。0 項容量警告只表示估算未偵測到溢出，換行品質需看圖。交付記錄最弱頁修改前後及理由；列出實際輸出的原生圖與 SVG，將「實際在 PowerPoint 改一個原生圖數值」標為完成或未驗。
+現場簡報每張內容頁的 `notes` 寫 1～3 句要說的話與資料限制，計算行另列；閱讀型簡報把這些話寫進頁面。預覽逐頁核對主張、強調項目、口徑、空間分配與閱讀順序，找出末行單一中文字、過短末行或不均勻斷行。0 項容量警告只表示估算未偵測到溢出，換行品質需看圖。交付記錄最弱頁修改前後及理由；列出實際輸出的原生圖與 SVG，將「實際在 PowerPoint 改一個原生圖數值」標為完成或未驗。

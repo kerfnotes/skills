@@ -21,12 +21,14 @@ const boxOf = (x, y, str, size, anchor) => {
   return { x0, x1: x0 + w, y0: y - size * 0.8, y1: y + size * 0.2, str };
 };
 
-function text(x, y, str, { size = PX, fill = C.textSecondary, weight, anchor, on } = {}) {
+function text(x, y, str, { size = PX, fill = C.textSecondary, weight, anchor, on, tick } = {}) {
   if (BOXES) BOXES.push(boxOf(x, y, str, size, anchor));
   const attrs = [`x="${n(x)}"`, `y="${n(y)}"`, `font-size="${size}"`, `fill="${fill}"`];
   if (weight) attrs.push(`font-weight="${weight}"`);
   if (anchor && anchor !== 'start') attrs.push(`text-anchor="${anchor}"`);
   if (on) attrs.push(`data-on="${on}"`);
+  // Axis scale labels: evals/check-report.mjs skips them, as evals/check.mjs skips axis.ticks.
+  if (tick) attrs.push('data-tick="1"');
   return `<text ${attrs.join(' ')}>${esc(str)}</text>`;
 }
 
@@ -79,7 +81,7 @@ function bottomAxis(axis, sx, y, x0, x1, P, { grid = true, top = 0, suffix = '' 
     const x = sx(t);
     if (grid) P.push(line(x, top, x, y, { stroke: C.grid, width: T.stroke.grid }));
     P.push(line(x, y, x, y + T.stroke.axisTick));
-    P.push(text(x, y + T.stroke.axisTick + LINE * 0.8, tickText(axis, t, suffix), { anchor: 'middle' }));
+    P.push(text(x, y + T.stroke.axisTick + LINE * 0.8, tickText(axis, t, suffix), { anchor: 'middle', tick: true }));
   }
   P.push(line(x0, y, x1, y));
 }
@@ -115,7 +117,7 @@ function yAxis(axis, sy, x0, x1, P, suffix = '') {
   for (const t of axis.ticks) {
     const y = sy(t);
     P.push(line(x0, y, x1, y, { stroke: C.grid, width: T.stroke.grid }));
-    P.push(text(x0 - 12, mid(y), tickText(axis, t, suffix), { anchor: 'end' }));
+    P.push(text(x0 - 12, mid(y), tickText(axis, t, suffix), { anchor: 'end', tick: true }));
   }
 }
 
@@ -216,7 +218,7 @@ DRAW.multiples = (m, W, H) => {
     P.push(text(x1, y1 + LINE * 0.9, m.x.at(-1), { anchor: 'end' }));
   });
   const ticks = m.axis.ticks.map((t) => tickText(m.axis, t)).join('、');
-  P.push(text(0, H - 8, `縱軸各格相同：${ticks}${m.unit ? ` ${m.unit}` : ''}；右上為最後一期的值`, {}));
+  P.push(text(0, H - 8, `縱軸各格相同：${ticks}${m.unit ? ` ${m.unit}` : ''}；右上為最後一期的值`, { tick: true }));
   return P.join('');
 };
 
@@ -874,7 +876,7 @@ export function framed(spec, opts = {}) {
 }
 
 // Keep enough vertical space for document charts whose categories run down the page.
-function reportHeight(model) {
+export function reportHeight(model) {
   const count = {
     rank: model.rows?.length, slope: model.rows?.length, share: model.rows?.length,
     strip: model.groups?.length, dumbbell: model.rows?.length, funnel: model.steps?.length,

@@ -49,7 +49,8 @@ function reportParts(html) {
         activeFigures.push(figure);
       }
       if (name === 'figcaption' && activeFigures.length) activeFigures.at(-1).hasCaption = true;
-      if (!voidTags.has(name) && !/\/\s*>$/.test(part)) tags.push({ name, hidden: hiddenTags.has(name) || /\shidden(?:\s|=|>)/i.test(part) || /\b(?:display\s*:\s*none|visibility\s*:\s*hidden)\b/i.test(part) });
+      // data-tick on an SVG <text> marks an axis scale label from scripts/svg.js; like evals/check.mjs, scale ticks are not checked.
+      if (!voidTags.has(name) && !/\/\s*>$/.test(part)) tags.push({ name, hidden: hiddenTags.has(name) || /\shidden(?:\s|=|>)/i.test(part) || (name === 'text' && /\sdata-tick(?:\s|=|>)/i.test(part)) || /\b(?:display\s*:\s*none|visibility\s*:\s*hidden)\b/i.test(part) });
     }
   }
   return { blocks, figures };

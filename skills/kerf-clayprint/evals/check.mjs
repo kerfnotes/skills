@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { build, validateStory, deckCategories } from '../scripts/pptx.js';
 import { normalize, numbers, found, calculations, calculationPattern } from './numbers.mjs';
-import { isMain } from '../scripts/main.js';
+import { isMain, rerunForMode } from '../scripts/main.js';
 import { prepare, delta } from '../scripts/core.js';
 
 function visibleText(value, path) {
@@ -78,7 +78,10 @@ export async function check(story, script) {
       if (!found(value, picture)) warnings.push(`第 ${n} 頁 claim：數字 ${value.text} 未出現在當頁畫面；請補入 visual／metric／lede／body，讓主張與畫面可核對。`);
     }
     const noteLines = (Array.isArray(page.notes) ? page.notes : [page.notes ?? '']).flatMap((text) => normalize(text).split(/\r\n|\r|\n/));
-    if (page.type !== 'cover' && !noteLines.some((line) => line.trim() && !/^(?:計算|算法)\s*:/.test(line.trim()))) {
+    // A read deck has no presenter: how to read the chart belongs on the page, not in speaker notes.
+    if (story.mode === 'read') {
+      if (page.type === 'evidence' && !page.note?.trim()) warnings.push(`第 ${n} 頁 note：閱讀型簡報沒有講者；請在 note 寫出這張圖怎麼讀與資料限制。`);
+    } else if (page.type !== 'cover' && !noteLines.some((line) => line.trim() && !/^(?:計算|算法)\s*:/.test(line.trim()))) {
       warnings.push(`第 ${n} 頁 notes：缺少講稿或只有計算行；請另寫 1～3 句要說的話與資料限制。`);
     }
   }
@@ -96,6 +99,7 @@ if (isMain(import.meta.url)) {
       let story;
       try { story = JSON.parse(readFileSync(storyFile, 'utf8')); }
       catch { throw new Error(`無法讀取 ${storyFile} 為 JSON；請確認路徑、雙引號與逗號。`); }
+      if (rerunForMode(story)) process.exit();
       let script;
       try { script = readFileSync(scriptFile, 'utf8'); }
       catch { throw new Error(`無法讀取文字稿 ${scriptFile}；請確認檔案路徑。`); }

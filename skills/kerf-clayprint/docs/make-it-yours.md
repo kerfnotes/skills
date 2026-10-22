@@ -26,15 +26,14 @@ CLAYPRINT_TOKENS=out/mine.json node scripts/pptx.js examples/story.json out/mine
 
 檢查若有「失敗」，先修好再建檔；「警告」要看是否需直接標值或改用表格。有 PowerPoint，或裝了 LibreOffice，且有 `pdftoppm`、`ffmpeg` 時，分別執行 `node scripts/preview.js out/original.pptx out/preview-original` 與 `node scripts/preview.js out/mine.pptx out/preview-mine`。用同一份 `examples/story.json` 的兩版逐頁並排，先改最弱的一頁。PowerPoint 與 LibreOffice 都沒有時，可先看 SVG 圖表，整頁仍待預覽。
 
-報告也用同一設計層；先複製，才修改 HTML：
+報告也用同一設計層；由 `report.json` 重建時，樣式與圖表會一起換色：
 
 ```sh
-cp examples/report.html out/mine-report.html
-CLAYPRINT_TOKENS=out/mine.json node scripts/theme-css.js out/mine-report.html
+CLAYPRINT_TOKENS=out/mine.json node scripts/report.js examples/report.json out/mine-report.html
 node evals/check-report.mjs out/mine-report.html evals/fixtures/explain-script.md
 ```
 
-用瀏覽器看報告。若報告嵌入的是由 `scripts/svg.js` 產生的 SVG，換設計層後也要用同一份圖表 JSON 重產。
+用瀏覽器看報告。手工組成的 HTML 報告用 `CLAYPRINT_TOKENS=out/mine.json node scripts/theme-css.js 報告.html` 只換樣式；其中由 `scripts/svg.js` 產生的 SVG，要用同一份圖表 JSON 重產。
 
 ### 故意做壞，再修好
 

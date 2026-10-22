@@ -1,0 +1,31 @@
+{
+  "name": "read",
+  "type": {
+    "display": 72,
+    "statement": 64,
+    "number": 88,
+    "conclusionNumber": 64,
+    "title": 40,
+    "sub": 28,
+    "body": 24,
+    "chartTitle": 24,
+    "tableBody": 24,
+    "tableHeader": 20,
+    "label": 20,
+    "minimum": 20
+  },
+  "chartArea": {
+    "evidence": { "width": 1000, "height": 669 }
+  },
+  "capacity": {
+    "numbers": [2, 5],
+    "numbersNote": 2,
+    "summary": [2, 4],
+    "summaryBody": 6,
+    "compare": [2, 5],
+    "list": [3, 6],
+    "listBody": 2,
+    "process": [3, 8],
+    "columns": [2, 5]
+  }
+}

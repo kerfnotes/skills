@@ -1,8 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { checkReport } from '../evals/check-report.mjs';
+import { buildReport } from '../scripts/report.js';
 import { themeCss, replaceTheme } from '../scripts/theme-css.js';
 import { loadTokens } from '../scripts/tokens.js';
 
@@ -60,4 +63,45 @@ test('theme-css keeps CRLF files in CRLF', () => {
   const out = replaceTheme(crlf, ':root {\n  --x: 1;\n}');
   assert.ok(!/[^\r]\n/.test(out), 'no bare LF after rewriting a CRLF file');
   assert.match(out, /--x: 1;/);
+});
+
+test('report.json 產生的範例報告通過原稿核對，樣式來自生效設計層', () => {
+  const { html, figures, warnings } = buildReport(JSON.parse(file('examples/report.json')), { baseDir: 'examples' });
+  assert.equal(figures, 2);
+  assert.deepEqual(warnings, []);
+  assert.equal(cssOf(html), themeCss());
+  assert.match(html, /<nav class="toc"/);
+  assert.match(html, /data-tick="1"/);
+  assert.equal(checkReport(html, file('evals/fixtures/explain-script.md')).figures, 2);
+  const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-report-'));
+  try {
+    const run = spawnSync(process.execPath, ['scripts/report.js', 'examples/report.json', path.join(dir, 'r.html')], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    assert.equal(readFileSync(path.join(dir, 'r.html'), 'utf8'), html);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('座標軸刻度不核對，資料標籤仍要來自原稿', () => {
+  const html = (label) => `<section><figure><svg><text data-tick="1">40</text><text>${label}</text></svg><figcaption>來源：原稿</figcaption></figure></section>`;
+  assert.doesNotThrow(() => checkReport(html('12'), '甲 12 件。'));
+  assert.throws(() => checkReport(html('99'), '甲 12 件。'), /99/);
+  assert.throws(() => checkReport('<section><p data-tick="1">甲 99 件</p></section>', '甲 12 件。'), /99/);
+});
+
+test('report.json：跳脫 HTML、缺值標未提供、缺來源的圖與錯誤元件指出位置', () => {
+  const base = { title: '測試', message: '帶走 <b>這句</b>', sections: [{ claim: '判斷', blocks: [{ type: 'text', text: '<script>x</script>' }] }] };
+  const { html } = buildReport({ ...base, summary: { claim: '建議', items: [{ label: '甲', value: null }, { label: '乙', value: 0, unit: '件' }] } });
+  assert.match(html, /帶走 &lt;b&gt;這句&lt;\/b&gt;/);
+  assert.match(html, /&lt;script&gt;x&lt;\/script&gt;/);
+  assert.match(html, /<dd><span class="missing">未提供<\/span><\/dd>/);
+  assert.match(html, /<dd>0 件<\/dd>/);
+  const chart = { kind: 'rank', rows: [{ label: '甲', value: 1 }] };
+  assert.throws(() => buildReport({ ...base, sections: [{ claim: '判斷', blocks: [{ type: 'chart', title: '圖', chart }] }] }), /source/);
+  assert.throws(() => buildReport({ ...base, sections: [{ claim: '判斷', blocks: [{ type: 'slide' }] }] }), /sections\[0\]\.blocks\[0\]\.type/);
+  assert.throws(() => buildReport({ ...base, summary: { claim: '建議', items: [{ label: '甲' }] } }), /summary\.items\[0\]\.value/);
+  assert.throws(() => buildReport({ ...base, sections: [{ claim: '判斷', blocks: [{ type: 'compare', rows: ['成本'], options: [{ values: ['低'] }] }] }] }), /options\[0\]\.name/);
+  assert.throws(() => buildReport({ ...base, sections: [{ claim: '判斷', blocks: [{ type: 'process', focus: '1', steps: [{ heading: '甲' }, { heading: '乙' }] }] }] }), /focus/);
+  assert.throws(() => buildReport({ ...base, sections: [{ id: 'section-2', claim: '判斷', blocks: base.sections[0].blocks }] }), /\.id/);
 });

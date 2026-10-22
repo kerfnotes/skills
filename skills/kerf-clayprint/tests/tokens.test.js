@@ -14,6 +14,7 @@ const readDesign = (name = 'tokens.json') => JSON.parse(readFileSync(path.join(r
 function run(code, { cwd = root, tokens } = {}) {
   const env = { ...process.env };
   delete env.CLAYPRINT_TOKENS;
+  delete env.CLAYPRINT_MODE;
   if (tokens !== undefined) env.CLAYPRINT_TOKENS = tokens;
   return spawnSync(process.execPath, ['--input-type=module', '-e', code], { cwd, env, encoding: 'utf8' });
 }

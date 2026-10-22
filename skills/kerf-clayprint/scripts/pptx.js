@@ -6,7 +6,8 @@ import JSZip from 'jszip';
 import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, prepare, decimalsOf, textOn } from './core.js';
 import { render } from './svg.js';
 import { svgToPng } from './png.js';
-import { isMain } from './main.js';
+import { isMain, rerunForMode } from './main.js';
+import { MODE } from './tokens.js';
 
 // Design px → PowerPoint units. The spec is drawn at 1920×1080 = 13.333×7.5 in.
 const inch = (px) => px / T.slide.pxPerIn;
@@ -60,6 +61,13 @@ function checkWrap(ctx, field, str, px, width, limit, orphan = false) {
     ctx.warn(`${measured}，末行僅 1 個中文字「${rows.at(-1).trim()}」；請調整斷行。`);
   }
   return count;
+}
+
+// A read deck has no presenter to carry a near-empty page. Only layouts whose height comes from the content call this.
+const MIN_FILL = 0.5;
+function sparse(ctx, used, avail) {
+  if (MODE !== 'read' || avail <= 0 || used / avail >= MIN_FILL) return;
+  ctx.warn(`第 ${ctx.n} 頁內容只占內容區 ${Math.round((used / avail) * 100)}%；閱讀型簡報先併入相鄰頁或刪頁，不湊字、不放大字級。`);
 }
 
 function sourceItems(sources = {}, missing = []) {
@@ -263,6 +271,9 @@ function chart(slide, spec, area, ctx) {
 // ---- layouts
 
 const LAYOUT = {};
+// Item counts per layout; read mode (design/read.json) widens them because its type is smaller.
+const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4], ...T.capacity };
+const outside = (count, [lo, hi]) => count < lo || count > hi;
 const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table', 'multiples', 'bridge', 'histogram', 'strip', 'matrix', 'dumbbell', 'funnel', 'heat', 'grouped', 'sharetrend', 'combo', 'bullet', 'waffle', 'mekko', 'pareto', 'tornado', 'box', 'ordered']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -277,6 +288,7 @@ export function validateStory(story) {
   need(isObject(story), 'story', '提供包含 pages 的 JSON 物件');
   need(Array.isArray(story.pages) && story.pages.length > 0, 'pages', '提供至少一頁的陣列');
   for (const key of ['title', 'date', 'author']) if (story[key] != null) need(typeof story[key] === 'string', key, '改成文字字串');
+  if (story.mode != null) need(['present', 'read'].includes(story.mode), 'mode', '填 present（現場簡報，預設）或 read（閱讀型簡報）');
   story.pages.forEach((page, i) => {
     const p = `pages[${i}]`, n = i + 1;
     const check = (ok, path, repair) => need(ok, `${p}${path ? `.${path}` : ''}`, repair, n);
@@ -362,7 +374,7 @@ export function validateStory(story) {
         str(item.label, `${path}label`, true);
         check(item.value === null || isNumber(item.value) || (typeof item.value === 'string' && item.value.trim().length > 0), `${path}value`, '填入有限數字或文字；未提供的數值請填 null');
         optional(item, ['unit', 'deltaSuffix'], path);
-        if (page.type === 'summary') optional(item, ['note'], path);
+        optional(item, ['note'], path);
         if (item.prev !== undefined) check(item.prev === null || isNumber(item.prev), `${path}prev`, '填入有限數字，未提供則填 null 或省略');
         if (item.digits !== undefined) digits(item.digits, `${path}digits`);
         if (item.better !== undefined) check(['higher', 'lower'].includes(item.better), `${path}better`, '填入 higher 或 lower');
@@ -520,6 +532,7 @@ LAYOUT.statement = (slide, ctx) => {
   }
   if (page.note) text(slide, page.note, { x: M.x, y: top + n * S * 1.25 + ledeH + 40, w: width, h: noteN * T.type.body.px * 1.5, px: T.type.body.px, lineHeight: 1.5 });
   if (top < M.top + LABEL || top + blockH > ruleY - M.sourceGap) ctx.warn(`第 ${ctx.n} 頁一句話內容超出可用高度`);
+  sparse(ctx, blockH, ruleY - M.sourceGap - TITLE_Y);
 };
 
 LAYOUT.evidence = (slide, ctx) => {
@@ -543,7 +556,9 @@ LAYOUT.evidence = (slide, ctx) => {
       { x: inch(x), y: inch(y), w: inch(w), h: inch(N * 1.2), margin: 0, valign: 'bottom' });
     y += N * 1.2 + 32;
   }
-  if (page.note) text(slide, page.note, { x, y, w, h: end - y, px: T.type.body.px, color: C.text, lineHeight: 1.5 });
+  if (!page.note) return;
+  checkWrap(ctx, 'note', page.note, T.type.body.px, w, Math.floor((end - y) / (T.type.body.px * 1.5)));
+  text(slide, page.note, { x, y, w, h: end - y, px: T.type.body.px, color: C.text, lineHeight: 1.5 });
 };
 
 LAYOUT.numbers = (slide, ctx) => {
@@ -552,15 +567,23 @@ LAYOUT.numbers = (slide, ctx) => {
   const topBase = contentTop(slide, ctx);
   const ruleY = sourceRow(slide, ctx);
   const items = page.visual.items.filter((it) => !emptyCell(it));
-  if (items.length < 2 || items.length > 4) ctx.warn(`第 ${ctx.n} 頁數字格是 ${items.length} 格，規格是 2～4 格`);
-  const gap = 56, cw = (INNER - gap * (items.length - 1)) / items.length;
-  const N = items.length >= 4 ? T.type.conclusionNumber.px : T.type.number.px, B = T.type.body.px;
-  const blockH = 16 + LABEL * LH + 16 + N * 1.15 + 16 + B * 1.4;
+  if (outside(items.length, CAP.numbers)) ctx.warn(`第 ${ctx.n} 頁數字格是 ${items.length} 格，規格是 ${CAP.numbers.join('～')} 格`);
+  // Read decks wrap four or more cells into two rows, so each number has room for its note.
+  const perRow = MODE === 'read' && items.length >= 4 ? Math.ceil(items.length / 2) : items.length;
+  const rows = Math.ceil(items.length / perRow);
+  const gap = 56, cw = (INNER - gap * (perRow - 1)) / perRow;
+  const N = perRow >= 4 ? T.type.conclusionNumber.px : T.type.number.px, B = T.type.body.px;
+  const noteN = Math.max(0, ...items.map((it) => it.note
+    ? Math.min(CAP.numbersNote, checkWrap(ctx, `visual.items[${page.visual.items.indexOf(it)}].note`, it.note, B, cw - 16, CAP.numbersNote)) : 0));
+  const valueY = 16 + LABEL * LH + 16, deltaY = valueY + N * 1.15 + 16;
+  const cellH = deltaY + B * 1.4 + (noteN ? 8 + noteN * B * LH : 0);
+  const blockH = rows * cellH + (rows - 1) * gap;
   const free = ruleY - M.sourceGap - topBase;
   if (blockH > free) ctx.warn(`第 ${ctx.n} 頁數字格高度超出內容區`);
-  const top = topBase + Math.max(0, (free - blockH) / 2);
+  sparse(ctx, blockH, free);
+  const top0 = topBase + Math.max(0, (free - blockH) / 2);
   items.forEach((it, i) => {
-    const x = M.x + i * (cw + gap);
+    const x = M.x + (i % perRow) * (cw + gap), top = top0 + Math.floor(i / perRow) * (cellH + gap);
     rule(slide, x, top, x + cw, top, C.gray);
     rule(slide, x, top, x, top + 16, C.gray);
     text(slide, it.label ?? '', { x: x + 16, y: top + 16, w: cw - 16, h: LABEL * LH });
@@ -574,6 +597,7 @@ LAYOUT.numbers = (slide, ctx) => {
       const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? 0, suffix: it.deltaSuffix ?? '' });
       if (d) text(slide, d.text, { x: x + 16, y: top + 16 + LABEL * LH + 16 + N * 1.15 + 16, w: cw - 16, h: B * 1.4, px: B, color: d.color });
     }
+    if (it.note) text(slide, it.note, { x: x + 16, y: top + deltaY + B * 1.4 + 8, w: cw - 16, h: noteN * B * LH, px: B, lineHeight: LH });
   });
 };
 
@@ -588,12 +612,12 @@ LAYOUT.summary = (slide, ctx) => {
   const leadH = checkWrap(ctx, 'visual.lead', lead, T.type.sub.px, leftW, 1) * T.type.sub.px * LH;
   text(slide, lead, { x: M.x, y: top, w: leftW, h: leadH, px: T.type.sub.px, color: C.text, bold: true });
   if (body) {
-    const limit = Math.max(0, Math.min(3, Math.floor((end - top - leadH - 24) / (T.type.body.px * LH))));
+    const limit = Math.max(0, Math.min(CAP.summaryBody, Math.floor((end - top - leadH - 24) / (T.type.body.px * LH))));
     const count = checkWrap(ctx, 'visual.body', body, T.type.body.px, leftW, limit, true), bodyH = count * T.type.body.px * LH;
     text(slide, body, { x: M.x, y: top + leadH + 24, w: leftW, h: bodyH, px: T.type.body.px, color: C.text, lineHeight: LH });
   }
   const items = page.visual.items.map((it, index) => ({ ...it, index })).filter((it) => !emptyCell(page.visual.items[it.index]));
-  if (items.length < 2 || items.length > 3) ctx.warn(`第 ${ctx.n} 頁主管摘要是 ${items.length} 格，規格是 2～3 格`);
+  if (outside(items.length, CAP.summary)) ctx.warn(`第 ${ctx.n} 頁主管摘要是 ${items.length} 格，規格是 ${CAP.summary.join('～')} 格`);
   const rowH = (end - top) / items.length, N = T.type.conclusionNumber.px, B = T.type.body.px;
   items.forEach((it, i) => {
     const y = top + i * rowH;
@@ -631,8 +655,8 @@ LAYOUT.compare = (slide, ctx) => {
   const ruleY = sourceRow(slide, ctx);
   const { rows } = page.visual;
   const options = page.visual.options.map((o, index) => ({ ...o, index })).filter((o) => !emptyCell(page.visual.options[o.index]));
-  if (options.length < 2 || options.length > 4) ctx.warn(`第 ${ctx.n} 頁比較方案是 ${options.length} 個，規格是 2～4 個`);
-  const labelW = options.length === 4 ? 240 : 300, gap = options.length === 4 ? 32 : 48;
+  if (outside(options.length, CAP.compare)) ctx.warn(`第 ${ctx.n} 頁比較方案是 ${options.length} 個，規格是 ${CAP.compare.join('～')} 個`);
+  const labelW = options.length >= 4 ? 240 : 300, gap = options.length >= 4 ? 32 : 48;
   const ow = (INNER - labelW - gap * options.length) / options.length;
   const end = ruleY - M.sourceGap;
   const headH = T.type.sub.px * 1.4 + LABEL * LH + 24;
@@ -670,7 +694,7 @@ LAYOUT.list = (slide, ctx) => {
   header(slide, page.kicker, story.title);
   const top = contentTop(slide, ctx), end = sourceRow(slide, ctx) - M.sourceGap;
   const items = page.visual.items.map((item, index) => ({ ...item, index })).filter((item) => !emptyCell(page.visual.items[item.index]));
-  if (items.length < 3 || items.length > 5) ctx.warn(`第 ${ctx.n} 頁診斷清單是 ${items.length} 項，規格是 3～5 項`);
+  if (outside(items.length, CAP.list)) ctx.warn(`第 ${ctx.n} 頁診斷清單是 ${items.length} 項，規格是 ${CAP.list.join('～')} 項`);
   const rowH = (end - top) / items.length, tagW = 200, noteW = 400, gap = 48;
   const midX = M.x + tagW + gap, midW = INNER - tagW - noteW - 2 * gap;
   items.forEach((item, i) => {
@@ -678,12 +702,13 @@ LAYOUT.list = (slide, ctx) => {
     if (i) rule(slide, M.x, y, W - M.x, y, C.grid);
     if (item.tag) text(slide, item.tag, { x: M.x, y: y + 16, w: tagW, h: LABEL * LH, color: focus ? C.focus : C.textSecondary, bold: focus });
     const headingH = lines(item.heading, T.type.sub.px, midW) * T.type.sub.px * 1.2;
+    const bodyH = item.body ? Math.min(lines(item.body, T.type.body.px, midW), CAP.listBody) * T.type.body.px * 1.4 : 0;
     text(slide, item.heading, { x: midX, y: y + 12, w: midW, h: headingH, px: T.type.sub.px, color: focus ? C.focus : C.text, bold: true });
-    if (item.body) text(slide, item.body, { x: midX, y: y + 16 + headingH, w: midW, h: T.type.body.px * 1.4, px: T.type.body.px, color: C.textSecondary });
+    if (item.body) text(slide, item.body, { x: midX, y: y + 16 + headingH, w: midW, h: bodyH, px: T.type.body.px, color: C.textSecondary });
     if (item.note) text(slide, item.note, { x: W - M.x - noteW, y: y + 16, w: noteW, h: LABEL * LH, align: 'right' });
-    checkWrap(ctx, `visual.items[${item.index}].heading`, item.heading, T.type.sub.px, midW, Math.max(0, Math.floor((rowH - 24 - (item.body ? 16 + T.type.body.px * 1.4 : 0)) / (T.type.sub.px * 1.2))));
+    checkWrap(ctx, `visual.items[${item.index}].heading`, item.heading, T.type.sub.px, midW, Math.max(0, Math.floor((rowH - 24 - (item.body ? 16 + bodyH : 0)) / (T.type.sub.px * 1.2))));
     if (item.tag) checkWrap(ctx, `visual.items[${item.index}].tag`, item.tag, LABEL, tagW, 1);
-    if (item.body) checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, midW, 1);
+    if (item.body) checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, midW, CAP.listBody);
     if (item.note) checkWrap(ctx, `visual.items[${item.index}].note`, item.note, LABEL, noteW, 1);
   });
 };
@@ -693,7 +718,7 @@ LAYOUT.process = (slide, ctx) => {
   header(slide, page.kicker, story.title);
   const topBase = contentTop(slide, ctx), end = sourceRow(slide, ctx) - M.sourceGap;
   const steps = page.visual.steps.map((step, index) => ({ ...step, index })).filter((step) => !emptyCell(page.visual.steps[step.index]));
-  if (steps.length < 3 || steps.length > 6) ctx.warn(`第 ${ctx.n} 頁無日期流程是 ${steps.length} 步，規格是 3～6 步`);
+  if (outside(steps.length, CAP.process)) ctx.warn(`第 ${ctx.n} 頁無日期流程是 ${steps.length} 步，規格是 ${CAP.process.join('～')} 步`);
   const gap = 28, cw = (INNER - gap * (steps.length - 1)) / steps.length;
   const stepH = 142 + Math.max(...steps.map((step) => lines(step.heading, T.type.sub.px, cw) * T.type.sub.px * 1.2
     + (step.body ? 18 + lines(step.body, T.type.body.px, cw) * T.type.body.px * LH : 0)));
@@ -701,6 +726,7 @@ LAYOUT.process = (slide, ctx) => {
   const top = topBase;
   const stepsEnd = end - noteH;
   if (blockH > end - topBase) ctx.warn(`第 ${ctx.n} 頁無日期流程高度不足`);
+  sparse(ctx, blockH, end - topBase);
   const lineY = top + 94;
   rule(slide, M.x + cw / 2, lineY, W - M.x - cw / 2, lineY, C.gray);
   steps.forEach((step, i) => {
@@ -804,7 +830,7 @@ LAYOUT.columns = (slide, ctx) => {
   header(slide, page.kicker, story.title);
   const topBase = contentTop(slide, ctx), end = sourceRow(slide, ctx) - M.sourceGap;
   const items = page.visual.items.map((item, index) => ({ ...item, index })).filter((item) => !emptyCell(page.visual.items[item.index]));
-  if (items.length < 2 || items.length > 4) ctx.warn(`第 ${ctx.n} 頁並列重點是 ${items.length} 欄，規格是 2～4 欄`);
+  if (outside(items.length, CAP.columns)) ctx.warn(`第 ${ctx.n} 頁並列重點是 ${items.length} 欄，規格是 ${CAP.columns.join('～')} 欄`);
   const gap = 48, cw = (INNER - gap * (items.length - 1)) / items.length;
   const blockH = Math.max(...items.map((item) => 28
     + (item.kicker ? LABEL * LH + 18 : 0)
@@ -813,6 +839,7 @@ LAYOUT.columns = (slide, ctx) => {
     + (item.body ? lines(item.body, T.type.body.px, cw) * T.type.body.px * LH : 0)));
   const top = topBase;
   if (blockH > end - topBase) ctx.warn(`第 ${ctx.n} 頁並列重點高度不足`);
+  sparse(ctx, blockH, end - topBase);
   items.forEach((item, i) => {
     const x = M.x + i * (cw + gap), focus = item.index === page.visual.focus;
     rule(slide, x, top, x + cw, top, focus ? C.focus : C.gray);
@@ -857,6 +884,7 @@ LAYOUT.steps = (slide, ctx) => {
     rule(slide, x0 + i * mw, rulerY, x0 + i * mw, rulerY + (quarter ? 16 : 8), C.gray);
   }
   const rowsTop = rulerY + 32, rowH = Math.min(120, (ruleY - 48 - rowsTop) / Math.max(1, phases.length));
+  sparse(ctx, rowsTop + phases.length * rowH - top, ruleY - 48 - top);
   phases.forEach((p, i) => {
     const y = rowsTop + i * rowH;
     checkWrap(ctx, `visual.phases[${p.index}].name`, p.name ?? '', T.type.body.px, nameW - 24, Math.max(0, Math.min(1, Math.floor((rowH - 12 - (p.note ? LABEL * LH : 0)) / (T.type.body.px * 1.3)))));
@@ -912,6 +940,9 @@ export function deckCategories(story) {
 
 export async function build(story) {
   validateStory(story);
+  if ((story.mode ?? 'present') !== MODE) {
+    throw new Error(`story 的 mode 是 ${story.mode ?? 'present'}，但字級以 ${MODE} 載入；請用 node scripts/pptx.js 或 node evals/check.mjs 建檔，它們會自動切換。程式內呼叫要先設 CLAYPRINT_MODE=${story.mode ?? 'present'}。`);
+  }
   const warnings = [];
   const charts = [];
   const pres = new PptxGenJS();
@@ -1129,6 +1160,7 @@ if (isMain(import.meta.url)) {
   }
   try {
     const story = JSON.parse(readFileSync(input, 'utf8'));
+    if (rerunForMode(story)) process.exit();
     const { buffer, warnings } = await build(story);
     writeFileSync(output, buffer);
     for (const w of warnings) console.error(`警告：${w}`);
