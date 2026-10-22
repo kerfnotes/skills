@@ -105,3 +105,43 @@ test('report.json：跳脫 HTML、缺值標未提供、缺來源的圖與錯誤�
   assert.throws(() => buildReport({ ...base, sections: [{ claim: '判斷', blocks: [{ type: 'process', focus: '1', steps: [{ heading: '甲' }, { heading: '乙' }] }] }] }), /focus/);
   assert.throws(() => buildReport({ ...base, sections: [{ id: 'section-2', claim: '判斷', blocks: base.sections[0].blocks }] }), /\.id/);
 });
+
+test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢幕規則不變', () => {
+  const css = themeCss();
+  const at = css.indexOf('@page');
+  const screen = css.slice(0, at), print = css.slice(at);
+  // 螢幕：940 px、米色、圖表橫向捲動與窄螢幕最小寬度都還在，且不受列印屬性影響。
+  assert.match(screen, /body \{[^}]*max-width: 940px/);
+  assert.match(screen, /html \{[^}]*background: var\(--cp-paper\)/);
+  assert.match(screen, /\.chart-scroll \{ max-width: 100%; overflow-x: auto; \}/);
+  assert.match(screen, /\.chart-scroll svg \{ min-width: 640px; max-width: none; \}/);
+  assert.doesNotMatch(screen, /data-paper|data-size|\dmm|\dpt/);
+  // 紙張與邊界：預設 A4 白紙；@page 設在最外的 22／14 mm 線，正文欄由 body 內距推到左 50、右 25 mm；
+  // 第一頁零邊界且無頁尾；Letter 只換紙張大小。
+  assert.match(print, /@page \{[^}]*size: A4; margin: 12mm 14mm 15mm 22mm;/);
+  assert.match(print, /@bottom-right \{[^}]*content: var\(--report-title, ""\) " \| " counter\(page\) " \/ " counter\(pages\);[^}]*font: 7pt var\(--cp-font\);[^}]*padding-right: 11mm;/);
+  assert.match(print, /@page :first \{ margin: 0;[^}]*@bottom-right \{ content: none; \}/);
+  assert.match(print, /@page letter \{ size: letter; \}/);
+  assert.match(print, /html\[data-size="letter"\] body \{ page: letter; \}/);
+  assert.match(print, /html\[data-paper="clay"\] body \{ page: clay; \}/);
+  assert.match(print, /@page clay \{ background: var\(--cp-paper\); \}/);
+  assert.doesNotMatch(print, /size: letter;[^}]*margin/);
+  // 列印字級與欄寬。
+  const media = print.slice(print.indexOf('@media print'));
+  assert.match(media, /html \{[^}]*background: #fff;[^}]*font-size: 10\.5pt; line-height: 16pt;/);
+  assert.match(media, /body \{[^}]*padding: 0 11mm 0 28mm;/);
+  assert.match(media, /h2 \{ font-size: 24pt;/);
+  assert.match(media, /h3 \{ font-size: 12pt;/);
+  assert.match(media, /figcaption, \.sources \{ font-size: 7pt;/);
+  assert.match(media, /figure, \.table-scroll \{ margin-right: -11mm; \}/);
+  assert.match(media, /\.chart-scroll svg \{ min-width: 0; max-width: 100%; \}/);
+  // 列印區塊在窄螢幕規則之後，才能蓋掉它（A4 版心約 510 CSS px，會命中 max-width: 640px）。
+  assert.ok(css.indexOf('@media print') > css.indexOf('@media (max-width: 640px)'));
+});
+
+test('報告名寫在根元素的 CSS 變數，給列印頁尾用，並跳脫引號與反斜線', () => {
+  const { html } = buildReport({ title: `甲's "乙" \\ <丙>\n丁`, message: '帶走這句', sections: [{ claim: '判斷', blocks: [{ type: 'text', text: '內文' }] }] });
+  assert.match(html, /<html lang="zh-Hant" style="--report-title: '甲\\'s &quot;乙&quot; \\\\ &lt;丙&gt; 丁'">/);
+  assert.match(file('examples/report.html'), /<html lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快'">/);
+  assert.match(file('assets/report.html'), /<html lang="zh-Hant" style="--report-title: '\{\{報告標題\}\}'">/);
+});

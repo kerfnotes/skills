@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快'">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -77,18 +77,41 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .summary-metrics { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
   .chart-scroll svg { min-width: 640px; max-width: none; }
 }
-@page { size: A4; margin: 18mm 19mm; }
+/* Chrome clips print content outside the page area and shrinks the whole page when anything overflows on the right,
+   so @page sits on the outermost lines (22 mm left, 14 mm right) and body padding sets the 50 / 25 mm text column. */
+@page {
+  size: A4; margin: 12mm 14mm 15mm 22mm;
+  @bottom-right { content: var(--report-title, "") " | " counter(page) " / " counter(pages); font: 7pt var(--cp-font); color: var(--cp-muted); padding-right: 11mm; }
+}
+/* The first page has no margin so the cover band can bleed, and no footer. */
+@page :first { margin: 0; @bottom-right { content: none; } }
+/* The PDF printer sets data-paper / data-size on the root; @page cannot match attributes, so they pick named pages. */
+@page clay { background: var(--cp-paper); }
+@page letter { size: letter; }
+@page clay-letter { size: letter; background: var(--cp-paper); }
 @media print {
-  html { background: var(--cp-paper); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  body { max-width: none; padding: 0; }
+  html { background: #fff; font-size: 10.5pt; line-height: 16pt; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  html[data-paper="clay"] { background: var(--cp-paper); }
+  html[data-paper="clay"] body { page: clay; }
+  html[data-size="letter"] body { page: letter; }
+  html[data-paper="clay"][data-size="letter"] body { page: clay-letter; }
+  body { max-width: none; padding: 0 11mm 0 28mm; }
+  h2 { font-size: 24pt; }
+  h3 { font-size: 12pt; }
+  figcaption, .sources { font-size: 7pt; }
   .report-cover { break-after: page; }
   .section-heading { break-after: avoid; }
   /* A short section stays on one page so its heading never sits alone; Chrome breaks sections taller than a page anyway. */
   section { break-inside: avoid; }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
   tr { break-inside: avoid; }
+  /* Charts and tables may run into the body padding, to 14 mm from the right edge (146 mm on A4). */
+  figure, .table-scroll { margin-right: -11mm; }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
+  /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
+  /* SVG text is in viewBox units (979 wide); 19 units at 146 mm is about 8 pt. */
+  .chart-scroll svg [data-tick] { font-size: 19px; }
   .sources { break-before: avoid; }
   a { color: inherit; }
 }
