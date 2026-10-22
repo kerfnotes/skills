@@ -133,7 +133,7 @@ test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢�
   assert.match(media, /h2 \{ font-size: 24pt;/);
   assert.match(media, /h3 \{ font-size: 12pt;/);
   assert.match(media, /figcaption, \.sources \{ font-size: 7pt;/);
-  assert.match(media, /figure, \.table-scroll \{ margin-right: -11mm; \}/);
+  assert.match(media, /figure, \.table-scroll \{ margin-right: -11mm; max-width: none; \}/);
   assert.match(media, /\.chart-scroll svg \{ min-width: 0; max-width: 100%; \}/);
   // 列印區塊在窄螢幕規則之後，才能蓋掉它（A4 版心約 510 CSS px，會命中 max-width: 640px）。
   assert.ok(css.indexOf('@media print') > css.indexOf('@media (max-width: 640px)'));

@@ -106,7 +106,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
   tr { break-inside: avoid; }
   /* Charts and tables may run into the body padding, to 14 mm from the right edge (146 mm on A4). */
-  figure, .table-scroll { margin-right: -11mm; }
+  figure, .table-scroll { margin-right: -11mm; max-width: none; }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
