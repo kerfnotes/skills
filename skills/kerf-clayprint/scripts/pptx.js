@@ -21,11 +21,11 @@ const CHART = (T.type.chart ?? T.type.label).px, SOURCE = (T.type.source ?? T.ty
 const LH = 1.45;
 const INNER = W - 2 * M.x;
 
-function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2 } = {}) {
+function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2, bullet } = {}) {
   if (str === '' || str === null || str === undefined) return;
   slide.addText(String(str), {
     x: inch(x), y: inch(y), w: inch(w), h: inch(h), fontFace: SLIDE_FONT, fontSize: pt(px), color: hex(color),
-    bold: !!bold, align, valign, margin: 0, lineSpacingMultiple: lineHeight, fit: 'none',
+    bold: !!bold, align, valign, margin: 0, lineSpacingMultiple: lineHeight, fit: 'none', ...(bullet ? { bullet } : {}),
   });
 }
 
@@ -84,7 +84,8 @@ function sourceItems(sources = {}, missing = []) {
 }
 
 // Thin rule with 9 ticks, then source｜unit｜period on up to two lines, page number on the right.
-// Returns the rule's y so the layout knows where content must stop.
+// Read-deck footnotes sit just above the rule, numbered (1), (2)…
+// Returns the top of that block (the rule when there are no footnotes) so the layout knows where content must stop.
 function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
   const pageNo = `${ctx.n} / ${ctx.total}`;
   const avail = INNER - textWidth(pageNo, SOURCE) - 40;
@@ -107,7 +108,16 @@ function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
   const top = ruleY + T.stroke.tickLong + 14;
   rows.forEach((r, i) => r.forEach(({ it, x: ix, w }) => text(slide, it, { x: M.x + ix, y: top + i * rowH, w: w + 8, h: rowH, px: SOURCE, color: ink })));
   text(slide, pageNo, { x: W - M.x - 200, y: top, w: 200, h: rowH, px: SOURCE, color: ink, align: 'right' });
-  return ruleY;
+  const notes = (ctx.page.footnotes ?? []).map((f, i) => `(${i + 1}) ${f}`);
+  if (!notes.length) return ruleY;
+  let y = ruleY - 12 - notes.reduce((sum, f) => sum + lines(f, SOURCE, INNER) * rowH, 0);
+  const notesTop = y;
+  for (const f of notes) {
+    const h = lines(f, SOURCE, INNER) * rowH;
+    text(slide, f, { x: M.x, y, w: INNER, h, px: SOURCE, color: ink, lineHeight: LH });
+    y += h;
+  }
+  return notesTop;
 }
 
 function header(slide, left, right, ink = C.textSecondary) {
@@ -278,7 +288,7 @@ function chart(slide, spec, area, ctx) {
 const LAYOUT = {};
 // Item counts per layout; read mode (design/read.json) widens them because its type is smaller.
 const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4],
-  compareRows: Infinity, tableRows: Infinity, closeRows: Infinity, ...T.capacity };
+  columnsBody: Infinity, compareRows: Infinity, tableRows: Infinity, closeRows: Infinity, points: [2, 4], ...T.capacity };
 const outside = (count, [lo, hi]) => count < lo || count > hi;
 const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table', 'multiples', 'bridge', 'histogram', 'strip', 'matrix', 'dumbbell', 'funnel', 'heat', 'grouped', 'sharetrend', 'combo', 'bullet', 'waffle', 'mekko', 'pareto', 'tornado', 'box', 'ordered']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -313,6 +323,16 @@ export function validateStory(story) {
     check(typeof page.type === 'string' && Object.hasOwn(LAYOUT, page.type), 'type', `選用 ${Object.keys(LAYOUT).join('、')} 其中一種版型`);
     str(page.claim, 'claim', true);
     optional(page, ['kicker', 'note']);
+    for (const key of ['takeaway', 'points', 'footnotes']) {
+      if (page[key] != null && story.mode !== 'read') throw new Error(`第 ${n} 頁：${p}.${key} 只有閱讀版支援；請在根層加 "mode": "read"，或刪除此欄位。`);
+    }
+    const strings = (v) => Array.isArray(v) && v.every((s) => typeof s === 'string' && s.trim());
+    if (page.takeaway != null) {
+      check(['evidence', 'columns'].includes(page.type), 'takeaway', '只在 evidence 或 columns 頁使用');
+      str(page.takeaway, 'takeaway', true);
+    }
+    if (page.points != null) check(page.type === 'evidence' && strings(page.points), 'points', '只在 evidence 頁使用，改成非空白文字的字串陣列');
+    if (page.footnotes != null) check(strings(page.footnotes), 'footnotes', '改成非空白文字的字串陣列，正文以「(1)」標記');
     if (page.type === 'statement') optional(page, ['focus']);
     if (page.lede != null) {
       check(page.type !== 'cover' && page.type !== 'section', 'lede', '只在內容頁使用');
@@ -585,7 +605,8 @@ LAYOUT.evidence = (slide, ctx) => {
   if (top >= end) ctx.warn(`第 ${ctx.n} 頁證據頁高度不足`);
   if (page.visual?.kind === 'table' && page.visual.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁表格是 ${page.visual.rows.length} 列，規格是至多 ${CAP.tableRows} 列`);
   const metric = page.metric && !emptyCell(page.metric) ? page.metric : null;
-  const side = page.note || metric;
+  const side = page.takeaway || page.points?.length || page.note || metric;
+  if (MODE === 'read' && !page.takeaway && !page.points?.length && !page.note) ctx.warn(`第 ${ctx.n} 頁右欄空白：閱讀版的 evidence 要有 takeaway 或 points。`);
   const area = { x: M.x, y: top, w: side ? T.chartArea.evidence.width : T.chartArea.evidenceNoNote.width, h: end - top };
   if (page.visual) chart(slide, page.visual, area, ctx);
   if (!side) return;
@@ -597,6 +618,21 @@ LAYOUT.evidence = (slide, ctx) => {
     slide.addText([run(displayedValue(page.metric.value, page.metric.digits), { px: N, color: C.focus }), run(page.metric.value !== null && page.metric.unit ? ` ${page.metric.unit}` : '', { px: T.type.body.px, color: C.textSecondary })].filter((r) => r.text),
       { x: inch(x), y: inch(y), w: inch(w), h: inch(N * 1.2), margin: 0, valign: 'bottom' });
     y += N * 1.2 + 32;
+  }
+  // Read decks lead the column with one bold sentence, then 2–4 short points, then the note.
+  if (page.takeaway) {
+    const h = checkWrap(ctx, 'takeaway', page.takeaway, LABEL, w, Math.max(0, Math.floor((end - y) / (LABEL * LH)))) * LABEL * LH;
+    text(slide, page.takeaway, { x, y, w, h, color: C.text, bold: true, lineHeight: LH });
+    y += h + 24;
+  }
+  if (page.points) {
+    if (outside(page.points.length, CAP.points)) ctx.warn(`第 ${ctx.n} 頁 points 是 ${page.points.length} 點，規格是 ${CAP.points.join('～')} 點`);
+    page.points.forEach((p, i) => {
+      const h = checkWrap(ctx, `points[${i}]`, p, LABEL, w - LABEL, 2) * LABEL * LH;
+      text(slide, p, { x, y, w, h, color: C.text, lineHeight: LH, bullet: { indent: pt(LABEL) } });
+      y += h + 12;
+    });
+    y += 20;
   }
   if (!page.note) return;
   checkWrap(ctx, 'note', page.note, T.type.body.px, w, Math.floor((end - y) / (T.type.body.px * 1.5)));
@@ -875,12 +911,15 @@ LAYOUT.columns = (slide, ctx) => {
   const items = page.visual.items.map((item, index) => ({ ...item, index })).filter((item) => !emptyCell(page.visual.items[item.index]));
   if (outside(items.length, CAP.columns)) ctx.warn(`第 ${ctx.n} 頁並列重點是 ${items.length} 欄，規格是 ${CAP.columns.join('～')} 欄`);
   const gap = 48, cw = (INNER - gap * (items.length - 1)) / items.length;
-  const blockH = Math.max(...items.map((item) => 28
+  const colsH = Math.max(...items.map((item) => 28
     + (item.kicker ? LABEL * LH + 18 : 0)
     + (item.value !== undefined && item.value !== '' ? T.type.conclusionNumber.px * 1.2 + 24 : 0)
     + lines(item.heading, T.type.sub.px, cw) * T.type.sub.px * 1.2 + 18
     + (item.body ? lines(item.body, T.type.body.px, cw) * T.type.body.px * LH : 0)));
+  const takeawayH = page.takeaway ? lines(page.takeaway, LABEL, INNER) * LABEL * LH : 0;
+  const blockH = colsH + (takeawayH ? 32 + takeawayH : 0);
   const top = topBase;
+  if (page.takeaway) text(slide, page.takeaway, { x: M.x, y: top + colsH + 32, w: INNER, h: takeawayH, color: C.text, bold: true, lineHeight: LH });
   if (blockH > end - topBase) ctx.warn(`第 ${ctx.n} 頁並列重點高度不足`);
   sparse(ctx, blockH, end - topBase);
   items.forEach((item, i) => {
@@ -901,7 +940,7 @@ LAYOUT.columns = (slide, ctx) => {
     text(slide, item.heading, { x, y, w: cw, h: headingH, px: T.type.sub.px, color: focus ? C.focus : C.text, bold: true });
     y += headingH + 18;
     if (item.kicker) checkWrap(ctx, `visual.items[${item.index}].kicker`, item.kicker, LABEL, cw, 1);
-    if (item.body) { const bodyH = checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, cw, Math.max(0, Math.floor((end - y) / (T.type.body.px * LH)))) * T.type.body.px * LH; text(slide, item.body, { x, y, w: cw, h: bodyH, px: T.type.body.px, color: C.textSecondary, lineHeight: LH }); y += bodyH; }
+    if (item.body) { const bodyH = checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, cw, Math.min(CAP.columnsBody, Math.max(0, Math.floor((end - y) / (T.type.body.px * LH))))) * T.type.body.px * LH; text(slide, item.body, { x, y, w: cw, h: bodyH, px: T.type.body.px, color: C.textSecondary, lineHeight: LH }); y += bodyH; }
   });
 };
 

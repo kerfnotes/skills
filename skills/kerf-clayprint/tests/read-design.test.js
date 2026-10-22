@@ -50,7 +50,7 @@ test('閱讀設計層：字級、上下邊界與新字級鍵只在閱讀模式�
   assert.deepEqual(read.margin, { ...present.margin, top: 45, bottom: 40 });
   assert.deepEqual(read.capacity, {
     summary: [2, 6], summaryBody: 10, list: [3, 8], listBody: 3, numbers: [2, 8], numbersNote: 3,
-    compare: [2, 5], compareRows: 8, process: [3, 8], columns: [2, 5], tableRows: 14, closeRows: 14,
+    compare: [2, 5], compareRows: 8, process: [3, 8], columns: [2, 5], columnsBody: 6, tableRows: 14, closeRows: 14,
   });
   const base = child(code);
   assert.deepEqual(base.margin, present.margin);
