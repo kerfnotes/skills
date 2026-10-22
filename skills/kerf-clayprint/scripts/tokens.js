@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// Read decks (story.json "mode": "read") lay design/read.json over the active design layer: smaller type, a narrower evidence chart
+// Read decks (story.json "mode": "read") lay design/read.json over the active design layer: smaller type, tighter top and bottom margins, a narrower evidence chart
 // so the reading note gets a wider column, and wider capacity.
 // Modules read sizes at import, so the mode is fixed per process; scripts/main.js reruns a CLI under the story's mode.
 const mode = process.env.CLAYPRINT_MODE || 'present';
@@ -18,8 +18,8 @@ export function loadTokens(path = process.env.CLAYPRINT_TOKENS || fileURLToPath(
   }
   if (MODE !== 'read') return tokens;
   const read = JSON.parse(readFileSync(new URL('../design/read.json', import.meta.url), 'utf8'));
-  // Type changes px only; each size keeps the layer's weight and color.
-  const type = Object.fromEntries(Object.entries(tokens.type).map(([key, value]) => [key,
-    !(key in read.type) ? value : typeof value === 'number' ? read.type[key] : { ...value, px: read.type[key] }]));
-  return { ...tokens, type, chartArea: { ...tokens.chartArea, ...read.chartArea }, capacity: read.capacity };
+  // Type changes px only; each size keeps the layer's weight and color. Read-only sizes (chart, source) take label's.
+  const type = { ...tokens.type };
+  for (const [key, px] of Object.entries(read.type)) type[key] = typeof tokens.type[key] === 'number' ? px : { ...(tokens.type[key] ?? tokens.type.label), px };
+  return { ...tokens, type, margin: { ...tokens.margin, ...read.margin }, chartArea: { ...tokens.chartArea, ...read.chartArea }, capacity: read.capacity };
 }

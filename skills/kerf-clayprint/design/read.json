@@ -5,27 +5,33 @@
     "statement": 64,
     "number": 88,
     "conclusionNumber": 64,
-    "title": 40,
+    "title": 44,
     "sub": 28,
-    "body": 24,
+    "body": 22,
     "chartTitle": 24,
-    "tableBody": 24,
-    "tableHeader": 20,
+    "tableBody": 18,
+    "tableHeader": 18,
     "label": 20,
-    "minimum": 20
+    "chart": 18,
+    "source": 16,
+    "minimum": 16
   },
+  "margin": { "top": 45, "bottom": 40 },
   "chartArea": {
     "evidence": { "width": 1000, "height": 669 }
   },
   "capacity": {
-    "numbers": [2, 5],
-    "numbersNote": 2,
-    "summary": [2, 4],
-    "summaryBody": 6,
+    "numbers": [2, 8],
+    "numbersNote": 3,
+    "summary": [2, 6],
+    "summaryBody": 10,
     "compare": [2, 5],
-    "list": [3, 6],
-    "listBody": 2,
+    "compareRows": 8,
+    "list": [3, 8],
+    "listBody": 3,
     "process": [3, 8],
-    "columns": [2, 5]
+    "columns": [2, 5],
+    "tableRows": 14,
+    "closeRows": 14
   }
 }

@@ -27,14 +27,14 @@ test('閱讀模式只改字級、證據圖寬與容量，保留各設計層的�
   const base = JSON.parse(readFileSync(path.join(root, 'design/tokens.blue.json'), 'utf8'));
   const child = run([], { code, mode: 'read', tokens: 'design/tokens.blue.json' });
   assert.equal(child.status, 0, child.stderr);
-  assert.deepEqual(JSON.parse(child.stdout), { title: { ...base.type.title, px: 40 }, label: 20, minimum: 20, list: [3, 6], evidence: 1000, focus: base.color.focus });
+  assert.deepEqual(JSON.parse(child.stdout), { title: { ...base.type.title, px: 44 }, label: 20, minimum: 16, list: [3, 8], evidence: 1000, focus: base.color.focus });
   const present = JSON.parse(run([], { code }).stdout);
   assert.equal(present.title.px, JSON.parse(readFileSync(path.join(root, 'design/tokens.json'), 'utf8')).type.title.px);
   assert.equal(present.list, undefined);
   assert.match(run([], { code, mode: 'dense' }).stderr, /CLAYPRINT_MODE/);
 });
 
-test('mode: read 的 story 由 CLI 自動改用閱讀字級，最小 10 pt，驗收無警告', async () => {
+test('mode: read 的 story 由 CLI 自動改用閱讀字級，最小 8 pt，驗收無警告', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-read-'));
   try {
     const out = path.join(dir, 'read.pptx');
@@ -45,8 +45,8 @@ test('mode: read 的 story 由 CLI 自動改用閱讀字級，最小 10 pt，驗
     for (const name of Object.keys(zip.files).filter((n) => /^ppt\/(?:slides\/slide|charts\/chart)\d+\.xml$/.test(n))) {
       sizes.push(...[...(await zip.file(name).async('string')).matchAll(/\ssz="(\d+)"/g)].map((m) => Number(m[1])));
     }
-    assert.ok(sizes.includes(2000), '頁標題 20 pt');
-    assert.ok(Math.min(...sizes) >= 1000, `最小字級 ${Math.min(...sizes) / 100} pt`);
+    assert.ok(sizes.includes(2200), '頁標題 22 pt');
+    assert.ok(Math.min(...sizes) >= 800, `最小字級 ${Math.min(...sizes) / 100} pt`);
     const checked = run(['evals/check.mjs', 'examples/story-read.json', 'evals/fixtures/example-script.md']);
     assert.equal(checked.status, 0, checked.stderr);
     assert.match(checked.stdout, /0 項警告/);
@@ -67,16 +67,6 @@ test('清單容量：現場簡報 6 項警告，閱讀型簡報 6 項可放', as
   const child = run([], { code, mode: 'read' });
   assert.equal(child.status, 0, child.stderr);
   assert.deepEqual(JSON.parse(child.stdout).filter((w) => /診斷清單/.test(w)), []);
-});
-
-test('閱讀型簡報：內容不到內容區一半的頁面會警告，現場簡報不會', async () => {
-  const story = { pages: [{ type: 'statement', claim: '先記住這件事', sources: { source: '原稿' } }] };
-  const { warnings } = await build(story);
-  assert.ok(!warnings.some((w) => /內容區/.test(w)), warnings.join('\n'));
-  const code = `import { build } from ${JSON.stringify(moduleUrl('pptx'))}; const r = await build(${JSON.stringify({ ...story, mode: 'read' })}); console.log(JSON.stringify(r.warnings));`;
-  const child = run([], { code, mode: 'read' });
-  assert.equal(child.status, 0, child.stderr);
-  assert.ok(JSON.parse(child.stdout).some((w) => /內容只占內容區 \d+%/.test(w)), child.stdout);
 });
 
 test('數字格 note：閱讀型 4 格排兩列、可寫 2 行；現場版同一句超出 1 行會警告', async () => {

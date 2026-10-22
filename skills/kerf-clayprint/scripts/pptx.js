@@ -16,6 +16,8 @@ const hex = (c) => c.replace('#', '');
 const W = T.slide.widthPx, H = T.slide.heightPx;
 const M = T.margin;
 const LABEL = T.type.label.px;
+// Read decks set chart text and the source row smaller than labels; other layers fall back to the label size.
+const CHART = (T.type.chart ?? T.type.label).px, SOURCE = (T.type.source ?? T.type.label).px;
 const LH = 1.45;
 const INNER = W - 2 * M.x;
 
@@ -64,10 +66,10 @@ function checkWrap(ctx, field, str, px, width, limit, orphan = false) {
 }
 
 // A read deck has no presenter to carry a near-empty page. Only layouts whose height comes from the content call this.
-const MIN_FILL = 0.5;
+const MIN_FILL = 0.7;
 function sparse(ctx, used, avail) {
   if (MODE !== 'read' || avail <= 0 || used / avail >= MIN_FILL) return;
-  ctx.warn(`第 ${ctx.n} 頁內容只占內容區 ${Math.round((used / avail) * 100)}%；閱讀型簡報先併入相鄰頁或刪頁，不湊字、不放大字級。`);
+  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 70%：加 takeaway 或 points，或併入相鄰頁。`);
 }
 
 function sourceItems(sources = {}, missing = []) {
@@ -85,17 +87,17 @@ function sourceItems(sources = {}, missing = []) {
 // Returns the rule's y so the layout knows where content must stop.
 function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
   const pageNo = `${ctx.n} / ${ctx.total}`;
-  const avail = INNER - textWidth(pageNo, LABEL) - 40;
+  const avail = INNER - textWidth(pageNo, SOURCE) - 40;
   const rows = [[]];
   let x = 0;
   for (const it of sourceItems(ctx.page.sources, ctx.missing)) {
-    const w = textWidth(it, LABEL) * 1.1;
+    const w = textWidth(it, SOURCE) * 1.1;
     if (x > 0 && x + w > avail) { rows.push([]); x = 0; }
     rows.at(-1).push({ it, x, w });
     x += w + 40;
   }
   if (rows.length > T.sourceRow.maxLines) ctx.warn(`第 ${ctx.n} 頁 sources：來源列需要 ${rows.length} 行，上限 ${T.sourceRow.maxLines} 行`);
-  const rowH = LABEL * LH;
+  const rowH = SOURCE * LH;
   const ruleY = H - M.bottom - rows.length * rowH - 14 - T.stroke.tickLong;
   rule(slide, M.x, ruleY, W - M.x, ruleY, line);
   for (let i = 0; i <= 8; i++) {
@@ -103,8 +105,8 @@ function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
     rule(slide, tx, ruleY, tx, ruleY + (i % 4 === 0 ? T.stroke.tickLong : T.stroke.tickShort), line);
   }
   const top = ruleY + T.stroke.tickLong + 14;
-  rows.forEach((r, i) => r.forEach(({ it, x: ix, w }) => text(slide, it, { x: M.x + ix, y: top + i * rowH, w: w + 8, h: rowH, color: ink })));
-  text(slide, pageNo, { x: W - M.x - 200, y: top, w: 200, h: rowH, color: ink, align: 'right' });
+  rows.forEach((r, i) => r.forEach(({ it, x: ix, w }) => text(slide, it, { x: M.x + ix, y: top + i * rowH, w: w + 8, h: rowH, px: SOURCE, color: ink })));
+  text(slide, pageNo, { x: W - M.x - 200, y: top, w: 200, h: rowH, px: SOURCE, color: ink, align: 'right' });
   return ruleY;
 }
 
@@ -191,13 +193,13 @@ function nativeChart(slide, m, area, ctx) {
     lang: 'zh-TW', chartColors: [hex(C.focus)],
     chartArea: { fill: { color: hex(C.onDark[0]) } },
     plotArea: { fill: { color: hex(C.onDark[0]) } },
-    dataLabelFontFace: SLIDE_FONT, dataLabelFontSize: pt(LABEL), dataLabelColor: hex(C.text),
+    dataLabelFontFace: SLIDE_FONT, dataLabelFontSize: pt(CHART), dataLabelColor: hex(C.text),
     dataLabelFormatCode: numberFormat(m.digits), displayBlanksAs: 'gap',
     catAxisLabelFontFace: SLIDE_FONT, valAxisLabelFontFace: SLIDE_FONT,
-    catAxisLabelFontSize: pt(LABEL), valAxisLabelFontSize: pt(LABEL),
+    catAxisLabelFontSize: pt(CHART), valAxisLabelFontSize: pt(CHART),
     catAxisLabelColor: hex(C.textSecondary), valAxisLabelColor: hex(C.textSecondary),
     catAxisTitleFontFace: SLIDE_FONT, valAxisTitleFontFace: SLIDE_FONT,
-    catAxisTitleFontSize: pt(LABEL), valAxisTitleFontSize: pt(LABEL),
+    catAxisTitleFontSize: pt(CHART), valAxisTitleFontSize: pt(CHART),
     catAxisTitleColor: hex(C.textSecondary), valAxisTitleColor: hex(C.textSecondary),
     catAxisLineColor: hex(C.gray), valAxisLineColor: hex(C.gray),
     catAxisLineSize: pt(T.stroke.axis), valAxisLineSize: pt(T.stroke.axis),
@@ -221,7 +223,7 @@ function nativeChart(slide, m, area, ctx) {
     type = 'bar';
     data = m.series.map((s) => ({ name: s.name, labels: m.x, values: [...s.values] }));
     Object.assign(opts, { barDir: 'col', barGrouping: 'clustered', chartColors: m.series.map((s) => hex(s.color)),
-      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(LABEL), legendColor: hex(C.textSecondary),
+      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(CHART), legendColor: hex(C.textSecondary),
       showValue: true, dataLabelPosition: 'outEnd' });
   } else if (m.kind === 'line' || m.kind === 'slope') {
     type = 'line';
@@ -236,7 +238,7 @@ function nativeChart(slide, m, area, ctx) {
     Object.assign(opts, { barDir: m.kind === 'sharetrend' ? 'col' : 'bar', barGrouping: 'percentStacked',
       ...(m.kind === 'share' ? { catAxisOrientation: 'maxMin', catAxisCrossesAt: 'max', valAxisLabelPos: 'nextTo' } : {}),
       chartColors: m.categories.map((c) => hex(c.other ? T.fill.other.native.color : c.color)),
-      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(LABEL), legendColor: hex(C.textSecondary),
+      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(CHART), legendColor: hex(C.textSecondary),
       valAxisMinVal: 0, valAxisMaxVal: 1, valAxisMajorUnit: 0.25, valAxisLabelFormatCode: numberFormat(0, true),
       dataLabelFormatCode: numberFormat(m.digits, true), dataLabelPosition: 'ctr' });
   } else {
@@ -275,7 +277,8 @@ function chart(slide, spec, area, ctx) {
 
 const LAYOUT = {};
 // Item counts per layout; read mode (design/read.json) widens them because its type is smaller.
-const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4], ...T.capacity };
+const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4],
+  compareRows: Infinity, tableRows: Infinity, closeRows: Infinity, ...T.capacity };
 const outside = (count, [lo, hi]) => count < lo || count > hi;
 const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table', 'multiples', 'bridge', 'histogram', 'strip', 'matrix', 'dumbbell', 'funnel', 'heat', 'grouped', 'sharetrend', 'combo', 'bullet', 'waffle', 'mekko', 'pareto', 'tornado', 'box', 'ordered']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -549,6 +552,7 @@ LAYOUT.evidence = (slide, ctx) => {
   const ruleY = sourceRow(slide, ctx);
   const end = ruleY - M.sourceGap;
   if (top >= end) ctx.warn(`第 ${ctx.n} 頁證據頁高度不足`);
+  if (page.visual?.kind === 'table' && page.visual.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁表格是 ${page.visual.rows.length} 列，規格是至多 ${CAP.tableRows} 列`);
   const metric = page.metric && !emptyCell(page.metric) ? page.metric : null;
   const side = page.note || metric;
   const area = { x: M.x, y: top, w: side ? T.chartArea.evidence.width : T.chartArea.evidenceNoNote.width, h: end - top };
@@ -663,6 +667,7 @@ LAYOUT.compare = (slide, ctx) => {
   const { rows } = page.visual;
   const options = page.visual.options.map((o, index) => ({ ...o, index })).filter((o) => !emptyCell(page.visual.options[o.index]));
   if (outside(options.length, CAP.compare)) ctx.warn(`第 ${ctx.n} 頁比較方案是 ${options.length} 個，規格是 ${CAP.compare.join('～')} 個`);
+  if (rows.length > CAP.compareRows) ctx.warn(`第 ${ctx.n} 頁比較列是 ${rows.length} 列，規格是至多 ${CAP.compareRows} 列`);
   const labelW = options.length >= 4 ? 240 : 300, gap = options.length >= 4 ? 32 : 48;
   const ow = (INNER - labelW - gap * options.length) / options.length;
   const end = ruleY - M.sourceGap;
@@ -913,6 +918,7 @@ LAYOUT.close = (slide, ctx) => {
   const top = contentTop(slide, ctx, ink, muted);
   const ruleY = sourceRow(slide, ctx, { line: muted, ink: muted });
   const rows = page.visual.rows.map((r, index) => ({ ...r, index })).filter((r) => !emptyCell(page.visual.rows[r.index]));
+  if (rows.length > CAP.closeRows) ctx.warn(`第 ${ctx.n} 頁收尾待辦是 ${rows.length} 列，規格是至多 ${CAP.closeRows} 列`);
   const ownerW = 420, dueW = 240, gap = 48;
   const taskW = INNER - ownerW - dueW - 2 * gap;
   const cols = [[M.x, taskW, '下一步', 'task'], [M.x + taskW + gap, ownerW, '負責人', 'owner'], [M.x + taskW + ownerW + 2 * gap, dueW, '期限', 'due']]
@@ -987,7 +993,7 @@ export async function build(story) {
 }
 
 function labelStyle(color, bold = false) {
-  return `<a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${pt(LABEL) * 100}" b="${bold ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill><a:latin typeface="${SLIDE_FONT}"/></a:defRPr></a:pPr></a:p>`;
+  return `<a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${pt(CHART) * 100}" b="${bold ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill><a:latin typeface="${SLIDE_FONT}"/></a:defRPr></a:pPr></a:p>`;
 }
 
 function pointLabel(i, { color = C.text, bold = false, name = false, value = true, pos = 'r', label, formatCode } = {}) {
