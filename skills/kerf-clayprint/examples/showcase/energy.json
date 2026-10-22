@@ -1,0 +1,320 @@
+{
+  "title": "全球能源轉型",
+  "date": "查核日 2026-10-22",
+  "author": "",
+  "pages": [
+    {
+      "type": "cover",
+      "kicker": "示範分析",
+      "claim": "全球能源轉型：\n五張圖看電力與汽車",
+      "note": "Ember、國際能源總署（IEA）公開資料",
+      "sources": {
+        "source": "Ember（CC BY 4.0）、IEA Global EV Outlook 2026／EV Data Explorer（CC BY 4.0）"
+      }
+    },
+    {
+      "type": "evidence",
+      "kicker": "裝置容量",
+      "claim": "十年間太陽能增為約 10.6 倍，\n已超過風電",
+      "lede": "全球累計裝置容量・GW",
+      "visual": {
+        "kind": "slope",
+        "unit": "GW",
+        "period": "2015、2025 年",
+        "source": "Ember Yearly Electricity Data",
+        "periods": [
+          "2015",
+          "2025"
+        ],
+        "rows": [
+          {
+            "label": "太陽能",
+            "values": [
+              226,
+              2391
+            ]
+          },
+          {
+            "label": "風電",
+            "values": [
+              416,
+              1291
+            ]
+          }
+        ]
+      },
+      "sources": {
+        "source": "Ember, Yearly Electricity Data（2026-09-15 版）",
+        "unit": "GW",
+        "period": "2015、2025 年",
+        "more": [
+          "倍數為計算值：太陽能約 10.6 倍、風電約 3.1 倍"
+        ]
+      },
+      "notes": "2015 年太陽能還不到風電的一半，2025 年已接近兩倍。",
+      "metric": {
+        "label": "太陽能 2025 對 2015",
+        "value": "10.6",
+        "unit": "倍"
+      },
+      "note": "風電約 3.1 倍。"
+    },
+    {
+      "type": "evidence",
+      "kicker": "發電結構",
+      "claim": "風電加太陽能占比\n從 4.5% 升到 17.3%",
+      "lede": "全球發電量占比・%",
+      "visual": {
+        "kind": "sharetrend",
+        "unit": "%",
+        "period": "2015、2025 年",
+        "source": "Ember Yearly Electricity Data",
+        "categories": [
+          "煤",
+          "天然氣",
+          "風電與太陽能",
+          "水力、核能與其他"
+        ],
+        "rows": [
+          {
+            "label": "2015",
+            "values": [
+              38.8,
+              23.1,
+              4.5,
+              33.6
+            ]
+          },
+          {
+            "label": "2025",
+            "values": [
+              33.2,
+              21.7,
+              17.3,
+              27.8
+            ]
+          }
+        ],
+        "digits": 1
+      },
+      "sources": {
+        "source": "Ember, Yearly Electricity Data（2026-09-15 版）",
+        "unit": "%",
+        "period": "2015、2025 年",
+        "more": [
+          "合併類別為計算值"
+        ]
+      },
+      "notes": "煤仍是最大電源，從 38.8% 降到 33.2%。",
+      "note": "風電與太陽能 4.5% → 17.3%；煤 38.8% → 33.2%。"
+    },
+    {
+      "type": "evidence",
+      "kicker": "電動車",
+      "claim": "電動車占新車銷售：\n中國過半，美國停在一成",
+      "lede": "電動車占新車銷售比例・含純電與插電式・%",
+      "visual": {
+        "kind": "multiples",
+        "unit": "%",
+        "period": "2019–2025 年",
+        "source": "IEA Global EV Data Explorer",
+        "x": [
+          "2019",
+          "2020",
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        "series": [
+          {
+            "name": "全球",
+            "values": [
+              2.7,
+              4.4,
+              9.3,
+              15,
+              18,
+              21,
+              25
+            ]
+          },
+          {
+            "name": "中國",
+            "values": [
+              5,
+              5.7,
+              16,
+              29,
+              38,
+              48,
+              53
+            ]
+          },
+          {
+            "name": "歐洲",
+            "values": [
+              3.4,
+              10,
+              17,
+              21,
+              22,
+              21,
+              28
+            ]
+          },
+          {
+            "name": "美國",
+            "values": [
+              2.1,
+              2.3,
+              4.7,
+              7.7,
+              9.7,
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "sources": {
+        "source": "IEA (2026), Global EV Outlook 2026／Global EV Data Explorer，CC BY 4.0",
+        "unit": "%",
+        "period": "2019–2025 年",
+        "more": [
+          "IEA 數字為四捨五入值"
+        ]
+      },
+      "notes": "四個市場共用同一縱軸，美國那一格幾乎是平的。"
+    },
+    {
+      "type": "evidence",
+      "kicker": "太陽能大國",
+      "claim": "2025 年太陽能發電，\n中國一國比後四名合計還多",
+      "lede": "太陽能發電量・TWh・2025 年",
+      "visual": {
+        "kind": "rank",
+        "focus": "中國",
+        "unit": "TWh",
+        "period": "2025 年",
+        "source": "Ember Yearly Electricity Data",
+        "rows": [
+          {
+            "label": "中國",
+            "value": 1173
+          },
+          {
+            "label": "美國",
+            "value": 389
+          },
+          {
+            "label": "印度",
+            "value": 195
+          },
+          {
+            "label": "日本",
+            "value": 111
+          },
+          {
+            "label": "德國",
+            "value": 90
+          }
+        ]
+      },
+      "metric": {
+        "label": "後四名合計",
+        "value": 785,
+        "unit": "TWh"
+      },
+      "sources": {
+        "source": "Ember, Yearly Electricity Data（2026-09-15 版）",
+        "unit": "TWh",
+        "period": "2025 年",
+        "more": [
+          "計算：389 + 195 + 111 + 90 = 785"
+        ]
+      },
+      "notes": "後四名合計是計算值。"
+    },
+    {
+      "type": "evidence",
+      "kicker": "新增用電",
+      "claim": "2025 年新增 850 TWh，\n約四分之三由太陽能補上",
+      "lede": "2025 年各電源發電量變化・TWh",
+      "visual": {
+        "kind": "bridge",
+        "unit": "TWh",
+        "period": "2025 年對 2024 年",
+        "source": "Ember Yearly Electricity Data",
+        "steps": [
+          {
+            "label": "太陽能",
+            "value": 646
+          },
+          {
+            "label": "風電",
+            "value": 199
+          },
+          {
+            "label": "核能",
+            "value": 30
+          },
+          {
+            "label": "生質等",
+            "value": 20
+          },
+          {
+            "label": "天然氣",
+            "value": 26
+          },
+          {
+            "label": "水力",
+            "value": -17
+          },
+          {
+            "label": "其他化石",
+            "value": -7
+          },
+          {
+            "label": "煤",
+            "value": -47
+          },
+          {
+            "label": "合計",
+            "value": 850,
+            "total": true
+          }
+        ]
+      },
+      "metric": {
+        "label": "太陽能占新增量",
+        "value": 76,
+        "unit": "%"
+      },
+      "sources": {
+        "source": "Ember, Yearly Electricity Data（2026-09-15 版）",
+        "unit": "TWh",
+        "period": "2025 年對 2024 年",
+        "more": [
+          "四捨五入；占比為計算值，Ember 報告寫 75%"
+        ]
+      },
+      "notes": "報告內文和資料檔的版本不同，這頁全部用資料檔。"
+    },
+    {
+      "type": "statement",
+      "kicker": "一句話",
+      "claim": "太陽能成長最快，\n但化石發電還沒開始大減",
+      "focus": "還沒開始大減",
+      "note": "2025 年化石燃料合計只比前一年少 28 TWh。",
+      "sources": {
+        "source": "Ember, Yearly Electricity Data（2026-09-15 版）",
+        "more": [
+          "計算：26 − 7 − 47 = −28"
+        ]
+      },
+      "notes": "新增用電幾乎全由風光補上，但存量的煤與天然氣仍在。"
+    }
+  ]
+}
