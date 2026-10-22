@@ -145,3 +145,56 @@ test('報告名寫在根元素的 CSS 變數，給列印頁尾用，並跳脫引
   assert.match(file('examples/report.html'), /<html lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快'">/);
   assert.match(file('assets/report.html'), /<html lang="zh-Hant" style="--report-title: '\{\{報告標題\}\}'">/);
 });
+
+test('圖表區塊：圖、表各自編號，標籤與標題在上，註與來源在下', () => {
+  const html = file('examples/report.html');
+  const figures = html.match(/<figure[\s\S]*?<\/figure>/g);
+  assert.equal(figures.length, 2);
+  figures.forEach((f, i) => {
+    const head = f.indexOf(`<span class="exhibit-label" data-label>圖 ${i + 1}</span>`);
+    assert.ok(head > 0 && head < f.indexOf('<svg'), `圖 ${i + 1} 標籤在圖上方`);
+    assert.ok(f.indexOf('<figcaption>') > f.indexOf('</svg>'), '圖說在圖下方');
+    assert.match(f, /<figcaption>[^<]*來源：/);
+  });
+  assert.match(figures[0], /class="exhibit-title"><span class="exhibit-label" data-label>圖 1<\/span>登錄時間比較<\/p>/);
+  assert.match(figures[0], /<figcaption>[^<]*附註：24 小時是試行目標/);
+  assert.doesNotMatch(figures[0], /<figcaption>登錄時間比較/);
+  assert.match(html, /<caption><span class="exhibit-label" data-label>表 1<\/span>同一流程的時間對照<\/caption>/);
+  assert.match(html, /<\/table>\n<\/div>\n<p class="exhibit-note">來源：/);
+
+  // 圖與表分開從 1 起算；沒有標題的表格也編號；compare 不編號；註與來源只在有填時出現。
+  const chart = { kind: 'rank', source: '原稿', rows: [{ label: '甲', value: 1 }] };
+  const table = { type: 'table', columns: [{ name: '項目' }], rows: [['甲']] };
+  const { html: out, figures: n } = buildReport({ title: '測試', message: '帶走這句', sections: [
+    { claim: '一', blocks: [table, { type: 'chart', title: '甲圖', chart }, { type: 'compare', rows: ['成本'], options: [{ name: 'A', values: ['低'] }] }] },
+    { claim: '二', blocks: [{ type: 'chart', title: '乙圖', chart, note: '區塊附註', wide: true }, { ...table, caption: '乙表', source: '原稿', note: '表附註' }] },
+  ] });
+  assert.equal(n, 2);
+  assert.deepEqual(out.match(/data-label>[^<]+/g).map((s) => s.slice(11)), ['表 1', '圖 1', '圖 2', '表 2']);
+  assert.match(out, /<figure class="wide">/);
+  assert.equal((out.match(/<figure>/g) ?? []).length, 1);
+  assert.match(out, /<figcaption>附註：區塊附註｜來源：原稿<\/figcaption>/);
+  assert.match(out, /<p class="exhibit-note">附註：表附註｜來源：原稿<\/p>/);
+  assert.equal((out.match(/<p class="exhibit-note">/g) ?? []).length, 1);
+  assert.throws(() => buildReport({ title: '測試', message: '帶走這句', sections: [{ claim: '一', blocks: [{ type: 'chart', title: '圖', chart, wide: 'yes' }] }] }), /wide/);
+  assert.throws(() => buildReport({ title: '測試', message: '帶走這句', sections: [{ claim: '一', blocks: [{ ...table, source: '' }] }] }), /source/);
+});
+
+test('全寬圖只在列印時從左 22 mm 起，不伸出 @page', () => {
+  const css = themeCss();
+  const media = css.slice(css.indexOf('@media print'));
+  assert.match(media, /figure\.wide, \.table-scroll\.wide \{ margin-left: -28mm; \}/);
+  assert.match(media, /\.exhibit-title, caption \{[^}]*font-size: 12pt;/);
+  assert.match(media, /\.exhibit-note, figcaption, \.sources \{ font-size: 7pt;/);
+  assert.doesNotMatch(css.slice(0, css.indexOf('@page')), /\.wide/);
+});
+
+test('驗收器略過產生器加的圖表標籤，正文裡原稿沒有的編號仍核對', () => {
+  const source = '甲 12 件。';
+  const fig = '<figure><p class="exhibit-title"><span class="exhibit-label" data-label>圖 7</span>甲</p><svg><text>12</text></svg><figcaption>來源：原稿</figcaption></figure>';
+  assert.doesNotThrow(() => checkReport(`<section>${fig}<table><caption><span class="exhibit-label" data-label>表 3</span>乙</caption><tr><td>12</td></tr></table></section>`, source));
+  assert.throws(() => checkReport(`<section><p>見圖 7</p>${fig}</section>`, source), /原稿找不到數字 7/);
+  assert.throws(() => checkReport(`<section>${fig.replace('甲</p>', '甲 99 件</p>')}</section>`, source), /99/);
+  assert.throws(() => checkReport(`<section>${fig.replace('>圖 7<', '>圖 7 共 99 件<')}</section>`, source), /原稿找不到數字/);
+  assert.throws(() => checkReport(fig.replace('來源：原稿', '原稿'), source), /figcaption/);
+});

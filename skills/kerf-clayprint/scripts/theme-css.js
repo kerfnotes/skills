@@ -53,7 +53,10 @@ a { color: var(--cp-accent); text-underline-offset: .16em; }
 figure { margin: 32px 0; }
 figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .chart-scroll { max-width: 100%; overflow-x: auto; }
-figcaption, .sources { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
+/* Figures and tables: generated 「圖 N」「表 N」 label and title above, notes and source below. */
+.exhibit-title, caption { margin-bottom: 10px; color: var(--cp-title); font-weight: 700; line-height: 1.4; }
+.exhibit-label { display: block; color: var(--cp-accent); font-size: var(--cp-small); letter-spacing: .08em; }
+figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
 .chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
 .chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
 .chart-grid { stroke: var(--cp-line); }
@@ -99,7 +102,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   body { max-width: none; padding: 0 11mm 0 28mm; }
   h2 { font-size: 24pt; }
   h3 { font-size: 12pt; }
-  figcaption, .sources { font-size: 7pt; }
+  .exhibit-note, figcaption, .sources { font-size: 7pt; }
+  .exhibit-title, caption { font-size: 12pt; }
   .report-cover { break-after: page; }
   .section-heading { break-after: avoid; }
   /* A short section stays on one page so its heading never sits alone; Chrome breaks sections taller than a page anyway. */
@@ -108,12 +112,14 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   tr { break-inside: avoid; }
   /* Charts and tables may run into the body padding, to 14 mm from the right edge (146 mm on A4). */
   figure, .table-scroll { margin-right: -11mm; max-width: none; }
+  /* wide: true starts on the 22 mm line, the @page edge, for 174 mm on A4; going past it would clip the block. */
+  figure.wide, .table-scroll.wide { margin-left: -28mm; }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
   /* SVG text is in viewBox units (979 wide); 19 units at 146 mm is about 8 pt. */
   .chart-scroll svg [data-tick] { font-size: 19px; }
-  .sources { break-before: avoid; }
+  .sources, .exhibit-note { break-before: avoid; }
   a { color: inherit; }
 }`;
 }

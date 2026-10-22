@@ -24,7 +24,8 @@ function reportParts(html) {
   };
   for (const part of html.replace(/<!--[\s\S]*?-->/g, '').match(/<[^>]*>|[^<]+/g) ?? []) {
     if (!part.startsWith('<')) {
-      if (!tags.some((tag) => tag.hidden)) append(decode(part));
+      const text = decode(part);
+      if (!tags.some((tag) => tag.hidden) && !(tags.at(-1)?.label && /^\s*[圖表] \d+\s*$/.test(text))) append(text);
       continue;
     }
     const match = part.match(/^<\s*(\/?)\s*([a-z][\w:-]*)\b/i);
@@ -50,7 +51,8 @@ function reportParts(html) {
       }
       if (name === 'figcaption' && activeFigures.length) activeFigures.at(-1).hasCaption = true;
       // data-tick on an SVG <text> marks an axis scale label from scripts/svg.js; like evals/check.mjs, scale ticks are not checked.
-      if (!voidTags.has(name) && !/\/\s*>$/.test(part)) tags.push({ name, hidden: hiddenTags.has(name) || /\shidden(?:\s|=|>)/i.test(part) || (name === 'text' && /\sdata-tick(?:\s|=|>)/i.test(part)) || /\b(?:display\s*:\s*none|visibility\s*:\s*hidden)\b/i.test(part) });
+      // data-label marks the 「圖 N」「表 N」 label scripts/report.js numbers itself; the same words in body text are still checked.
+      if (!voidTags.has(name) && !/\/\s*>$/.test(part)) tags.push({ name, hidden: hiddenTags.has(name) || /\shidden(?:\s|=|>)/i.test(part) || (name === 'text' && /\sdata-tick(?:\s|=|>)/i.test(part)) || /\b(?:display\s*:\s*none|visibility\s*:\s*hidden)\b/i.test(part), label: name === 'span' && /\sdata-label(?:\s|=|>)/i.test(part) });
     }
   }
   return { blocks, figures };
