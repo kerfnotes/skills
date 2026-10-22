@@ -117,6 +117,8 @@ const TITLE_Y = M.top + LABEL + M.titleGap;
 // Microsoft JhengHei sits taller than the design font, so display lines get a little more room.
 const DISPLAY_LH = 1.35;
 const TITLE = T.type.title.px;
+// Cover, section and content titles all allow two estimated lines; statement's claim is its body and has its own height check.
+const TITLE_LINES = 2;
 
 function title(slide, str, color = C.title) {
   const n = lines(str, TITLE, INNER);
@@ -125,6 +127,7 @@ function title(slide, str, color = C.title) {
 }
 
 function contentTop(slide, ctx, color = C.title, ledeColor = C.textSecondary) {
+  checkWrap(ctx, 'claim', ctx.page.claim, TITLE, INNER, TITLE_LINES);
   const bottom = title(slide, ctx.page.claim, color);
   if (!ctx.page.lede) return bottom + M.contentGap;
   checkWrap(ctx, 'lede', ctx.page.lede, LABEL, INNER, 1);
@@ -278,7 +281,8 @@ const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
 const emptyCell = (v) => isObject(v) && Object.values(v).every((x) => x === null || x === undefined || x === '' || (Array.isArray(x) && !x.length));
-const displayedValue = (value, digits = 0) => value === null ? '未提供' : typeof value === 'string' ? value : formatValue(value, { digits }) ?? '';
+// Without digits a number keeps its own decimals: 24.7 stays 24.7, never a silent 25.
+const displayedValue = (value, digits = decimalsOf([value])) => value === null ? '未提供' : typeof value === 'string' ? value : formatValue(value, { digits }) ?? '';
 
 // Validate before category collection or rendering, so malformed JSON points back to its editable field.
 export function validateStory(story) {
@@ -323,6 +327,7 @@ export function validateStory(story) {
       if (!emptyCell(page.metric)) {
         check(page.metric.value === null || typeof page.metric.value === 'string' || isNumber(page.metric.value), 'metric.value', '填入文字、有限數字或 null');
         if (page.metric.value === null) str(page.metric.label, 'metric.label', true);
+        if (page.metric.digits !== undefined) digits(page.metric.digits, 'metric.digits');
       }
     }
     if (!['evidence', 'numbers', 'summary', 'compare', 'steps', 'close', 'list', 'process', 'kpi', 'flow', 'columns'].includes(page.type)) {
@@ -471,6 +476,8 @@ LAYOUT.cover = (slide, ctx) => {
   header(slide, page.kicker, story.date, muted);
   const ruleY = sourceRow(slide, ctx, { line: muted, ink: muted });
   const D = T.type.display.px;
+  // Layout height still follows explicit breaks; only the warning uses the wrap estimate.
+  checkWrap(ctx, 'claim', page.claim ?? '', D, INNER, TITLE_LINES);
   const titleLines = String(page.claim ?? '').split('\n').length;
   const lh = D * DISPLAY_LH;
   const blockH = titleLines * lh + (page.note ? 72 + T.type.sub.px * 1.5 : 0);
@@ -495,7 +502,7 @@ LAYOUT.section = (slide, ctx) => {
     text(slide, name, { x, y: rulerY + 4 + 16, w: segW, h: LABEL * LH, color: current ? C.focus : C.textSecondary, bold: current });
   });
   const D = T.type.display.px;
-  const titleH = lines(page.claim ?? '', D, INNER) * D * DISPLAY_LH;
+  const titleH = checkWrap(ctx, 'claim', page.claim ?? '', D, INNER, TITLE_LINES) * D * DISPLAY_LH;
   const blockH = titleH + (page.note ? 28 + T.type.sub.px * 1.5 : 0);
   const top = (M.top + LABEL + rulerY) / 2 - blockH / 2;
   if (page.claim) text(slide, page.claim, { x: M.x, y: top, w: INNER, h: titleH, px: D, color: C.title, bold: true, lineHeight: DISPLAY_LH });
@@ -552,7 +559,7 @@ LAYOUT.evidence = (slide, ctx) => {
   if (metric) {
     if (page.metric.label) { text(slide, page.metric.label, { x, y, w, h: LABEL * LH }); y += LABEL * LH + 8; }
     const N = T.type.conclusionNumber.px;
-    slide.addText([run(displayedValue(page.metric.value), { px: N, color: C.focus }), run(page.metric.value !== null && page.metric.unit ? ` ${page.metric.unit}` : '', { px: T.type.body.px, color: C.textSecondary })].filter((r) => r.text),
+    slide.addText([run(displayedValue(page.metric.value, page.metric.digits), { px: N, color: C.focus }), run(page.metric.value !== null && page.metric.unit ? ` ${page.metric.unit}` : '', { px: T.type.body.px, color: C.textSecondary })].filter((r) => r.text),
       { x: inch(x), y: inch(y), w: inch(w), h: inch(N * 1.2), margin: 0, valign: 'bottom' });
     y += N * 1.2 + 32;
   }
@@ -587,14 +594,14 @@ LAYOUT.numbers = (slide, ctx) => {
     rule(slide, x, top, x + cw, top, C.gray);
     rule(slide, x, top, x, top + 16, C.gray);
     text(slide, it.label ?? '', { x: x + 16, y: top + 16, w: cw - 16, h: LABEL * LH });
-    const value = displayedValue(it.value, it.digits ?? 0);
+    const value = displayedValue(it.value, it.digits);
     const unitW = it.value !== null && it.unit ? textWidth(` ${it.unit}`, B) : 0;
     if (textWidth(value, N) * 1.12 + unitW > cw - 16) ctx.warn(`第 ${ctx.n} 頁「${it.label}」的數字超出欄寬；請刪減內容或拆頁`);
     slide.addText([run(value, { px: N }), run(it.value !== null && it.unit ? ` ${it.unit}` : '', { px: B, color: C.textSecondary })].filter((r) => r.text),
       { x: inch(x + 16), y: inch(top + 16 + LABEL * LH + 16), w: inch(cw - 16), h: inch(N * 1.15), margin: 0, valign: 'bottom' });
     if (typeof it.value === 'number' && it.prev !== undefined) {
       if (!it.better) ctx.warn(`第 ${ctx.n} 頁「${it.label}」有前期值但沒寫 better，預設越高越好`);
-      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? 0, suffix: it.deltaSuffix ?? '' });
+      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? decimalsOf([it.prev, it.value]), suffix: it.deltaSuffix ?? '' });
       if (d) text(slide, d.text, { x: x + 16, y: top + 16 + LABEL * LH + 16 + N * 1.15 + 16, w: cw - 16, h: B * 1.4, px: B, color: d.color });
     }
     if (it.note) text(slide, it.note, { x: x + 16, y: top + deltaY + B * 1.4 + 8, w: cw - 16, h: noteN * B * LH, px: B, lineHeight: LH });
@@ -622,7 +629,7 @@ LAYOUT.summary = (slide, ctx) => {
   items.forEach((it, i) => {
     const y = top + i * rowH;
     if (i) rule(slide, x, y, x + w, y, C.grid);
-    const value = displayedValue(it.value, it.digits ?? 0);
+    const value = displayedValue(it.value, it.digits);
     const unitW = it.value !== null && it.unit ? textWidth(` ${it.unit}`, B) : 0;
     if (textWidth(value, N) * 1.12 + unitW > w) ctx.warn(`第 ${ctx.n} 頁主管摘要「${it.label}」的數字超出欄寬`);
     slide.addText([run(value, { px: N }), run(it.value !== null && it.unit ? ` ${it.unit}` : '', { px: B, color: C.textSecondary })].filter((r) => r.text),
@@ -638,7 +645,7 @@ LAYOUT.summary = (slide, ctx) => {
     }
     if (typeof it.value === 'number' && it.prev !== undefined) {
       if (!it.better) ctx.warn(`第 ${ctx.n} 頁「${it.label}」有前期值但沒寫 better，預設越高越好`);
-      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? 0, suffix: it.deltaSuffix ?? '' });
+      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? decimalsOf([it.prev, it.value]), suffix: it.deltaSuffix ?? '' });
       if (d) {
         text(slide, d.text, { x, y: textY + 8, w, h: LABEL * LH, color: d.color });
         textY += 8 + LABEL * LH;
@@ -760,7 +767,7 @@ LAYOUT.kpi = (slide, ctx) => {
   if (secondary.length > 4) ctx.warn(`第 ${ctx.n} 頁核心數字有 ${secondary.length} 個次要指標，規格是 0～4 個`);
   const gap = 88, leftW = 940, rightX = M.x + leftW + gap, rightW = INNER - leftW - gap;
   text(slide, main.label, { x: M.x, y: top, w: leftW, h: LABEL * LH });
-  const mainValue = displayedValue(main.value, main.digits ?? 0), N = T.type.number.px, B = T.type.body.px;
+  const mainValue = displayedValue(main.value, main.digits), N = T.type.number.px, B = T.type.body.px;
   const mainUnit = main.value !== null && main.unit ? ` ${main.unit}` : '';
   if (textWidth(mainValue, N) + textWidth(mainUnit, B) > leftW) ctx.warn(`第 ${ctx.n} 頁核心數字超出左欄寬`);
   slide.addText([run(mainValue, { px: N, color: C.focus }), run(mainUnit, { px: B, color: C.textSecondary })].filter((r) => r.text),
@@ -768,7 +775,7 @@ LAYOUT.kpi = (slide, ctx) => {
   const rowsTop = top + LABEL * LH + 18 + N * 1.2 + 36;
   const rowH = Math.min(100, (end - rowsTop) / benchmarks.length);
   benchmarks.forEach((item, i) => {
-    const y = rowsTop + i * rowH, value = displayedValue(item.value, item.digits ?? 0) + (item.value !== null && item.unit ? ` ${item.unit}` : '');
+    const y = rowsTop + i * rowH, value = displayedValue(item.value, item.digits) + (item.value !== null && item.unit ? ` ${item.unit}` : '');
     rule(slide, M.x, y, M.x + leftW, y, C.grid);
     text(slide, item.label, { x: M.x, y: y + 16, w: leftW * 0.55, h: B * 1.4, px: B, color: C.text });
     text(slide, value, { x: M.x + leftW * 0.55, y: y + 16, w: leftW * 0.45, h: B * 1.4, px: B, color: C.text, align: 'right' });
@@ -779,7 +786,7 @@ LAYOUT.kpi = (slide, ctx) => {
   if (secondary.length) {
     const secondaryH = (end - top) / secondary.length;
     secondary.forEach((item, i) => {
-      const y = top + i * secondaryH, value = displayedValue(item.value, item.digits ?? 0), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
+      const y = top + i * secondaryH, value = displayedValue(item.value, item.digits), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
       if (i) rule(slide, rightX, y, rightX + rightW, y, C.grid);
       text(slide, item.label, { x: rightX, y: y + 12, w: rightW, h: LABEL * LH });
       slide.addText([run(value, { px: T.type.conclusionNumber.px }), run(unit, { px: B, color: C.textSecondary })].filter((r) => r.text),
@@ -846,7 +853,7 @@ LAYOUT.columns = (slide, ctx) => {
     let y = top + 28;
     if (item.kicker) { text(slide, item.kicker, { x, y, w: cw, h: LABEL * LH, color: focus ? C.focus : C.textSecondary }); y += LABEL * LH + 18; }
     if (item.value !== undefined && item.value !== '') {
-      const value = displayedValue(item.value, item.digits ?? 0), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
+      const value = displayedValue(item.value, item.digits), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
       const N = T.type.conclusionNumber.px;
       slide.addText([run(value, { px: N, color: focus ? C.focus : C.text }), run(unit, { px: T.type.body.px, color: C.textSecondary })].filter((r) => r.text),
         { x: inch(x), y: inch(y), w: inch(cw), h: inch(N * 1.2), margin: 0, valign: 'bottom' });

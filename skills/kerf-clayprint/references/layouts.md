@@ -11,7 +11,7 @@
 | 欄位 | 用法 |
 | --- | --- |
 | `kicker` | 頁首主題；封面作單位名稱。章節尺標按非封面頁的 `kicker` 首次出現順序去重，只在 `section` 頁顯示。 |
-| `claim` | 可由內容支持的結論。長標題可用 `\n` 指定斷點；不要只寫「背景」或「分析結果」。 |
+| `claim` | 可由內容支持的結論。長標題可用 `\n` 指定斷點；封面、章節與內容頁標題估算超過兩行會警告。不要只寫「背景」或「分析結果」。 |
 | `lede` | 封面、章節以外的內容頁選填，一行小字放在標題下、內容上，交代「指標・範圍・期間・單位」。省略時不佔高度。 |
 | `note` | 畫面上的補充，適用於 `cover`、`section`、`statement`、`evidence`。 |
 | `visual` | 依版型放圖表或結構化內容；欄位見下表。 |
@@ -32,7 +32,7 @@
 | 主管摘要 `summary` | 建議這樣做，關鍵數字支持它。 | `{lead, body?, items}`；左欄一行建議和至多三行理由，右欄建議 2～3 個數字格。 |
 | 章節 `section` | 接下來處理這個問題。 | 無；用 `kicker`、`claim`、`note`。 |
 | 一句話 `statement` | 先記住這個判斷。 | 無；選用頁面 `focus` 指定 `claim` 中的原文，找不到會警告。 |
-| 證據 `evidence` | 這張圖或表支持標題判斷。 | 一張[圖表](charts.md)；選用頁面 `metric: {label?, value, unit?}` 和 `note` 作右側結論欄。 |
+| 證據 `evidence` | 這張圖或表支持標題判斷。 | 一張[圖表](charts.md)；選用頁面 `metric: {label?, value, unit?, digits?}` 和 `note` 作右側結論欄。 |
 | 數字 `numbers` | 這幾個指標一起說明狀態。 | `items: [{label, value, unit?, ...}]`；建議 2～4 格，過長數字與高度會警告。 |
 | 診斷清單 `list` | 這幾件事需要處理；原稿有優先序時標出重點。 | `items` 3～5 項；選用 `tag`／`focus`，列間細線。 |
 | 無日期流程 `process` | 事情照這個順序走，現在在這一步。 | `steps` 3～6 步；`focus` 標目前步驟，超出欄寬會警告。 |
@@ -49,7 +49,7 @@
 
 預設設計層的 `body` 每行約 25 個中文字、最多三行約 75 字；標點與手動換行也佔容量，末行孤字需調整斷點。
 
-`numbers.visual.items` 的每項是 `{label, value, unit?, prev?, mode?, digits?, better?, deltaSuffix?, note?}`；`note` 是數字下方的一行說明，交代口徑或比較基準。`value` 可為數字、顯示字串或 `null`；數字依 `digits` 格式化。四格時使用設計層較小的固定數字字級，過長仍警告而不自動縮字。數字搭 `prev` 時可算增減，須明寫 `better: "higher"` 或 `"lower"`；`mode` 預設 `abs`（差額），另有 `pct`（相對百分比）、`pp`（百分點）。前期為 0 時改用差額；字串值不計算增減。
+`numbers.visual.items` 的每項是 `{label, value, unit?, prev?, mode?, digits?, better?, deltaSuffix?, note?}`；`note` 是數字下方的一行說明，交代口徑或比較基準。`value` 可為數字、顯示字串或 `null`；數字依 `digits` 格式化，未指定時照數值本身的小數位顯示（24.7 顯示 24.7），增減值照前後值的小數位。四格時使用設計層較小的固定數字字級，過長仍警告而不自動縮字。數字搭 `prev` 時可算增減，須明寫 `better: "higher"` 或 `"lower"`；`mode` 預設 `abs`（差額），另有 `pct`（相對百分比）、`pp`（百分點）。前期為 0 時改用差額；字串值不計算增減。
 
 `kpi.visual` 為 `{main: {label, value, unit?, digits?, benchmarks: [{label, value, unit?, digits?}]}, secondary?: [{label, value, unit?, digits?}]}`。主數字在左，1～3 個對照逐列置於下方，右側直排 0～4 個次要指標。每個 `value` 可為數字或顯示字串，數字依該項的 `digits` 格式化；論證必要但缺值時可用 `null`，畫面標「未提供」並列入來源列。
 
