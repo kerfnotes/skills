@@ -198,7 +198,8 @@ ${parts.join('\n\n')}
 </body>
 </html>
 `;
-  return { html, warnings, sections: report.sections.length, figures };
+  // The summary is a <section> too, so this matches evals/check-report.mjs.
+  return { html, warnings, sections: report.sections.length + (report.summary ? 1 : 0), figures };
 }
 
 if (isMain(import.meta.url)) {
