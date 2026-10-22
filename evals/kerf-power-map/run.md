@@ -34,7 +34,7 @@
 <貼上「使用者輸入」一節全文>
 ```
 
-**地圖檢查**（跑評測的人或主代理）：用 `html_preview` 以 375 寬開地圖 HTML，把 `evals/kerf-power-map/map-check.js` 以 inline script 附在 HTML 末端，存下 console 的 PASS／FAIL 輸出與 375 截圖。腳本細節與 html_preview 用法見同資料夾 `README.md`。沒有 HTML 就記「無地圖」。
+**地圖檢查**（跑評測的人或主代理）：用 `html_preview` 以 375 寬開地圖 HTML，把 `evals/kerf-power-map/map-check.js` 以 inline script 附在 HTML 末端，存下 console 的 PASS／FAIL 與 INFO 8（列數與每列字數）輸出，以及 375 截圖。腳本細節與 html_preview 用法見同資料夾 `README.md`。沒有 HTML 就記「無地圖」。
 
 **評審**（子代理，沒參與改版也沒參與作答）拿到：使用者輸入、回覆正文、地圖 HTML、375 截圖、腳本輸出、該則通過條件。提示詞：
 

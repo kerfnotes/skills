@@ -1,5 +1,5 @@
 // Power Map 地圖驗收檢查。用法見同資料夾 README.md：預覽時以 inline <script> 附在 </body> 前，交付版不含此 script。
-// 輸出：每項一行 PASS/FAIL 與原因，最後一行總結。
+// 輸出：第 1～7 項每項一行 PASS/FAIL 與原因，第 8 項一行 INFO（列數與字數，只報不判），最後一行總結第 1～7 項。
 (function () {
   // shortcut: 以 id 排除 html_preview 注入的主題樣式（它替 html 設了背景），換預覽工具時要改這裡
   var THEME_ID = 't3-theme';
@@ -117,6 +117,27 @@
   var emptyTagIssues = [];
   document.querySelectorAll('.tag').forEach(function (t, i) { if (!t.textContent.trim()) emptyTagIssues.push('第 ' + (i + 1) + ' 個 .tag 是空的'); });
   report(7, '證據標籤都有文字', emptyTagIssues);
+
+  // 8. 列數與每列字數：只報不判，不計入總結。精簡圖拿來對 board.md §1「最多 5 列，每列 20 字內」，完整面板不受這條限制
+  // 字數不含空白、標點、證據標籤（.tag 與 SVG 的〔…〕）和決策圈的圈名（.rk）
+  var chars = function (s) { return s.replace(/〔[^〕]*〕/g, '').replace(/[\s\p{P}\p{S}]/gu, '').length; };
+  var rowText = function (el) {
+    var copy = el.cloneNode(true);
+    copy.querySelectorAll('.tag, .rk').forEach(function (t) { t.remove(); });
+    return copy.textContent;
+  };
+  var rows = Array.from(document.querySelectorAll('.qa-r, .hop, .ring > p:not(.rk)')).map(function (el) { return chars(rowText(el)); });
+  var info = [];
+  if (rows.length) {
+    var long = rows.map(function (n, i) { return n > 20 ? '第 ' + (i + 1) + ' 列 ' + n + ' 字' : null; }).filter(Boolean);
+    info.push(rows.length + ' 列，每列 ' + rows.join('／') + ' 字' + (long.length ? '；超過 20 字：' + long.join('、') : ''));
+  }
+  // ponytail: SVG 不分列，只報方框、點的個數與文字總數；要逐節點算時再依座標把 <text> 歸到方框
+  document.querySelectorAll('svg').forEach(function (svg, i) {
+    var total = Array.from(svg.querySelectorAll('text:not(.mu)')).reduce(function (sum, t) { return sum + chars(t.textContent); }, 0);
+    info.push('第 ' + (i + 1) + ' 個 <svg>（概略）：方框 ' + svg.querySelectorAll('rect.bx').length + ' 個、點 ' + svg.querySelectorAll('circle.dot').length + ' 個，非 .mu 文字共 ' + total + ' 字');
+  });
+  console.log('INFO 8 列數與字數（只報不判）：' + (info.length ? info.join('；') : '沒有 .qa-r、.hop、.ring 列或 SVG'));
 
   var failed = results.filter(function (r) { return !r.ok; }).map(function (r) { return r.no; });
   console.log('map-check ' + (failed.length ? 'FAIL（第 ' + failed.join('、') + ' 項）' : 'PASS') + '：' + (results.length - failed.length) + '/' + results.length + ' 通過，視窗寬 ' + vw + 'px');
