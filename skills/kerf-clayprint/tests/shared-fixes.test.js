@@ -50,6 +50,15 @@ test('數字格與 metric 未指定 digits 時照數值小數位顯示，指定�
   assert.ok(rounded.includes('25') && !rounded.includes('24.7'));
 });
 
+test('報告摘要與方案比較的數值未指定 digits 時照數值小數位顯示，指定時照指定', () => {
+  const { html } = buildReport({ title: '位數', message: '帶走這句',
+    summary: { claim: '建議', items: [{ label: '甲', value: 24.7, unit: '%' }, { label: '乙', value: 476.56 }, { label: '丙', value: 24.7, digits: 0 }] },
+    sections: [{ claim: '比較', blocks: [{ type: 'compare', rows: ['比例'], options: [{ name: 'A', values: [24.7] }, { name: 'B', values: [18] }] }] }] });
+  const dd = [...html.matchAll(/<dd>([^<]*)<\/dd>/g)].map((m) => m[1]);
+  assert.deepEqual(dd, ['24.7 %', '476.56', '25']);
+  assert.match(html, /<td>24\.7<\/td><td>18<\/td>/);
+});
+
 test('驗收器的增減值核對與畫面同一位數', async () => {
   const story = { title: '增減測試', pages: [{ type: 'numbers', claim: '比例下降 0.3', sources, notes: '講稿。',
     visual: { items: [{ label: '甲', value: 24.7, prev: 25, better: 'higher' }, { label: '乙', value: 3 }] } }] };
