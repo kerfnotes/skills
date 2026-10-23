@@ -131,6 +131,11 @@ test('閱讀版容量上限：剛好上限不警告，超出一項才警告', ()
   for (const [, pattern] of capacity) assert.ok(over.some((w) => pattern.test(w)), `${pattern}\n${over.join('\n')}`);
 });
 
+test('閱讀版軟上限放得下：標題一行時摘要 6 項、收尾 14 列沒有高度警告', () => {
+  const warnings = readWarnings(capacityPages(0)).filter((w) => /^第 [38] 頁/.test(w));
+  assert.deepEqual(warnings, []);
+});
+
 test('列數上限只屬於閱讀版：簡報版比較 9 列、表格與收尾 15 列不新增警告', async () => {
   const warnings = await presentWarnings(capacityPages(1).filter((p) => ['compare', 'evidence', 'close'].includes(p.type)));
   assert.deepEqual(warnings.filter((w) => /比較列|表格是|收尾待辦/.test(w)), []);

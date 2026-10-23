@@ -722,7 +722,8 @@ LAYOUT.summary = (slide, ctx) => {
         textY += 8 + LABEL * LH;
       }
     }
-    if (labelN > 1 || textY + 8 > y + rowH) ctx.warn(`第 ${ctx.n} 頁主管摘要「${it.label}」超出單列容量，文字可能重疊`);
+    // 6 px clearance above the next rule lets six bare read-deck items fit under a one-line title.
+    if (labelN > 1 || textY + 6 > y + rowH) ctx.warn(`第 ${ctx.n} 頁主管摘要「${it.label}」超出單列容量，文字可能重疊`);
   });
 };
 
@@ -1059,7 +1060,7 @@ LAYOUT.close = (slide, ctx) => {
     const y = headY + i * rowH;
     if (i) rule(slide, M.x, y, W - M.x, y, muted);
     for (const [x, w, , key] of cols) {
-      if (r[key]) checkWrap(ctx, `visual.rows[${r.index}].${key}`, r[key], T.type.body.px, w, Math.max(0, Math.floor((rowH - 20) / (T.type.body.px * LH))), key !== 'task');
+      if (r[key]) checkWrap(ctx, `visual.rows[${r.index}].${key}`, r[key], T.type.body.px, w, Math.max(0, Math.floor((rowH - 16) / (T.type.body.px * LH))), key !== 'task');
       text(slide, r[key] ?? '', { x, y, w, h: rowH, px: T.type.body.px, valign: 'middle',
         color: key === 'task' ? ink : muted, bold: key === 'task', align: key === 'task' ? 'left' : 'right' });
     }
