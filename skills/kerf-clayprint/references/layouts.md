@@ -92,16 +92,51 @@
 | `compare` | 2～4 個方案 | 2～5 個方案，至多 8 列 |
 | `list` | 3～5 項，`body` 1 行 | 3～8 項，`body` 至多 3 行（項數多時仍受高度限制） |
 | `process` | 3～6 步 | 3～8 步 |
-| `columns` | 2～4 欄 | 2～5 欄 |
+| `columns` | 2～4 欄 | 2～5 欄，每欄 `body` 至多 6 行 |
 | `evidence` 的 `table` | 依可用高度 | 至多 14 列 |
+| `evidence` 的 `points` | 不支援 | 2～4 點，每點至多 2 行 |
 | `close` | 依可用高度 | 至多 14 列 |
+| `panels` | 不支援 | 恰好 2 格，每格 `note` 至多 3 行 |
+
+`panels` 只在閱讀型使用，一頁並排兩格，各放一張圖、一張表、一份清單或一段文字；現場簡報用到會驗收失敗。`visual` 為 `{items: [{title, visual, note?}, {title, visual, note?}], split?}`：`items` 恰好兩格；格標題 10 pt；格內 `visual` 是圖表或表格的 `{kind, …}`（同[圖表欄位](charts.md)，表格用 `table` 圖種）、清單 `{items: [{heading, body?}]}` 或一段文字字串（正文 11 pt）；`note` 10 pt、至多 3 行，超出警告。預設兩格等寬，`split: [3, 2]` 依比例分寬。格內數字與註一樣要能在原稿找到；兩格都是文字或清單時也套用 70% 填滿警告。
+
+```json
+{
+  "type": "panels",
+  "claim": "河東與河西的騎乘量都成長，河東增量最大",
+  "visual": {
+    "split": [3, 2],
+    "items": [
+      { "title": "各區 2025 年騎乘量", "visual": { "kind": "rank", "unit": "萬次", "rows": [{ "label": "河東區", "value": 398 }, { "label": "河西區", "value": 301 }] }, "note": "河東區 398 萬次最高。" },
+      { "title": "主要風險", "visual": { "items": [{ "heading": "司機招募不易", "body": "尖峰補車延遲。" }] } }
+    ]
+  },
+  "sources": { "source": "河港市交通局營運報表" }
+}
+```
 
 沒有講者，要說的話就要寫在頁面上：
 
-- 每張證據頁都填 `note`，寫這張圖怎麼讀、結論和資料限制；缺 `note` 時驗收器會警告。
+- 每張證據頁的右欄都要有內容：`takeaway` 一句結論（10 pt 粗體），`points` 2～4 點理由（10 pt），`note` 寫怎麼讀與資料限制；三者都沒有時建檔會警告右欄空白。重點數字 `metric` 仍在右欄最上方。
+- `columns` 可在頁面層加 `takeaway`，以一列 10 pt 粗體顯示在各欄下方。
+- 任一頁可加 `footnotes`，自動編號為「(1)」「(2)」，以 8 pt 置於來源列上方；正文自己寫「(1)」標記，不用上標。驗收器掃數字時會剔除不超過註腳數的「(N)」，其餘數字（含 `takeaway`、`points`、`footnotes` 裡的數字）都要有原稿依據。
+- 這三個欄位只有閱讀型支援；現場簡報用到時驗收失敗。
 - `lede` 交代指標、範圍、期間與單位；清單與流程的 `body` 寫原因或做法，不只寫名詞。
 - 現場簡報用來鋪陳的 `statement`、`section` 頁，改把判斷併入相鄰內容頁的 `claim` 或 `note`，頁數通常比現場版少。數字格、流程、並列、時程與一句話頁填滿低於 70% 時驗收器會警告；先併入相鄰頁，不湊字、不放大字級。
 - `notes` 不會被讀者看到，只放計算行與資料限制，不必寫講稿。
+
+```json
+{
+  "type": "evidence",
+  "claim": "甲區 12 件，多於乙區的 8 件",
+  "takeaway": "甲區是目前最主要的案件來源(1)。",
+  "points": ["甲區 12 件，乙區 8 件。", "乙區仍在成長，差距可能縮小。"],
+  "note": "只計已結案件；未結案件不列入。",
+  "footnotes": ["案件以受理地區歸類。"],
+  "visual": { "kind": "rank", "rows": [{ "label": "甲區", "value": 12 }, { "label": "乙區", "value": 8 }] },
+  "sources": { "source": "虛構測試文字稿" }
+}
+```
 
 範例見 [story-read.json](../examples/story-read.json)，和現場版 [story.json](../examples/story.json) 用同一份原稿。
 

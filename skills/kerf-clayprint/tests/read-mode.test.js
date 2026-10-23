@@ -81,10 +81,10 @@ test('數字格 note：閱讀型 4 格排兩列、可寫 2 行；現場版同一
   assert.deepEqual(JSON.parse(child.stdout), []);
 });
 
-test('閱讀型簡報的證據頁要有 note，不再要求講稿', () => {
+test('閱讀型簡報的證據頁右欄要有內容，不再要求講稿', () => {
   const story = { mode: 'read', pages: [{ type: 'evidence', claim: '甲 12 件', sources: { source: '原稿' }, visual: { kind: 'rank', rows: [{ label: '甲', value: 12 }, { label: '乙', value: 8 }] } }] };
   const code = `import { check } from ${JSON.stringify(new URL('../evals/check.mjs', import.meta.url).href)}; const r = await check(${JSON.stringify(story)}, '甲 12 件，乙 8 件。'); console.log(JSON.stringify(r.warnings));`;
   const warnings = JSON.parse(run([], { code, mode: 'read' }).stdout);
-  assert.ok(warnings.some((w) => /note：閱讀型簡報沒有講者/.test(w)), warnings.join('\n'));
+  assert.ok(warnings.includes('第 1 頁右欄空白：閱讀版的 evidence 要有 takeaway 或 points。'), warnings.join('\n'));
   assert.ok(!warnings.some((w) => /講稿/.test(w)), warnings.join('\n'));
 });
