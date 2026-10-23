@@ -24,6 +24,21 @@ test('封面 claim 估算三行時驗收器警告頁碼、欄位、估算行數�
   }
 });
 
+test('封面 claim 自動折成兩行時保留兩行高度，說明不被壓到', async () => {
+  const EMU = 914400 / 144;
+  const claim = '封面主張'.repeat(7), note = '封面說明';
+  const zip = await JSZip.loadAsync((await build({ title: '封面測試', pages: [{ type: 'cover', claim, note, sources }] })).buffer);
+  const xml = await zip.file('ppt/slides/slide1.xml').async('string');
+  const box = (text) => {
+    const sp = xml.split('<p:sp>').find((part) => part.includes(`<a:t>${text}</a:t>`));
+    const [, y, h] = sp.match(/<a:off x="\d+" y="(\d+)"\/><a:ext cx="\d+" cy="(\d+)"\/>/).map(Number);
+    return { y: y / EMU, h: h / EMU };
+  };
+  const title = box(claim), below = box(note);
+  assert.ok(title.h > 1.9 * 104 * 1.35, `封面標題框高 ${title.h}`);
+  assert.ok(below.y >= title.y + title.h, `說明 ${below.y} 在標題框 ${title.y}+${title.h} 之內`);
+});
+
 test('章節與內容頁的標題超過兩行同樣警告', async () => {
   const long = '標題很長'.repeat(30);
   const { warnings } = await build({ title: '標題測試', pages: [

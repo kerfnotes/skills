@@ -528,9 +528,8 @@ LAYOUT.cover = (slide, ctx) => {
   header(slide, page.kicker, story.date, muted);
   const ruleY = sourceRow(slide, ctx, { line: muted, ink: muted });
   const D = T.type.display.px;
-  // Layout height still follows explicit breaks; only the warning uses the wrap estimate.
-  checkWrap(ctx, 'claim', page.claim ?? '', D, INNER, TITLE_LINES);
-  const titleLines = String(page.claim ?? '').split('\n').length;
+  // The estimate counts explicit breaks too, so an automatic wrap keeps its height and never lands on the note.
+  const titleLines = checkWrap(ctx, 'claim', page.claim ?? '', D, INNER, TITLE_LINES);
   const lh = D * DISPLAY_LH;
   const blockH = titleLines * lh + (page.note ? 72 + T.type.sub.px * 1.5 : 0);
   const top = (M.top + LABEL + ruleY) / 2 - blockH / 2;
