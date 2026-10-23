@@ -1,34 +1,27 @@
 // Print a report to PDF with headless Chrome, Edge, Chromium or Brave, then check every page.
 // node scripts/pdf.js out/report.html out/print [--letter] [--paper clay]
 // Fill and right overflow come from ink rows in a 50 dpi grayscale render; split exhibits from pdftotext page by page.
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isMain } from './main.js';
-import { executable } from './preview.js';
+import { contactSheet, findProgram, numbered, programFiles } from './preview.js';
 
 const NO_BROWSER = '找不到 Chrome、Edge、Chromium 或 Brave；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。';
 
 export function findBrowser({ platform = process.platform, env = process.env, exists = existsSync } = {}) {
   if (env.CLAYPRINT_CHROME) return exists(env.CLAYPRINT_CHROME) ? env.CLAYPRINT_CHROME : null;
-  const onPath = ['google-chrome', 'chromium', 'chrome', 'msedge'].map((name) => executable(name, { platform, env })).find(Boolean);
-  if (onPath) return onPath;
   const installed = platform === 'darwin'
     ? ['Google Chrome', 'Chromium', 'Microsoft Edge', 'Brave Browser'].map((app) => `/Applications/${app}.app/Contents/MacOS/${app}`)
     : platform === 'win32'
-      ? [env.ProgramFiles, env['ProgramFiles(x86)']].filter(Boolean).flatMap((dir) => [
-        join(dir, 'Google', 'Chrome', 'Application', 'chrome.exe'), join(dir, 'Chromium', 'Application', 'chrome.exe'),
-        join(dir, 'Microsoft', 'Edge', 'Application', 'msedge.exe'), join(dir, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe')])
+      ? programFiles(env, ['Google', 'Chrome', 'Application', 'chrome.exe'], ['Chromium', 'Application', 'chrome.exe'],
+        ['Microsoft', 'Edge', 'Application', 'msedge.exe'], ['BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'])
       : [];
-  return installed.find((path) => exists(path)) ?? null;
+  return findProgram(['google-chrome', 'chromium', 'chrome', 'msedge'], installed, { platform, env, exists });
 }
-
-// Files pdftoppm wrote for prefix, in page order. It pads numbers to the page count (page-1 or page-01).
-const numbered = (dir, prefix, ext) => readdirSync(dir).filter((f) => new RegExp(`^${prefix}-\\d+\\.${ext}$`).test(f))
-  .sort((a, b) => parseInt(a.slice(prefix.length + 1)) - parseInt(b.slice(prefix.length + 1)));
 
 // Gray below 240 is ink: tints and rules count, white and clay paper (about 249) do not.
 const INK = 240;
@@ -117,12 +110,8 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
     renameSync(join(outDir, f), png);
     return png;
   });
-  // Portrait pages, four to a row; ffmpeg's xstack needs at least two, so a one-page print has no sheet.
-  const sheet = pngs.length > 1 ? join(outDir, 'sheet.png') : null;
-  rmSync(join(outDir, 'sheet.png'), { force: true });
-  if (sheet) execFileSync('ffmpeg', ['-loglevel', 'error', '-y', ...pngs.flatMap((p) => ['-i', p]),
-    '-filter_complex', `${pngs.map((_, i) => `[${i}]scale=400:560:force_original_aspect_ratio=decrease,pad=420:580:(ow-iw)/2:10:white[p${i}]`).join(';')};${pngs.map((_, i) => `[p${i}]`).join('')}xstack=inputs=${pngs.length}:layout=${pngs.map((_, i) => `${(i % 4) * 420}_${Math.floor(i / 4) * 580}`).join('|')}:fill=white`,
-    sheet]);
+  // Portrait pages, four to a row.
+  const sheet = contactSheet(pngs, join(outDir, 'sheet.png'), { perRow: 4, width: 420, height: 580 });
 
   const tmp = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
   let pages;
