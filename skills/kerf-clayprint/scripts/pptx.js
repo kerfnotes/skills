@@ -73,7 +73,8 @@ function checkWrap(ctx, field, str, px, width, limit, orphan = false) {
 function sparse(ctx, used, avail) {
   if (MODE !== 'read' || avail <= 0 || used / avail >= CAP.minFill) return;
   // list, compare, close and summary take no takeaway or points.
-  const fix = ['list', 'compare', 'close', 'summary'].includes(ctx.page.type) ? '加項目或正文' : '加 takeaway 或 points';
+  // Only evidence and columns take takeaway／points; every other layout grows by adding items or body text.
+  const fix = ['evidence', 'columns'].includes(ctx.page.type) ? '加 takeaway 或 points' : '加項目或正文';
   ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 ${Math.round(CAP.minFill * 100)}%：${fix}，或併入相鄰頁。`);
 }
 

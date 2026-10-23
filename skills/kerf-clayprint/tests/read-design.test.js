@@ -166,15 +166,17 @@ test('閱讀版驗收：缺來源行的頁面失敗並指出頁碼', async () =>
 });
 
 test('閱讀版填滿率低於 70% 的內容頁以固定文案警告，簡報版不警告', async () => {
-  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：加 takeaway 或 points，或併入相鄰頁。$/;
+  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：(加項目或正文|加 takeaway 或 points)，或併入相鄰頁。$/;
   const statement = [{ type: 'statement', claim: '先記住這件事', sources }];
-  assert.ok(readWarnings(statement).some((w) => fill.test(w)), readWarnings(statement).join('\n'));
+  // Only evidence and columns take takeaway／points; other layouts are told to add items or body text.
+  assert.ok(readWarnings(statement).some((w) => w.match(fill)?.[2] === '加項目或正文'), readWarnings(statement).join('\n'));
   assert.ok(!(await presentWarnings(statement)).some((w) => /填滿|內容區/.test(w)));
   // A page between half and 70% full warned under neither old rule; it warns now.
   const columns = (lines) => [{ type: 'columns', claim: '並列', sources, visual: { items: [
     { heading: '甲', body: '欄內正文'.repeat(9 * lines) }, { heading: '乙' }] } }];
   const percents = [8, 9, 10, 11, 12].map((lines) => readWarnings(columns(lines)).map((w) => w.match(fill)?.[1]).find(Boolean));
   assert.ok(percents.some((p) => p >= 50 && p < 70), percents.join(','));
+  assert.ok(readWarnings(columns(8)).some((w) => w.match(fill)?.[2] === '加 takeaway 或 points'));
   assert.ok(!readWarnings(columns(16)).some((w) => fill.test(w) || /內容區/.test(w)));
 });
 
