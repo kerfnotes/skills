@@ -173,7 +173,7 @@
 - 現場簡報用來鋪陳的 `statement`、`section` 頁，改把判斷併入相鄰內容頁的 `claim`、`takeaway` 或 `note`，頁數通常比現場版少。
 - `notes` 不會被讀者看到，只放計算行與資料限制，不必寫講稿。
 
-範例見 [story-read.json](../examples/story-read.json)：封面加五個內容頁，用到 summary、evidence 的 `takeaway`／`points`、`panels`、compare 與 columns 的 `takeaway`，各頁有 `footnotes` 與兩行標題；和現場版 [story.json](../examples/story.json) 用同一份原稿。
+範例見 [story-read.json](../examples/story-read.json)：封面加五個內容頁，用到 summary、evidence 的 `takeaway`／`points`、`panels`、compare 與 columns 的 `takeaway`；四頁有 `footnotes`，三頁用兩行標題；和現場版 [story.json](../examples/story.json) 用同一份原稿。
 
 ## 預覽與交付
 
