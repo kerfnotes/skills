@@ -33,6 +33,9 @@
     "columns": [2, 5],
     "columnsBody": 6,
     "tableRows": 14,
-    "closeRows": 14
+    "closeRows": 14,
+    "points": [2, 4],
+    "panelNote": 3,
+    "minFill": 0.7
   }
 }

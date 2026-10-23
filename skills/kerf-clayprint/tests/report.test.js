@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -128,12 +128,13 @@ test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢�
   assert.doesNotMatch(print, /size: letter;[^}]*margin/);
   // 列印字級與欄寬。
   const media = print.slice(print.indexOf('@media print'));
-  assert.match(media, /html \{[^}]*background: #fff;[^}]*font-size: 10\.5pt; line-height: 16pt;/);
-  assert.match(media, /body \{[^}]*padding: 0 11mm 0 28mm;/);
-  assert.match(media, /h2 \{ font-size: 24pt;/);
-  assert.match(media, /h3 \{ font-size: 12pt;/);
-  assert.match(media, /figcaption, \.sources \{ font-size: 7pt;/);
-  assert.match(media, /figure, \.table-scroll \{ margin-right: -11mm; max-width: none; \}/);
+  assert.match(media, /:root \{[^}]*--cp-print-indent: 28mm; --cp-print-gutter: 11mm;[^}]*--cp-print-body: 10\.5pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;[^}]*--cp-print-sub: 12pt; --cp-print-small: 7pt;/);
+  assert.match(media, /html \{[^}]*background: #fff;[^}]*font-size: var\(--cp-print-body\); line-height: var\(--cp-print-leading\);/);
+  assert.match(media, /body \{[^}]*padding: 0 var\(--cp-print-gutter\) 0 var\(--cp-print-indent\);/);
+  assert.match(media, /h2 \{ font-size: var\(--cp-print-heading\);/);
+  assert.match(media, /h3 \{ font-size: var\(--cp-print-sub\);/);
+  assert.match(media, /figcaption, \.sources \{ font-size: var\(--cp-print-small\);/);
+  assert.match(media, /figure, \.table-scroll \{ margin-right: calc\(-1 \* var\(--cp-print-gutter\)\); max-width: none; \}/);
   assert.match(media, /\.chart-scroll svg \{ min-width: 0; max-width: 100%; \}/);
   // 列印區塊在窄螢幕規則之後，才能蓋掉它（A4 版心約 510 CSS px，會命中 max-width: 640px）。
   assert.ok(css.indexOf('@media print') > css.indexOf('@media (max-width: 640px)'));
@@ -183,9 +184,9 @@ test('圖表區塊：圖、表各自編號，標籤與標題在上，註與來�
 test('全寬圖只在列印時從左 22 mm 起，不伸出 @page', () => {
   const css = themeCss();
   const media = css.slice(css.indexOf('@media print'));
-  assert.match(media, /figure\.wide, \.table-scroll\.wide \{ margin-left: -28mm; \}/);
-  assert.match(media, /\.exhibit-title, caption \{[^}]*font-size: 12pt;/);
-  assert.match(media, /\.exhibit-note, figcaption, \.sources \{ font-size: 7pt;/);
+  assert.match(media, /figure\.wide, \.table-scroll\.wide \{ margin-left: calc\(-1 \* var\(--cp-print-indent\)\); \}/);
+  assert.match(media, /\.exhibit-title, caption \{[^}]*font-size: var\(--cp-print-sub\);/);
+  assert.match(media, /\.exhibit-note, figcaption, \.sources \{ font-size: var\(--cp-print-small\);/);
   assert.doesNotMatch(css.slice(0, css.indexOf('@page')), /\.wide/);
 });
 
@@ -197,4 +198,26 @@ test('驗收器略過產生器加的圖表標籤，正文裡原稿沒有的編�
   assert.throws(() => checkReport(`<section>${fig.replace('甲</p>', '甲 99 件</p>')}</section>`, source), /99/);
   assert.throws(() => checkReport(`<section>${fig.replace('>圖 7<', '>圖 7 共 99 件<')}</section>`, source), /原稿找不到數字/);
   assert.throws(() => checkReport(fig.replace('來源：原稿', '原稿'), source), /figcaption/);
+});
+
+test('列印字級與邊界來自設計層 print 區塊，缺少時用預設值', () => {
+  for (const name of ['tokens.json', 'tokens.blue.json']) {
+    const { print } = JSON.parse(file(`design/${name}`));
+    assert.deepEqual(print, { margin: { top: 12, right: 14, bottom: 15, left: 22, indent: 28, gutter: 11 },
+      type: { body: 10.5, leading: 16, heading: 24, sub: 12, small: 7, cover: 30 } });
+  }
+  const tokens = loadTokens();
+  const { print, ...bare } = tokens;
+  const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-print-'));
+  try {
+    writeFileSync(path.join(dir, 'bare.json'), JSON.stringify(bare));
+    assert.deepEqual(loadTokens(path.join(dir, 'bare.json')).print, print);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const css = themeCss({ ...tokens, print: { margin: { ...print.margin, left: 20, indent: 30 }, type: { ...print.type, body: 9, small: 6.5 } } });
+  assert.match(css, /@page \{[^}]*margin: 12mm 14mm 15mm 20mm;[^}]*font: 6\.5pt var\(--cp-font\)/);
+  const media = css.slice(css.indexOf('@media print'));
+  assert.match(media, /:root \{[^}]*--cp-print-indent: 30mm;[^}]*--cp-print-text-left: 50mm;[^}]*--cp-print-body: 9pt;/);
+  assert.match(media, /html \{[^}]*font-size: var\(--cp-print-body\); line-height: var\(--cp-print-leading\);/);
 });

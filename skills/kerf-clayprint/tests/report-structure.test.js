@@ -39,11 +39,12 @@ test('目錄三節以上才出現，只列節標題、不印頁碼', () => {
 test('列印：第一頁容器出血並以分頁結束，節不換頁，節標題與目錄、引言對齊 22 mm 線', () => {
   const css = printCss();
   // 第 1 頁 @page 邊界為 0：容器抵銷 body 內距，再補回左 50、右 25 mm；橫幅再抵銷容器內距印到紙邊。
-  assert.match(css, /\.report-front \{[^}]*margin: 0 -11mm 0 -28mm;[^}]*padding: 0 25mm 15mm 50mm;[^}]*break-after: page;/);
-  assert.match(css, /\.report-cover \{[^}]*margin: 0 -25mm[^;]*-50mm;[^}]*padding: [^;]*25mm [^;]*50mm;[^}]*background: /);
+  assert.match(css, /--cp-print-text-left: 50mm; --cp-print-text-right: 25mm;/);
+  assert.match(css, /\.report-front \{[^}]*margin: 0 calc\(-1 \* var\(--cp-print-gutter\)\) 0 calc\(-1 \* var\(--cp-print-indent\)\);[^}]*padding: 0 var\(--cp-print-text-right\) var\(--cp-print-bottom\) var\(--cp-print-text-left\);[^}]*break-after: page;/);
+  assert.match(css, /\.report-cover \{[^}]*margin: 0 calc\(-1 \* var\(--cp-print-text-right\)\)[^;]*calc\(-1 \* var\(--cp-print-text-left\)\);[^}]*padding: [^;]*var\(--cp-print-text-right\) [^;]*var\(--cp-print-text-left\);[^}]*background: /);
   assert.doesNotMatch(css, /(?:^|\s)section \{[^}]*break-(?:inside|before)/m);
   assert.doesNotMatch(css, /\.report-cover \{[^}]*break-after/);
-  assert.match(css, /\.toc, \.section-heading, \.callout \{ margin-left: -28mm;/);
+  assert.match(css, /\.toc, \.section-heading, \.callout \{ margin-left: calc\(-1 \* var\(--cp-print-indent\)\);/);
   assert.match(css, /\.section-heading \{[^}]*border-top: [^;]*var\(--cp-accent\)/);
   assert.match(css, /\.section-heading h2 \{[^}]*color: var\(--cp-accent\)/);
   assert.match(css, /\.section-heading \{[^}]*break-inside: avoid; break-after: avoid/);
@@ -55,7 +56,7 @@ test('列印：callout 是 24 pt 強調色、無框無底色的引言；螢幕�
   assert.match(screen, /\.callout \{[^}]*padding: 20px 24px; background: var\(--cp-tint\);/);
   const print = printCss();
   assert.match(print, /\.callout \{[^}]*padding: 0;[^}]*background: none;[^}]*border: 0;/);
-  assert.match(print, /\.callout p \{[^}]*font-size: 24pt;[^}]*line-height: [\d.]+;[^}]*color: var\(--cp-accent\)/);
+  assert.match(print, /\.callout p \{[^}]*font-size: var\(--cp-print-heading\);[^}]*line-height: [\d.]+;[^}]*color: var\(--cp-accent\)/);
   // 字重 400 才讀得出是引言，不像另一個節標題。
   assert.match(print, /\.callout p \{[^}]*font-weight: 400;/);
 });

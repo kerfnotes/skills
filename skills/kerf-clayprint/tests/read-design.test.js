@@ -51,6 +51,7 @@ test('閱讀設計層：字級、上下邊界與新字級鍵只在閱讀模式�
   assert.deepEqual(read.capacity, {
     summary: [2, 6], summaryBody: 10, list: [3, 8], listBody: 3, numbers: [2, 8], numbersNote: 3,
     compare: [2, 5], compareRows: 8, process: [3, 8], columns: [2, 5], columnsBody: 6, tableRows: 14, closeRows: 14,
+    points: [2, 4], panelNote: 3, minFill: 0.7,
   });
   const base = child(code);
   assert.deepEqual(base.margin, present.margin);
@@ -175,4 +176,13 @@ test('閱讀版填滿率低於 70% 的內容頁以固定文案警告，簡報版
   const percents = [8, 9, 10, 11, 12].map((lines) => readWarnings(columns(lines)).map((w) => w.match(fill)?.[1]).find(Boolean));
   assert.ok(percents.some((p) => p >= 50 && p < 70), percents.join(','));
   assert.ok(!readWarnings(columns(16)).some((w) => fill.test(w) || /內容區/.test(w)));
+});
+
+test('閱讀版的填滿門檻、points 點數與 panels 註行數放在設計層 read.json', () => {
+  const { capacity } = JSON.parse(readFileSync(path.join(root, 'design/read.json'), 'utf8'));
+  assert.equal(capacity.minFill, 0.7);
+  assert.deepEqual(capacity.points, [2, 4]);
+  assert.equal(capacity.panelNote, 3);
+  const pptx = readFileSync(path.join(root, 'scripts/pptx.js'), 'utf8');
+  assert.doesNotMatch(pptx, /MIN_FILL|PANEL_NOTE|points: \[2, 4\]|低於 70%/);
 });

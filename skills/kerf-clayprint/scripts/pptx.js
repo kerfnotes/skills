@@ -66,10 +66,9 @@ function checkWrap(ctx, field, str, px, width, limit, orphan = false) {
 }
 
 // A read deck has no presenter to carry a near-empty page. Only layouts whose height comes from the content call this.
-const MIN_FILL = 0.7;
 function sparse(ctx, used, avail) {
-  if (MODE !== 'read' || avail <= 0 || used / avail >= MIN_FILL) return;
-  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 70%：加 takeaway 或 points，或併入相鄰頁。`);
+  if (MODE !== 'read' || avail <= 0 || used / avail >= CAP.minFill) return;
+  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 ${Math.round(CAP.minFill * 100)}%：加 takeaway 或 points，或併入相鄰頁。`);
 }
 
 function sourceItems(sources = {}, missing = []) {
@@ -288,7 +287,7 @@ function chart(slide, spec, area, ctx) {
 const LAYOUT = {};
 // Item counts per layout; read mode (design/read.json) widens them because its type is smaller.
 const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4],
-  columnsBody: Infinity, compareRows: Infinity, tableRows: Infinity, closeRows: Infinity, points: [2, 4], ...T.capacity };
+  columnsBody: Infinity, compareRows: Infinity, tableRows: Infinity, closeRows: Infinity, ...T.capacity };
 const outside = (count, [lo, hi]) => count < lo || count > hi;
 const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table', 'multiples', 'bridge', 'histogram', 'strip', 'matrix', 'dumbbell', 'funnel', 'heat', 'grouped', 'sharetrend', 'combo', 'bullet', 'waffle', 'mekko', 'pareto', 'tornado', 'box', 'ordered']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -945,8 +944,7 @@ LAYOUT.columns = (slide, ctx) => {
   });
 };
 
-// Read decks only: two titled cells side by side, each a chart, table, list or text with a note of up to three lines.
-const PANEL_NOTE = 3;
+// Read decks only: two titled cells side by side, each a chart, table, list or text with a note of up to CAP.panelNote lines.
 LAYOUT.panels = (slide, ctx) => {
   const { page, story } = ctx;
   header(slide, page.kicker, story.title);
@@ -958,7 +956,7 @@ LAYOUT.panels = (slide, ctx) => {
   const gap = 96, [a, b] = page.visual.split ?? [1, 1];
   const widths = [a, b].map((s) => ((INNER - gap) * s) / (a + b));
   const B = T.type.body.px, titleH = LABEL * LH;
-  const noteRows = Math.max(0, ...cells.map((cell, j) => cell.note ? Math.min(PANEL_NOTE, checkWrap(ctx, `visual.items[${j}].note`, cell.note, LABEL, widths[j], PANEL_NOTE)) : 0));
+  const noteRows = Math.max(0, ...cells.map((cell, j) => cell.note ? Math.min(CAP.panelNote, checkWrap(ctx, `visual.items[${j}].note`, cell.note, LABEL, widths[j], CAP.panelNote)) : 0));
   const noteH = noteRows ? 24 + noteRows * LABEL * LH : 0;
   let filled = top;
   cells.forEach((cell, j) => {

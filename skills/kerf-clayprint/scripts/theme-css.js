@@ -6,6 +6,9 @@ export function themeCss(tokens = loadTokens()) {
   const c = tokens.color;
   const font = [...tokens.font.latin, ...tokens.font.cjk].map((name) => `"${name}"`).join(', ');
   const body = tokens.type.body.px / 2;
+  const { margin: pm, type: pt } = tokens.print;
+  // ponytail: print front matter (.report-front) longer than one page keeps the 50 mm padding on top of page 2's margin;
+  // shorten the summary if it spills.
   return `:root {
   --cp-paper: ${c.onDark[0]};
   --cp-ink: ${c.text};
@@ -82,10 +85,11 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .chart-scroll svg { min-width: 640px; max-width: none; }
 }
 /* Chrome clips print content outside the page area and shrinks the whole page when anything overflows on the right,
-   so @page sits on the outermost lines (22 mm left, 14 mm right) and body padding sets the 50 / 25 mm text column. */
+   so @page sits on the outermost lines (22 mm left, 14 mm right) and body padding sets the 50 / 25 mm text column.
+   Sizes come from the design layer's print block; @page takes the numbers, element rules the --cp-print-* variables. */
 @page {
-  size: A4; margin: 12mm 14mm 15mm 22mm;
-  @bottom-right { content: var(--report-title, "") " | " counter(page) " / " counter(pages); font: 7pt var(--cp-font); color: var(--cp-muted); padding-right: 11mm; }
+  size: A4; margin: ${pm.top}mm ${pm.right}mm ${pm.bottom}mm ${pm.left}mm;
+  @bottom-right { content: var(--report-title, "") " | " counter(page) " / " counter(pages); font: ${pt.small}pt var(--cp-font); color: var(--cp-muted); padding-right: ${pm.gutter}mm; }
 }
 /* The first page has no margin so the cover band can bleed, and no footer. */
 @page :first { margin: 0; @bottom-right { content: none; } }
@@ -94,46 +98,51 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 @page letter { size: letter; }
 @page clay-letter { size: letter; background: var(--cp-paper); }
 @media print {
-  html { background: #fff; font-size: 10.5pt; line-height: 16pt; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  :root {
+    --cp-print-indent: ${pm.indent}mm; --cp-print-gutter: ${pm.gutter}mm; --cp-print-bottom: ${pm.bottom}mm;
+    --cp-print-text-left: ${pm.left + pm.indent}mm; --cp-print-text-right: ${pm.right + pm.gutter}mm;
+    --cp-print-body: ${pt.body}pt; --cp-print-leading: ${pt.leading}pt; --cp-print-heading: ${pt.heading}pt;
+    --cp-print-sub: ${pt.sub}pt; --cp-print-small: ${pt.small}pt; --cp-print-cover: ${pt.cover}pt;
+  }
+  html { background: #fff; font-size: var(--cp-print-body); line-height: var(--cp-print-leading); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   html[data-paper="clay"] { background: var(--cp-paper); }
   html[data-paper="clay"] body { page: clay; }
   html[data-size="letter"] body { page: letter; }
   html[data-paper="clay"][data-size="letter"] body { page: clay-letter; }
-  body { max-width: none; padding: 0 11mm 0 28mm; }
-  h2 { font-size: 24pt; }
-  h3 { font-size: 12pt; }
-  .exhibit-note, figcaption, .sources { font-size: 7pt; }
-  .exhibit-title, caption { font-size: 12pt; }
+  body { max-width: none; padding: 0 var(--cp-print-gutter) 0 var(--cp-print-indent); }
+  h2 { font-size: var(--cp-print-heading); }
+  h3 { font-size: var(--cp-print-sub); }
+  .exhibit-note, figcaption, .sources { font-size: var(--cp-print-small); }
+  .exhibit-title, caption { font-size: var(--cp-print-sub); }
   /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
-     the cover band cancels that again to reach the paper edge. Sections always start on the next page. */${''
-  /* ponytail: front matter longer than one page keeps the 50 mm padding on top of page 2's margin; shorten the summary if it spills. */}
-  .report-front { margin: 0 -11mm 0 -28mm; padding: 0 25mm 15mm 50mm; break-after: page; }
-  .report-cover { margin: 0 -25mm 10mm -50mm; padding: 24mm 25mm 12mm 50mm; background: var(--cp-tint); }
-  .report-cover h1 { font-size: 30pt; line-height: 1.2; }
+     the cover band cancels that again to reach the paper edge. Sections always start on the next page. */
+  .report-front { margin: 0 calc(-1 * var(--cp-print-gutter)) 0 calc(-1 * var(--cp-print-indent)); padding: 0 var(--cp-print-text-right) var(--cp-print-bottom) var(--cp-print-text-left); break-after: page; }
+  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 24mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-tint); }
+  .report-cover h1 { font-size: var(--cp-print-cover); line-height: 1.2; }
   /* A full-page cover fills the paper; 1 mm short so it never spills onto a second page. */
   .report-front[data-cover="page"] { padding-bottom: 0; }
   .report-front[data-cover="page"] .report-cover { min-height: 296mm; margin-bottom: 0; padding-top: 80mm; }
   html[data-size="letter"] .report-front[data-cover="page"] .report-cover { min-height: 278mm; }
   .toc { margin-top: 0; }
   section { margin-top: 8mm; }
-  .toc h2 { font-size: 12pt; }
+  .toc h2 { font-size: var(--cp-print-sub); }
   /* Section headings, contents and pull quotes sit on the 22 mm line, the inner edge of @page. */
-  .toc, .section-heading, .callout { margin-left: -28mm; }
+  .toc, .section-heading, .callout { margin-left: calc(-1 * var(--cp-print-indent)); }
   .section-heading { break-inside: avoid; break-after: avoid; margin-bottom: 4mm; border-top: 1.5pt solid var(--cp-accent); padding-top: 4mm; }
   .section-heading .eyebrow { margin-bottom: 1mm; }
   .section-heading h2 { color: var(--cp-accent); margin-bottom: 3mm; }
   .callout { margin-top: 6mm; margin-bottom: 6mm; padding: 0; background: none; border: 0; }
-  .callout p { font-size: 24pt; line-height: 1.3; color: var(--cp-accent); font-weight: 400; max-width: none; }
+  .callout p { font-size: var(--cp-print-heading); line-height: 1.3; color: var(--cp-accent); font-weight: 400; max-width: none; }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
-  /* Tables over eight rows may break; the header repeats on the next page. */
+  /* Tables over eight rows may break; the header repeats on the next page. scripts/pdf.js (splitExhibits) uses the same eight. */
   .table-scroll:has(tbody tr:nth-child(9)), .table-scroll:has(tbody tr:nth-child(9)) table { break-inside: auto; }
   thead { display: table-header-group; }
   caption, thead { break-after: avoid; }
   tr { break-inside: avoid; }
   /* Charts and tables may run into the body padding, to 14 mm from the right edge (146 mm on A4). */
-  figure, .table-scroll { margin-right: -11mm; max-width: none; }
+  figure, .table-scroll { margin-right: calc(-1 * var(--cp-print-gutter)); max-width: none; }
   /* wide: true starts on the 22 mm line, the @page edge, for 174 mm on A4; going past it would clip the block. */
-  figure.wide, .table-scroll.wide { margin-left: -28mm; }
+  figure.wide, .table-scroll.wide { margin-left: calc(-1 * var(--cp-print-indent)); }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
