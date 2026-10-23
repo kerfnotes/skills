@@ -12,9 +12,9 @@ const { findBrowser } = await import('../scripts/pdf.js');
 
 // A4 at 50 dpi, the size pdftoppm -gray -r 50 writes. Ink is 0 on white 255.
 const W = 414, H = 585, k = 50 / 25.4;
-function pgm(inkRows, inkPixels = []) {
+function pgm(inkRows, inkPixels = [], from = 100) {
   const data = Buffer.alloc(W * H, 255);
-  for (const y of inkRows) data.fill(0, y * W + 100, y * W + 300);
+  for (const y of inkRows) data.fill(0, y * W + from, y * W + from + 200);
   for (const [x, y] of inkPixels) data[y * W + x] = 0;
   return Buffer.concat([Buffer.from(`P5\n${W} ${H}\n255\n`), data]);
 }
@@ -64,8 +64,9 @@ printf 'fake sheet' > "$sheet"
   return { bin, fixtures };
 }
 
-function run(dir, args, env = {}) {
+function run(dir, args, env = {}, pages) {
   const { bin, fixtures } = shims(dir);
+  if (pages) pages.forEach((page, i) => writeFileSync(join(fixtures, `${i + 1}.pgm`), page));
   const { CLAYPRINT_CHROME, ...rest } = process.env;
   return spawnSync(process.execPath, [script, ...args], {
     encoding: 'utf8', env: { ...rest, PATH: `${bin}:/usr/bin:/bin`, FAKE_LOG: join(dir, 'calls'), FAKE_FIXTURES: fixtures, ...env },
@@ -100,6 +101,26 @@ test('pdf.js prints with the browser, rasterizes pages, and warns about fill, ov
     assert.match(result.stderr, /圖 1 的標題在第 1 頁、來源在第 2 頁：縮短圖上方的段落，或改小圖。/);
     assert.doesNotMatch(result.stderr, /圖 2 的標題/);
     assert.match(result.stderr, /表 1 跨第 2–3 頁：列數少於 8 不該分頁，縮短表上方的段落。/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('Chrome shrinks a page whose content runs past the right edge: the body column moves left of 50 mm', { skip: process.platform === 'win32' && 'POSIX shell shims' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
+  try {
+    const html = join(dir, 'report.html'), out = join(dir, 'print');
+    writeFileSync(html, readFileSync(example));
+    const rows = (from, n) => Array.from({ length: n }, (_, i) => from + i * 20);
+    // Page 2: body lines start at x 85 (43.2 mm, so 28 mm became 21.2 mm: 76%); section headings on the 22 mm line (x 43)
+    // and a lone block at x 70 do not move the estimate. Page 3: body at 50.8 mm and a wide table whose cells start
+    // at 25.7 mm (x 51): not shrunk.
+    const shrunk = pgm(rows(top + 10, 12), [[43, top + 2], [43, top + 3], [70, top + 300], [90, top + 300]], 85);
+    const wide = pgm(rows(top + 10, 6), rows(top + 200, 8).map((y) => [51, y]));
+    const result = run(dir, [html, out], {}, [pgm([5, bottom - 10]), shrunk, wide]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /第 2 頁內容超出右邊界，整頁被縮成 76%：減少表格欄數或設 wide: true。/);
+    assert.doesNotMatch(result.stderr, /第 [13] 頁內容超出右邊界/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

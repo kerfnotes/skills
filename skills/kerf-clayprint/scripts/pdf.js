@@ -36,27 +36,39 @@ const INK = 240;
 // because its banner bleeds), overflow is how far ink reaches past 14 mm from the right edge, with 1 mm to spare.
 // The footer sits in the bottom margin, so neither scan sees it. Chrome clips anything pushed past the 22 mm left margin,
 // so a row with ink left of it is a deliberate bleed (page 1's cover band and rule) and does not count as overflow.
-function measure(pgm, dpi, first) {
+// Content wider than the page does not reach past 14 mm: Chrome shrinks the whole page to fit, about the 22 mm line,
+// so the body column (normally 22 + 28 mm) moves left. Its left edge is the leftmost start shared by two or more runs
+// of ink rows right of 30 mm: headings, quotes, wide figures and wide-table cells (22–26 mm) stay put and are skipped,
+// and a chart is one tall run, so its axis does not count twice.
+function measure(pgm, dpi, firstPage) {
   const head = /^P5\s+(\d+)\s+(\d+)\s+\d+\s/.exec(pgm.subarray(0, 64).toString('latin1'));
   const [w, h] = [Number(head[1]), Number(head[2])], data = pgm.subarray(head[0].length), mm = dpi / 25.4;
-  const top = first ? 0 : Math.round(12 * mm), bottom = h - Math.round(15 * mm), right = w - 14 * mm;
+  const top = firstPage ? 0 : Math.round(12 * mm), bottom = h - Math.round(15 * mm), right = w - 14 * mm;
   const left = Math.round(21 * mm);
-  let last = -1, far = -1;
+  let last = -1, far = -1, run = Infinity;
+  const starts = new Map();
+  const close = () => { if (run < Infinity) starts.set(run, (starts.get(run) ?? 0) + 1); run = Infinity; };
   for (let y = top; y < bottom; y++) {
     const row = data.subarray(y * w, (y + 1) * w);
-    const first = row.findIndex((v) => v < INK);
-    if (first < 0) continue;
+    const start = row.findIndex((v) => v < INK);
+    if (start < 0) { close(); continue; }
     last = y;
-    if (first >= left) far = Math.max(far, row.findLastIndex((v) => v < INK));
+    if (start < left) { close(); continue; }
+    far = Math.max(far, row.findLastIndex((v) => v < INK));
+    run = Math.min(run, start);
   }
+  close();
+  const column = Math.min(...[...starts].filter(([x, n]) => x >= 30 * mm && n >= 2).map(([x]) => x));
   return {
     fill: last < 0 ? 0 : Math.min(100, Math.round((last - top) / (bottom - top) * 100)),
     overflow: far + 1 > right + mm ? Math.round((far + 1 - right) / mm) : 0,
+    scale: firstPage || column === Infinity ? 1 : (column / mm - 22) / 28,
   };
 }
 
 // 圖 N or 表 N label and the next 來源 line on different pages. Labels are their own line in pdftotext ("圖1").
-// Tables count only when they carry a source and have eight body rows or fewer; longer ones may break.
+// Tables count only when they carry a source and have eight body rows or fewer; longer ones may break
+// (scripts/theme-css.js lets a table break from its ninth row, :has(tbody tr:nth-child(9)); change both together).
 function splitExhibits(pages, html) {
   const tables = new Map();
   for (const [, n, body, note = ''] of html.matchAll(/data-label>表\s*(\d+)<\/span>([\s\S]*?)<\/table>\s*<\/div>(?:\s*<p class="exhibit-note">([\s\S]*?)<\/p>)?/g)) {
@@ -120,9 +132,10 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
     rmSync(tmp, { recursive: true, force: true });
   }
   const warnings = [];
-  pages.forEach(({ fill, overflow }, i) => {
+  pages.forEach(({ fill, overflow, scale }, i) => {
     if (i < pages.length - 1 && fill < 70) warnings.push(`第 ${i + 1} 頁只填 ${fill}%：把下一節開頭提上來，或把這頁的圖設 wide: true 拉高。`);
-    if (overflow) warnings.push(`第 ${i + 1} 頁內容超出右邊界約 ${overflow} mm：減少表格欄數或設 wide: true。`);
+    if (scale < 0.97) warnings.push(`第 ${i + 1} 頁內容超出右邊界，整頁被縮成 ${Math.round(scale * 100)}%：減少表格欄數或設 wide: true。`);
+    else if (overflow) warnings.push(`第 ${i + 1} 頁內容超出右邊界約 ${overflow} mm：減少表格欄數或設 wide: true。`);
   });
   warnings.push(...splitExhibits(execFileSync('pdftotext', [pdf, '-'], { encoding: 'utf8' }).split('\f'), source));
   return { pdf, pngs, sheet, fills: pages.map((p) => p.fill), size: letter ? 'Letter' : 'A4', warnings };
