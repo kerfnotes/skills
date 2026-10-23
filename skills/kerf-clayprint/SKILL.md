@@ -22,7 +22,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 - 決策型：封面 → 主管摘要 → 現況／需求 → 證據 → 診斷或方案 → 決議事項；無數字時，封面後以帶 `focus` 的 `statement` 開場。每張證據頁都要被摘要或決議採用，孤立頁刪去。
 - 說明型：封面 → 重點摘要 → 拆解 → 流程或時程 → 下一步。
 
-簡報要會前寄出、讀者自己看而沒有人講解時，在 `story.json` 根層填 `"mode": "read"`，做成閱讀型簡報：字級較小、每頁容量較大，要說的話寫在頁面上，不寫在 `notes`。規則見[閱讀型簡報](references/layouts.md#閱讀型簡報)。
+簡報要會前寄出、讀者自己看而沒有人講解時，在 `story.json` 根層填 `"mode": "read"`，做成閱讀型簡報：字級較小（標題 22 pt 可寫兩行、正文 11 pt），每個內容頁約放 600 到 900 字元；證據頁右欄寫 `takeaway` 與 `points`，可用 `panels` 並排兩格、用 `footnotes` 加註腳。要說的話寫在頁面上，不寫在 `notes`。規則見[閱讀型簡報](references/layouts.md#閱讀型簡報)。
 
 ## 資料底線
 
@@ -54,6 +54,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 讀者要連續閱讀、轉寄或列印時，依 [報告流程](references/report.md)寫 `out/report.json`。
 先寫讀者要帶走的一句話與每節判斷；有資料才加圖，圖表 JSON 填單位、期間與來源，圖說會自動組成。
 執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再用 `node evals/check-report.mjs out/report.html script.md` 核對。
+核對通過後執行 `node scripts/pdf.js out/report.html out/print` 印成 PDF，處理填滿率與切頁警告並逐頁看 `page-NN.png`；找不到瀏覽器時 PDF 標「受阻」並附原因，其餘步驟繼續。
 
 ## 套用到既有檔案
 

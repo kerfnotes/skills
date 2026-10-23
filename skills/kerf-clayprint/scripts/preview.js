@@ -19,6 +19,30 @@ export function executable(name, { platform = process.platform, env = process.en
   return null;
 }
 
+// The first of names on PATH, else the first install location that exists.
+export function findProgram(names, installed, { platform, env, exists = existsSync } = {}) {
+  return names.map((name) => executable(name, { platform, env })).find(Boolean) ?? installed.find((path) => exists(path)) ?? null;
+}
+
+// Windows install locations: each path under Program Files and Program Files (x86).
+export const programFiles = (env, ...paths) => [env.ProgramFiles, env['ProgramFiles(x86)']].filter(Boolean)
+  .flatMap((dir) => paths.map((parts) => join(dir, ...parts)));
+
+// Files pdftoppm wrote for prefix, in page order. It pads numbers to the page count (page-1 or page-01).
+export const numbered = (dir, prefix, ext) => readdirSync(dir).filter((f) => new RegExp(`^${prefix}-\\d+\\.${ext}$`).test(f))
+  .sort((a, b) => parseInt(a.slice(prefix.length + 1)) - parseInt(b.slice(prefix.length + 1)));
+
+// Pages perRow to a row, each fitted into a width × height cell with a 10 px white margin. ffmpeg's xstack needs at
+// least two inputs, so a one-page document has no sheet: returns null.
+export function contactSheet(pngs, sheet, { perRow, width, height }) {
+  rmSync(sheet, { force: true });
+  if (pngs.length < 2) return null;
+  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', ...pngs.flatMap((p) => ['-i', p]),
+    '-filter_complex', `${pngs.map((_, i) => `[${i}]scale=${width - 20}:${height - 20}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:10:white[p${i}]`).join(';')};${pngs.map((_, i) => `[p${i}]`).join('')}xstack=inputs=${pngs.length}:layout=${pngs.map((_, i) => `${(i % perRow) * width}_${Math.floor(i / perRow) * height}`).join('|')}:fill=white`,
+    sheet]);
+  return sheet;
+}
+
 export function preview(deck, outDir) {
   mkdirSync(outDir, { recursive: true });
   const name = basename(deck, '.pptx');
@@ -40,10 +64,9 @@ export function preview(deck, outDir) {
   } else {
     const installed = [
       ...(process.platform === 'darwin' ? ['/Applications/LibreOffice.app/Contents/MacOS/soffice'] : []),
-      ...(process.platform === 'win32' ? [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean)
-        .map((dir) => join(dir, 'LibreOffice', 'program', 'soffice.exe')) : []),
+      ...(process.platform === 'win32' ? programFiles(process.env, ['LibreOffice', 'program', 'soffice.exe']) : []),
     ];
-    const soffice = executable('soffice') ?? installed.find((path) => existsSync(path)) ?? null;
+    const soffice = findProgram(['soffice'], installed);
     if (!soffice) throw new Error('找不到 PowerPoint 或 LibreOffice。請安裝 LibreOffice（soffice），或改看 SVG／PNG 圖表。');
     rmSync(outPdf, { force: true });
     execFileSync(soffice, ['--headless', '--convert-to', 'pdf', '--outdir', resolve(outDir), resolve(deck)], { timeout: 180000 });
@@ -52,11 +75,9 @@ export function preview(deck, outDir) {
   }
   // 144 dpi gives 1920×1080 per page, the design size.
   execFileSync('pdftoppm', ['-r', '144', '-png', outPdf, join(outDir, 'page')]);
-  const pages = readdirSync(outDir).filter((f) => /^page-\d+\.png$/.test(f)).sort((a, b) => parseInt(a.slice(5)) - parseInt(b.slice(5)));
-  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', ...pages.flatMap((p) => ['-i', join(outDir, p)]),
-    '-filter_complex', `${pages.map((_, i) => `[${i}]scale=960:-1,pad=980:560:10:10:white[p${i}]`).join(';')};${pages.map((_, i) => `[p${i}]`).join('')}xstack=inputs=${pages.length}:layout=${pages.map((_, i) => `${(i % 2) * 980}_${Math.floor(i / 2) * 560}`).join('|')}:fill=white`,
-    join(outDir, 'sheet.png')]);
-  return pages.map((p) => resolve(outDir, p));
+  const pages = numbered(outDir, 'page', 'png').map((p) => resolve(outDir, p));
+  contactSheet(pages, join(outDir, 'sheet.png'), { perRow: 2, width: 980, height: 560 });
+  return pages;
 }
 
 if (isMain(import.meta.url)) {

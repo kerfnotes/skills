@@ -1,9 +1,9 @@
 // Build a continuous-reading HTML report from report.json: cover, contents, summary, then sections of blocks.
 // node scripts/report.js report.json report.html
 // Markup and classes follow assets/report.html; charts come from scripts/svg.js, tables from the same model as the deck.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { T, formatValue, prepare } from './core.js';
+import { T, formatValue, prepare, shownDigits } from './core.js';
 import { render, reportHeight } from './svg.js';
 import { themeCss } from './theme-css.js';
 import { isMain } from './main.js';
@@ -13,9 +13,9 @@ const MISSING = '<span class="missing">未提供</span>';
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const BLOCKS = ['text', 'callout', 'chart', 'table', 'compare', 'list', 'process', 'close', 'missing'];
 // A summary or meta value: number formatted like the deck, text as written, null marked in place.
-const shown = (value, { digits = 0, unit } = {}) => value === null ? MISSING
-  : `${esc(typeof value === 'number' ? formatValue(value, { digits }) : value)}${unit ? ` ${esc(unit)}` : ''}`;
-const scroll = (label, inner) => `<div class="table-scroll" tabindex="0" role="region" aria-label="${esc(label)}，可橫向捲動">\n${inner}\n</div>`;
+const shown = (value, { digits, unit } = {}) => value === null ? MISSING
+  : `${esc(typeof value === 'number' ? formatValue(value, { digits: shownDigits(digits, value) }) : value)}${unit ? ` ${esc(unit)}` : ''}`;
+const scroll = (label, inner, wide) => `<div class="table-scroll${wide ? ' wide' : ''}" tabindex="0" role="region" aria-label="${esc(label)}，可橫向捲動">\n${inner}\n</div>`;
 
 function validate(report) {
   const need = (ok, path, repair) => { if (!ok) throw new Error(`${path} 格式不正確；請${repair}。`); };
@@ -24,6 +24,7 @@ function validate(report) {
   need(isObject(report), 'report', '提供包含 title、message 與 sections 的 JSON 物件');
   str(report.title, 'title');
   str(report.message, 'message');
+  need(report.cover == null || report.cover === 'page', 'cover', '填 "page" 改成整頁封面，或省略使用橫幅封面');
   if (report.meta != null) { list(report.meta, 'meta'); report.meta.forEach((m, i) => { str(m?.label, `meta[${i}].label`); str(m?.value, `meta[${i}].value`); }); }
   if (report.summary != null) {
     str(report.summary.claim, 'summary.claim');
@@ -48,6 +49,10 @@ function validate(report) {
       if (['text', 'callout', 'missing'].includes(b.type)) str(b.text, `${q}.text`);
       if (b.type === 'chart') { str(b.title, `${q}.title`); need(typeof b.chart === 'string' || isObject(b.chart), `${q}.chart`, '填圖表 JSON 路徑或圖表物件'); }
       if (b.type === 'table') { list(b.columns, `${q}.columns`); list(b.rows, `${q}.rows`); b.columns.forEach((c, k) => str(c?.name, `${q}.columns[${k}].name`)); }
+      if (b.type === 'chart' || b.type === 'table') {
+        if (b.wide != null) need(typeof b.wide === 'boolean', `${q}.wide`, '填 true 或 false');
+        for (const key of b.type === 'table' ? ['note', 'source'] : ['note']) if (b[key] != null) str(b[key], `${q}.${key}`);
+      }
       if (b.type === 'compare') { list(b.rows, `${q}.rows`); list(b.options, `${q}.options`); b.options.forEach((o, k) => str(o?.name, `${q}.options[${k}].name`)); }
       if (b.type === 'list') { list(b.items, `${q}.items`); b.items.forEach((it, k) => str(it?.heading, `${q}.items[${k}].heading`)); }
       if (b.type === 'process') {
@@ -60,7 +65,10 @@ function validate(report) {
   });
 }
 
-function figure(block, where, baseDir, warnings) {
+// The generated 「圖 N」「表 N」 label; data-label tells evals/check-report.mjs not to check its number.
+const label = (text) => `<span class="exhibit-label" data-label>${text}</span>`;
+
+function figure(block, n, where, baseDir, warnings) {
   let spec = block.chart;
   if (typeof spec === 'string') {
     try { spec = JSON.parse(readFileSync(resolve(baseDir, spec), 'utf8')); }
@@ -70,15 +78,20 @@ function figure(block, where, baseDir, warnings) {
   const m = out.model;
   if (!m.source) throw new Error(`${where}.chart 缺少 source；請在圖表 JSON 填資料來源。`);
   for (const w of m.warnings) warnings.push(`${where}「${block.title}」：${w}`);
-  const notes = [typeof spec.note === 'string' ? spec.note : null,
+  const notes = [block.note, typeof spec.note === 'string' ? spec.note : null,
     m.missing.length && T.dataDisplay.missing.sourceField.replace('{item}', m.missing.join('、'))].filter(Boolean);
-  const caption = [block.title, m.unit && `單位：${m.unit}`, m.period && `期間：${m.period}`, `來源：${m.source}`, notes.length && `附註：${notes.join('；')}`]
+  // The title sits above the chart; unit, period, notes and source go below it, source last.
+  const caption = [m.unit && `單位：${m.unit}`, m.period && `期間：${m.period}`, notes.length && `附註：${notes.join('；')}`, `來源：${m.source}`]
     .filter(Boolean).map(esc).join('｜');
   const svg = out.svg.replace('<svg ', `<svg role="img" aria-label="${esc(block.title)}" `);
-  return `<figure>\n<div class="chart-scroll" tabindex="0" role="region" aria-label="${esc(block.title)}，可橫向捲動">\n${svg}\n</div>\n<figcaption>${caption}</figcaption>\n</figure>`;
+  return `<figure${block.wide ? ' class="wide"' : ''}>
+<p class="exhibit-title">${label(`圖 ${n}`)}${esc(block.title)}</p>
+<div class="chart-scroll" tabindex="0" role="region" aria-label="${esc(block.title)}，可橫向捲動">\n${svg}\n</div>
+<figcaption>${caption}</figcaption>
+</figure>`;
 }
 
-function table(block, where, warnings) {
+function table(block, n, where, warnings) {
   const m = prepare({ kind: 'table', columns: block.columns, rows: block.rows, total: block.total, emphasis: block.emphasis });
   for (const w of m.warnings) warnings.push(`${where}：${w}`);
   const cls = (align) => (align === 'end' ? ' class="num"' : '');
@@ -86,17 +99,18 @@ function table(block, where, warnings) {
   const row = (r) => `<tr${r.total ? ' class="total"' : r.emphasis ? ' class="emphasis"' : ''}>${r.cells.map((c, i) => (i
     ? `<td${cls(c.align)}>${cell(c)}</td>` : `<th scope="row"${cls(c.align)}>${cell(c)}</th>`)).join('')}</tr>`;
   const body = m.rows.filter((r) => !r.total), total = m.rows.filter((r) => r.total);
-  return scroll(block.caption ?? '表格', `<table>${block.caption ? `<caption>${esc(block.caption)}</caption>` : ''}
+  const note = [block.note && `附註：${block.note}`, block.source && `來源：${block.source}`].filter(Boolean).map(esc).join('｜');
+  return scroll(block.caption ?? '表格', `<table><caption>${label(`表 ${n}`)}${esc(block.caption ?? '')}</caption>
 <thead><tr>${m.header.map((h) => `<th scope="col"${cls(h.align)}>${esc(h.text)}</th>`).join('')}</tr></thead>
 <tbody>
 ${body.map(row).join('\n')}
 </tbody>${total.length ? `\n<tfoot>${total.map(row).join('')}</tfoot>` : ''}
-</table>`);
+</table>`, block.wide) + (note ? `\n<p class="exhibit-note">${note}</p>` : '');
 }
 
 function compare(block) {
   const rec = (o) => (o.recommended ? ' class="recommended"' : '');
-  const value = (v) => (v === null || v === undefined ? MISSING : esc(typeof v === 'number' ? formatValue(v) : v));
+  const value = (v) => (v === undefined ? MISSING : shown(v));
   return scroll(block.caption ?? '方案比較', `<table class="comparison">${block.caption ? `<caption>${esc(block.caption)}</caption>` : ''}
 <thead><tr><th scope="col">比較項目</th>${block.options.map((o) => `<th scope="col"${rec(o)}>${esc(o.name)}${o.recommended ? '（建議）' : ''}</th>`).join('')}</tr></thead>
 <tbody>
@@ -118,13 +132,13 @@ ${block.rows.map((r) => `<tr>${cols.map(([key], i) => (i ? `<td>${esc(r[key] ?? 
 
 const item = (it) => `<li${it.current ? ' aria-current="step"' : ''}><strong>${esc(it.heading)}</strong>${it.body ? `<span>${esc(it.body)}</span>` : ''}</li>`;
 
-function block(b, where, baseDir, warnings) {
+function block(b, n, where, baseDir, warnings) {
   switch (b.type) {
     case 'text': return `<p>${esc(b.text)}</p>`;
     case 'callout': return `<aside class="callout"><p>${esc(b.text)}</p></aside>`;
     case 'missing': return `<p class="missing">未提供：${esc(b.text)}</p>`;
-    case 'chart': return figure(b, where, baseDir, warnings);
-    case 'table': return table(b, where, warnings);
+    case 'chart': return figure(b, n, where, baseDir, warnings);
+    case 'table': return table(b, n, where, warnings);
     case 'compare': return compare(b);
     case 'close': return close(b);
     case 'list': return `<ul class="diagnosis">\n${b.items.map(item).join('\n')}\n</ul>`;
@@ -139,7 +153,7 @@ export function buildReport(report, { baseDir = '.' } = {}) {
   if (report.meta?.length > 3) warnings.push(`封面資訊是 ${report.meta.length} 項，建議最多 3 項`);
   const items = report.summary?.items ?? [];
   if (report.summary && (items.length < 2 || items.length > 3)) warnings.push(`摘要數字是 ${items.length} 格，建議 2～3 格`);
-  let figures = 0;
+  let figures = 0, tables = 0;
   const parts = [`<header class="report-cover">
 ${report.kicker ? `<p class="eyebrow">${esc(report.kicker)}</p>\n` : ''}<h1>${esc(report.title)}</h1>
 <p class="cover-message">${esc(report.message)}</p>${report.meta ? `
@@ -166,10 +180,13 @@ ${items.map((it) => `<div><dt>${esc(it.label)}</dt><dd>${shown(it.value, it)}</d
 </dl>
 </section>`);
   }
+  // Page 1 holds the cover band, contents and summary, then breaks; with cover: "page" it holds the cover only.
+  const front = parts.splice(0, report.cover === 'page' ? 1 : parts.length);
+  parts.unshift(`<div class="report-front"${report.cover === 'page' ? ' data-cover="page"' : ''}>\n${front.join('\n')}\n</div>`);
   report.sections.forEach((s, i) => {
     const body = s.blocks.map((b, j) => {
-      if (b.type === 'chart') figures += 1;
-      return block(b, `第 ${i + 1} 節第 ${j + 1} 個元件`, baseDir, warnings);
+      const n = b.type === 'chart' ? ++figures : b.type === 'table' ? ++tables : 0;
+      return block(b, n, `第 ${i + 1} 節第 ${j + 1} 個元件`, baseDir, warnings);
     });
     const sources = s.sources ? `\n<footer class="sources">\n<h3>來源與附註</h3>\n${s.sources.map((t) => `<p>${esc(t)}</p>`).join('\n')}\n</footer>` : '';
     parts.push(`<section aria-labelledby="${ids[i]}">
@@ -179,8 +196,10 @@ ${s.kicker ? `<p class="eyebrow">${esc(s.kicker)}</p>\n` : ''}<h2 id="${ids[i]}"
 ${body.join('\n')}${sources}
 </section>`);
   });
+  // The print footer reads the title and its separator from this CSS string; escape it for CSS first, then for the attribute.
+  const footerTitle = `${report.title.replace(/[\\']/g, '\\$&').replace(/\s+/g, ' ')} | `;
   const html = `<!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" style="--report-title: '${esc(footerTitle)}'">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -196,7 +215,8 @@ ${parts.join('\n\n')}
 </body>
 </html>
 `;
-  return { html, warnings, sections: report.sections.length, figures };
+  // The summary is a <section> too, so this matches evals/check-report.mjs.
+  return { html, warnings, sections: report.sections.length + (report.summary ? 1 : 0), figures };
 }
 
 if (isMain(import.meta.url)) {
@@ -210,6 +230,7 @@ if (isMain(import.meta.url)) {
       try { report = JSON.parse(readFileSync(input, 'utf8')); }
       catch { throw new Error(`無法讀取 ${input} 為 JSON；請確認路徑、雙引號與逗號。`); }
       const result = buildReport(report, { baseDir: dirname(input) });
+      mkdirSync(dirname(output), { recursive: true });
       writeFileSync(output, result.html);
       for (const w of result.warnings) console.error(`警告：${w}`);
       console.log(`完成：${result.sections} 節、${result.figures} 張圖，${result.warnings.length} 項警告 → ${output}`);

@@ -75,6 +75,9 @@ export function decimalsOf(nums) {
   }));
 }
 
+// Digits for a shown value: the ones given, else the values' own decimals, so 24.7 stays 24.7 and never prints as 25.
+export const shownDigits = (digits, ...values) => digits ?? decimalsOf(values);
+
 // Axis labels keep the tick step's precision, so 0.1 never prints as "<1".
 export function tickText(axis, t, suffix = '') {
   return formatValue(t, { digits: axis.decimals, suffix });
@@ -515,7 +518,7 @@ KINDS.table = (spec, m) => {
   need(Array.isArray(spec.rows) && spec.rows.length, 'table 需要 rows');
   const isText = (j) => spec.rows.every((r) => !Array.isArray(r) || r[j] === null || typeof r[j] === 'string');
   const cols = spec.columns.map((c, j) => ({
-    name: c.name, type: c.type ?? (isText(j) ? 'text' : 'number'), digits: c.digits ?? m.digits, suffix: c.suffix ?? '', better: c.better ?? m.better,
+    name: c.name, type: c.type ?? (isText(j) ? 'text' : 'number'), digits: c.digits ?? spec.digits, suffix: c.suffix ?? '', better: c.better ?? m.better,
   }));
   need(cols.every((c) => ['text', 'number', 'delta'].includes(c.type)), 'table 的欄位 type 只能是 text、number、delta');
   m.header = cols.map((c) => ({ text: c.name, align: c.type === 'text' ? 'start' : 'end' }));
@@ -526,10 +529,10 @@ KINDS.table = (spec, m) => {
     if (c.type === 'text') return { text: String(v), align, value: v, color: C.text };
     need(isNum(v), `table 的「${name} ${c.name}」不是數字`);
     if (c.type === 'delta') {
-      const d = delta(0, v, { better: c.better, digits: c.digits, suffix: c.suffix });
+      const d = delta(0, v, { better: c.better, digits: shownDigits(c.digits, v), suffix: c.suffix });
       return { text: d.text, align, value: v, color: d.color };
     }
-    return { text: formatValue(v, { digits: c.digits, suffix: c.suffix }), align, value: v, color: C.text };
+    return { text: formatValue(v, { digits: shownDigits(c.digits, v), suffix: c.suffix }), align, value: v, color: C.text };
   });
   m.rows = spec.rows.map((r, i) => {
     need(Array.isArray(r) && r.length === cols.length, `table 每一列要有 ${cols.length} 格`);

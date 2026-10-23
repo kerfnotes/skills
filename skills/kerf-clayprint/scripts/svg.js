@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { T, C, FONT_FAMILY, prepare, formatValue, tickText, textWidth } from './core.js';
 import { isMain } from './main.js';
 
-const PX = T.type.label.px; // 24, the smallest text anywhere
+const PX = (T.type.chart ?? T.type.label).px; // 24, the smallest text anywhere; read decks use their chart size
 const LINE = Math.round(PX * 1.45);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const n = (v) => Math.round(v * 100) / 100;

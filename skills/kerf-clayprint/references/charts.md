@@ -253,6 +253,7 @@ node scripts/png.js out/rank.svg out/rank.png
 
 - 欄位：`columns: [{name, type?, digits?, suffix?, better?}]`、`rows: [[儲存格, ...], ...]`；選用 `total: [儲存格, ...]`、`emphasis`（首欄符合此值的列強調）。每列與 `total` 格數須等於欄數。
 - `type`：`text`、`number` 或 `delta`。省略時依內容推斷，明寫較容易核對；`number` 與 `delta` 儲存格須是數字或 `null`，`text` 可放文字或 `null`。任何型別的 `null` 都在原格寫「未提供」，並自動以「列名／欄名」列入來源缺值說明，SVG 與原生表格相同。`delta` 只格式化已提供的差額，`total` 只顯示已提供的合計，都不代算。
+- `digits`：欄位或整張表的 `digits` 都沒填時，每格照數值本身的小數位顯示（24.7 印成 24.7），不套上方圖表預設的 `0`；填了才照位數四捨五入。
 - 輸出：原生 PowerPoint 表格，直接編輯儲存格，沒有圖表活頁簿。
 - 常見錯誤：格數不一致；用加上千分位的字串填數值欄；以為 `total` 自動相加。純文字表格可用於無數字文字稿，但若只是比較方案，`compare` 通常更直接。
 - 最小範例：`{"kind":"table","columns":[{"name":"項目","type":"text"},{"name":"件數","type":"number"}],"rows":[["甲",12],["乙",8]]}`。完整檔：[examples/table.json](../examples/table.json)。

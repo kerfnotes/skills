@@ -1,9 +1,10 @@
 // Build a PowerPoint deck from story.json: 9 layouts, every page with a source row and page number.
 // node scripts/pptx.js story.json deck.pptx
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
-import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, prepare, decimalsOf, textOn } from './core.js';
+import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, prepare, decimalsOf, shownDigits, textOn } from './core.js';
 import { render } from './svg.js';
 import { svgToPng } from './png.js';
 import { isMain, rerunForMode } from './main.js';
@@ -16,14 +17,19 @@ const hex = (c) => c.replace('#', '');
 const W = T.slide.widthPx, H = T.slide.heightPx;
 const M = T.margin;
 const LABEL = T.type.label.px;
+// Read decks set chart text and the source row smaller than labels; other layers fall back to the label size.
+const CHART = (T.type.chart ?? T.type.label).px, SOURCE = (T.type.source ?? T.type.label).px;
 const LH = 1.45;
 const INNER = W - 2 * M.x;
+// PowerPoint scales a line-spacing multiple by the font's own line height (about 1.2 em), so read decks set exact points
+// equal to the estimate (px × multiple) and render as tall as the layouts plan. Presentation decks keep the multiple.
+const spacing = (px, multiple) => (MODE === 'read' ? { lineSpacing: pt(px * multiple) } : { lineSpacingMultiple: multiple });
 
-function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2 } = {}) {
+function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2, bullet } = {}) {
   if (str === '' || str === null || str === undefined) return;
   slide.addText(String(str), {
     x: inch(x), y: inch(y), w: inch(w), h: inch(h), fontFace: SLIDE_FONT, fontSize: pt(px), color: hex(color),
-    bold: !!bold, align, valign, margin: 0, lineSpacingMultiple: lineHeight, fit: 'none',
+    bold: !!bold, align, valign, margin: 0, ...spacing(px, lineHeight), fit: 'none', ...(bullet ? { bullet } : {}),
   });
 }
 
@@ -64,10 +70,12 @@ function checkWrap(ctx, field, str, px, width, limit, orphan = false) {
 }
 
 // A read deck has no presenter to carry a near-empty page. Only layouts whose height comes from the content call this.
-const MIN_FILL = 0.5;
 function sparse(ctx, used, avail) {
-  if (MODE !== 'read' || avail <= 0 || used / avail >= MIN_FILL) return;
-  ctx.warn(`第 ${ctx.n} 頁內容只占內容區 ${Math.round((used / avail) * 100)}%；閱讀型簡報先併入相鄰頁或刪頁，不湊字、不放大字級。`);
+  if (MODE !== 'read' || avail <= 0 || used / avail >= CAP.minFill) return;
+  // list, compare, close and summary take no takeaway or points.
+  // Only evidence and columns take takeaway／points; every other layout grows by adding items or body text.
+  const fix = ['evidence', 'columns'].includes(ctx.page.type) ? '加 takeaway 或 points' : '加項目或正文';
+  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 ${Math.round(CAP.minFill * 100)}%：${fix}，或併入相鄰頁。`);
 }
 
 function sourceItems(sources = {}, missing = []) {
@@ -82,20 +90,21 @@ function sourceItems(sources = {}, missing = []) {
 }
 
 // Thin rule with 9 ticks, then source｜unit｜period on up to two lines, page number on the right.
-// Returns the rule's y so the layout knows where content must stop.
+// Read-deck footnotes sit just above the rule, numbered (1), (2)…
+// Returns the top of that block (the rule when there are no footnotes) so the layout knows where content must stop.
 function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
   const pageNo = `${ctx.n} / ${ctx.total}`;
-  const avail = INNER - textWidth(pageNo, LABEL) - 40;
+  const avail = INNER - textWidth(pageNo, SOURCE) - 40;
   const rows = [[]];
   let x = 0;
   for (const it of sourceItems(ctx.page.sources, ctx.missing)) {
-    const w = textWidth(it, LABEL) * 1.1;
+    const w = textWidth(it, SOURCE) * 1.1;
     if (x > 0 && x + w > avail) { rows.push([]); x = 0; }
     rows.at(-1).push({ it, x, w });
     x += w + 40;
   }
   if (rows.length > T.sourceRow.maxLines) ctx.warn(`第 ${ctx.n} 頁 sources：來源列需要 ${rows.length} 行，上限 ${T.sourceRow.maxLines} 行`);
-  const rowH = LABEL * LH;
+  const rowH = SOURCE * LH;
   const ruleY = H - M.bottom - rows.length * rowH - 14 - T.stroke.tickLong;
   rule(slide, M.x, ruleY, W - M.x, ruleY, line);
   for (let i = 0; i <= 8; i++) {
@@ -103,9 +112,18 @@ function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
     rule(slide, tx, ruleY, tx, ruleY + (i % 4 === 0 ? T.stroke.tickLong : T.stroke.tickShort), line);
   }
   const top = ruleY + T.stroke.tickLong + 14;
-  rows.forEach((r, i) => r.forEach(({ it, x: ix, w }) => text(slide, it, { x: M.x + ix, y: top + i * rowH, w: w + 8, h: rowH, color: ink })));
-  text(slide, pageNo, { x: W - M.x - 200, y: top, w: 200, h: rowH, color: ink, align: 'right' });
-  return ruleY;
+  rows.forEach((r, i) => r.forEach(({ it, x: ix, w }) => text(slide, it, { x: M.x + ix, y: top + i * rowH, w: w + 8, h: rowH, px: SOURCE, color: ink })));
+  text(slide, pageNo, { x: W - M.x - 200, y: top, w: 200, h: rowH, px: SOURCE, color: ink, align: 'right' });
+  const notes = (ctx.page.footnotes ?? []).map((f, i) => `(${i + 1}) ${f}`);
+  if (!notes.length) return ruleY;
+  let y = ruleY - 12 - notes.reduce((sum, f) => sum + lines(f, SOURCE, INNER) * rowH, 0);
+  const notesTop = y;
+  for (const f of notes) {
+    const h = lines(f, SOURCE, INNER) * rowH;
+    text(slide, f, { x: M.x, y, w: INNER, h, px: SOURCE, color: ink, lineHeight: LH });
+    y += h;
+  }
+  return notesTop;
 }
 
 function header(slide, left, right, ink = C.textSecondary) {
@@ -117,6 +135,10 @@ const TITLE_Y = M.top + LABEL + M.titleGap;
 // Microsoft JhengHei sits taller than the design font, so display lines get a little more room.
 const DISPLAY_LH = 1.35;
 const TITLE = T.type.title.px;
+// Cover, section and content titles all allow two estimated lines; statement's claim is its body and has its own height check.
+const TITLE_LINES = 2;
+// Read decks widen these to a body line (design/read.json); presentation decks keep 12 and 32.
+const LEDE_GAP = M.ledeGap ?? 12, TAKEAWAY_GAP = M.takeawayGap ?? 32;
 
 function title(slide, str, color = C.title) {
   const n = lines(str, TITLE, INNER);
@@ -125,11 +147,12 @@ function title(slide, str, color = C.title) {
 }
 
 function contentTop(slide, ctx, color = C.title, ledeColor = C.textSecondary) {
+  checkWrap(ctx, 'claim', ctx.page.claim, TITLE, INNER, TITLE_LINES);
   const bottom = title(slide, ctx.page.claim, color);
   if (!ctx.page.lede) return bottom + M.contentGap;
   checkWrap(ctx, 'lede', ctx.page.lede, LABEL, INNER, 1);
-  text(slide, ctx.page.lede, { x: M.x, y: bottom + 12, w: INNER, h: LABEL * LH, color: ledeColor });
-  return bottom + 12 + LABEL * LH + M.contentGap;
+  text(slide, ctx.page.lede, { x: M.x, y: bottom + LEDE_GAP, w: INNER, h: LABEL * LH, color: ledeColor });
+  return bottom + LEDE_GAP + LABEL * LH + M.contentGap;
 }
 
 // ---- charts on evidence pages
@@ -188,13 +211,13 @@ function nativeChart(slide, m, area, ctx) {
     lang: 'zh-TW', chartColors: [hex(C.focus)],
     chartArea: { fill: { color: hex(C.onDark[0]) } },
     plotArea: { fill: { color: hex(C.onDark[0]) } },
-    dataLabelFontFace: SLIDE_FONT, dataLabelFontSize: pt(LABEL), dataLabelColor: hex(C.text),
+    dataLabelFontFace: SLIDE_FONT, dataLabelFontSize: pt(CHART), dataLabelColor: hex(C.text),
     dataLabelFormatCode: numberFormat(m.digits), displayBlanksAs: 'gap',
     catAxisLabelFontFace: SLIDE_FONT, valAxisLabelFontFace: SLIDE_FONT,
-    catAxisLabelFontSize: pt(LABEL), valAxisLabelFontSize: pt(LABEL),
+    catAxisLabelFontSize: pt(CHART), valAxisLabelFontSize: pt(CHART),
     catAxisLabelColor: hex(C.textSecondary), valAxisLabelColor: hex(C.textSecondary),
     catAxisTitleFontFace: SLIDE_FONT, valAxisTitleFontFace: SLIDE_FONT,
-    catAxisTitleFontSize: pt(LABEL), valAxisTitleFontSize: pt(LABEL),
+    catAxisTitleFontSize: pt(CHART), valAxisTitleFontSize: pt(CHART),
     catAxisTitleColor: hex(C.textSecondary), valAxisTitleColor: hex(C.textSecondary),
     catAxisLineColor: hex(C.gray), valAxisLineColor: hex(C.gray),
     catAxisLineSize: pt(T.stroke.axis), valAxisLineSize: pt(T.stroke.axis),
@@ -218,7 +241,7 @@ function nativeChart(slide, m, area, ctx) {
     type = 'bar';
     data = m.series.map((s) => ({ name: s.name, labels: m.x, values: [...s.values] }));
     Object.assign(opts, { barDir: 'col', barGrouping: 'clustered', chartColors: m.series.map((s) => hex(s.color)),
-      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(LABEL), legendColor: hex(C.textSecondary),
+      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(CHART), legendColor: hex(C.textSecondary),
       showValue: true, dataLabelPosition: 'outEnd' });
   } else if (m.kind === 'line' || m.kind === 'slope') {
     type = 'line';
@@ -233,7 +256,7 @@ function nativeChart(slide, m, area, ctx) {
     Object.assign(opts, { barDir: m.kind === 'sharetrend' ? 'col' : 'bar', barGrouping: 'percentStacked',
       ...(m.kind === 'share' ? { catAxisOrientation: 'maxMin', catAxisCrossesAt: 'max', valAxisLabelPos: 'nextTo' } : {}),
       chartColors: m.categories.map((c) => hex(c.other ? T.fill.other.native.color : c.color)),
-      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(LABEL), legendColor: hex(C.textSecondary),
+      showLegend: true, legendPos: 't', legendFontFace: SLIDE_FONT, legendFontSize: pt(CHART), legendColor: hex(C.textSecondary),
       valAxisMinVal: 0, valAxisMaxVal: 1, valAxisMajorUnit: 0.25, valAxisLabelFormatCode: numberFormat(0, true),
       dataLabelFormatCode: numberFormat(m.digits, true), dataLabelPosition: 'ctr' });
   } else {
@@ -272,13 +295,14 @@ function chart(slide, spec, area, ctx) {
 
 const LAYOUT = {};
 // Item counts per layout; read mode (design/read.json) widens them because its type is smaller.
-const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4], ...T.capacity };
+const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4],
+  columnsBody: Infinity, compareRows: Infinity, tableRows: Infinity, closeRows: Infinity, ...T.capacity };
 const outside = (count, [lo, hi]) => count < lo || count > hi;
 const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table', 'multiples', 'bridge', 'histogram', 'strip', 'matrix', 'dumbbell', 'funnel', 'heat', 'grouped', 'sharetrend', 'combo', 'bullet', 'waffle', 'mekko', 'pareto', 'tornado', 'box', 'ordered']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
 const emptyCell = (v) => isObject(v) && Object.values(v).every((x) => x === null || x === undefined || x === '' || (Array.isArray(x) && !x.length));
-const displayedValue = (value, digits = 0) => value === null ? '未提供' : typeof value === 'string' ? value : formatValue(value, { digits }) ?? '';
+const displayedValue = (value, digits) => value === null ? '未提供' : typeof value === 'string' ? value : formatValue(value, { digits: shownDigits(digits, value) }) ?? '';
 
 // Validate before category collection or rendering, so malformed JSON points back to its editable field.
 export function validateStory(story) {
@@ -306,6 +330,16 @@ export function validateStory(story) {
     check(typeof page.type === 'string' && Object.hasOwn(LAYOUT, page.type), 'type', `選用 ${Object.keys(LAYOUT).join('、')} 其中一種版型`);
     str(page.claim, 'claim', true);
     optional(page, ['kicker', 'note']);
+    for (const key of ['takeaway', 'points', 'footnotes']) {
+      if (page[key] != null && story.mode !== 'read') throw new Error(`第 ${n} 頁：${p}.${key} 只有閱讀版支援；請在根層加 "mode": "read"，或刪除此欄位。`);
+    }
+    const strings = (v) => Array.isArray(v) && v.every((s) => typeof s === 'string' && s.trim());
+    if (page.takeaway != null) {
+      check(['evidence', 'columns'].includes(page.type), 'takeaway', '只在 evidence 或 columns 頁使用');
+      str(page.takeaway, 'takeaway', true);
+    }
+    if (page.points != null) check(page.type === 'evidence' && strings(page.points), 'points', '只在 evidence 頁使用，改成非空白文字的字串陣列');
+    if (page.footnotes != null) check(strings(page.footnotes), 'footnotes', '改成非空白文字的字串陣列，正文以「(1)」標記');
     if (page.type === 'statement') optional(page, ['focus']);
     if (page.lede != null) {
       check(page.type !== 'cover' && page.type !== 'section', 'lede', '只在內容頁使用');
@@ -323,45 +357,51 @@ export function validateStory(story) {
       if (!emptyCell(page.metric)) {
         check(page.metric.value === null || typeof page.metric.value === 'string' || isNumber(page.metric.value), 'metric.value', '填入文字、有限數字或 null');
         if (page.metric.value === null) str(page.metric.label, 'metric.label', true);
+        if (page.metric.digits !== undefined) digits(page.metric.digits, 'metric.digits');
       }
     }
-    if (!['evidence', 'numbers', 'summary', 'compare', 'steps', 'close', 'list', 'process', 'kpi', 'flow', 'columns'].includes(page.type)) {
+    if (page.type === 'panels') check(story.mode === 'read', 'type', '在根層填 "mode": "read"（只有閱讀版支援 panels），或改用 evidence、columns 等版型');
+    if (!['evidence', 'numbers', 'summary', 'compare', 'steps', 'close', 'list', 'process', 'kpi', 'flow', 'columns', 'panels'].includes(page.type)) {
       if (page.visual != null) check(emptyCell(page.visual), 'visual', '將主視覺移至 evidence 等對應版型，或省略此頁不使用的 visual');
       return;
     }
-    const v = page.visual;
-    check(isObject(v), 'visual', `提供 ${page.type} 的主視覺物件，參考 examples/story.json`);
-    if (page.type === 'evidence') {
-      check(CHART_KINDS.has(v.kind), 'visual.kind', `選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
-      if (v.native !== undefined) check(typeof v.native === 'boolean', 'visual.native', '填入 true 或 false');
-      if (v.digits !== undefined) digits(v.digits, 'visual.digits');
-      for (const key of ['categories', 'x', 'periods', 'rowLabels', 'colLabels']) if (v[key] !== undefined) check(Array.isArray(v[key]) && v[key].every((s) => typeof s === 'string'), `visual.${key}`, '改成文字字串陣列');
+    // Evidence charts and chart cells in panels go through the same checks; who names the cell in repair hints.
+    const checkChart = (v, path, who = '') => {
+      check(CHART_KINDS.has(v.kind), `${path}.kind`, `${who ? `為${who}` : ''}選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
+      if (v.native !== undefined) check(typeof v.native === 'boolean', `${path}.native`, '填入 true 或 false');
+      if (v.digits !== undefined) digits(v.digits, `${path}.digits`);
+      for (const key of ['categories', 'x', 'periods', 'rowLabels', 'colLabels']) if (v[key] !== undefined) check(Array.isArray(v[key]) && v[key].every((s) => typeof s === 'string'), `${path}.${key}`, '改成文字字串陣列');
       if (v.columns && Array.isArray(v.columns)) v.columns.forEach((c, j) => {
-        check(isObject(c), `visual.columns[${j}]`, '改成欄位物件');
-        str(c.name, `visual.columns[${j}].name`, true);
-        if (c.digits !== undefined) digits(c.digits, `visual.columns[${j}].digits`);
+        check(isObject(c), `${path}.columns[${j}]`, '改成欄位物件');
+        str(c.name, `${path}.columns[${j}].name`, true);
+        if (c.digits !== undefined) digits(c.digits, `${path}.columns[${j}].digits`);
       });
       if (v.refs !== undefined) {
-        check(Array.isArray(v.refs), 'visual.refs', '改成參考線陣列');
+        check(Array.isArray(v.refs), `${path}.refs`, '改成參考線陣列');
         v.refs.forEach((r, j) => {
-          check(isObject(r), `visual.refs[${j}]`, '改成參考線物件');
-          for (const key of ['x', 'y']) if (r[key] != null) check(isNumber(r[key]), `visual.refs[${j}].${key}`, '填入有限數字');
-          check(v.kind === 'histogram' ? isNumber(r.x) : isNumber(r.x) || isNumber(r.y), `visual.refs[${j}]`, '提供參考線的數字座標');
-          optional(r, ['label'], `visual.refs[${j}].`);
+          check(isObject(r), `${path}.refs[${j}]`, '改成參考線物件');
+          for (const key of ['x', 'y']) if (r[key] != null) check(isNumber(r[key]), `${path}.refs[${j}].${key}`, '填入有限數字');
+          check(v.kind === 'histogram' ? isNumber(r.x) : isNumber(r.x) || isNumber(r.y), `${path}.refs[${j}]`, '提供參考線的數字座標');
+          optional(r, ['label'], `${path}.refs[${j}].`);
         });
       }
       if (v.kind === 'matrix') {
-        if (v.domain != null) check(Array.isArray(v.domain) && v.domain.length === 2 && v.domain.every(isNumber) && v.domain[0] < v.domain[1], 'visual.domain', '提供遞增的兩個有限數字，例如 [0, 10]');
+        if (v.domain != null) check(Array.isArray(v.domain) && v.domain.length === 2 && v.domain.every(isNumber) && v.domain[0] < v.domain[1], `${path}.domain`, '提供遞增的兩個有限數字，例如 [0, 10]');
         if (v.split != null) {
-          check(isObject(v.split), 'visual.split', '改成包含 x 或 y 的分割線物件');
-          for (const key of ['x', 'y']) if (v.split[key] != null) check(isNumber(v.split[key]), `visual.split.${key}`, '填入有限數字');
+          check(isObject(v.split), `${path}.split`, '改成包含 x 或 y 的分割線物件');
+          for (const key of ['x', 'y']) if (v.split[key] != null) check(isNumber(v.split[key]), `${path}.split.${key}`, '填入有限數字');
         }
       }
       try { prepare(v); }
       catch (error) {
         const detail = /[\u3400-\u9fff]/.test(error.message) ? `（${error.message}）` : '';
-        check(false, 'visual', `依 examples/${v.kind}.json 修正圖表欄位、資料型別與陣列長度${detail}`);
+        check(false, path, `依 examples/${v.kind}.json 修正${who ? `${who}的` : ''}圖表欄位、資料型別與陣列長度${detail}`);
       }
+    };
+    const v = page.visual;
+    check(isObject(v), 'visual', `提供 ${page.type} 的主視覺物件，參考 examples/story.json`);
+    if (page.type === 'evidence') {
+      checkChart(v, 'visual');
     } else if (page.type === 'numbers' || page.type === 'summary') {
       if (page.type === 'summary') {
         str(v.lead, 'visual.lead', true);
@@ -453,6 +493,26 @@ export function validateStory(story) {
         check(from >= start && from <= end, `${path}from`, '填入 start 到 end 之間的月份');
         check(to >= from && to <= end, `${path}to`, '填入 from 到 end 之間的月份');
       });
+    } else if (page.type === 'panels') {
+      check(Array.isArray(v.items) && v.items.length === 2 && v.items.every(isObject), 'visual.items', `提供恰好兩格的陣列（目前 ${Array.isArray(v.items) ? v.items.length : 0} 格），每格是 {title, visual, note?}`);
+      if (v.split !== undefined) check(Array.isArray(v.split) && v.split.length === 2 && v.split.every((x) => isNumber(x) && x > 0), 'visual.split', '填入兩個正數的寬度比例，例如 [3, 2]');
+      v.items.forEach((cell, j) => {
+        const path = `visual.items[${j}]`, nth = `第 ${j + 1} 格`;
+        check(typeof cell.title === 'string' && cell.title.trim().length > 0, `${path}.title`, `為${nth}填入非空白標題`);
+        if (cell.note != null) check(typeof cell.note === 'string', `${path}.note`, `把${nth}的註改成文字字串`);
+        const c = cell.visual;
+        if (typeof c === 'string') return check(c.trim().length > 0, `${path}.visual`, `為${nth}填入非空白文字`);
+        if (isObject(c) && c.kind !== undefined) return checkChart(c, `${path}.visual`, nth);
+        if (isObject(c) && c.items !== undefined) {
+          objects(c.items, `${path}.visual.items`);
+          return c.items.forEach((item, k) => {
+            if (emptyCell(item)) return;
+            str(item.heading, `${path}.visual.items[${k}].heading`, true);
+            optional(item, ['body'], `${path}.visual.items[${k}].`);
+          });
+        }
+        check(false, `${path}.visual`, `為${nth}改用支援的種類 chart、table、list 或 text：圖表與表格填 {kind, …}，清單填 {items: [{heading, body?}]}，文字填字串`);
+      });
     } else {
       objects(v.rows, 'visual.rows');
       v.rows.forEach((row, j) => {
@@ -471,7 +531,8 @@ LAYOUT.cover = (slide, ctx) => {
   header(slide, page.kicker, story.date, muted);
   const ruleY = sourceRow(slide, ctx, { line: muted, ink: muted });
   const D = T.type.display.px;
-  const titleLines = String(page.claim ?? '').split('\n').length;
+  // The estimate counts explicit breaks too, so an automatic wrap keeps its height and never lands on the note.
+  const titleLines = checkWrap(ctx, 'claim', page.claim ?? '', D, INNER, TITLE_LINES);
   const lh = D * DISPLAY_LH;
   const blockH = titleLines * lh + (page.note ? 72 + T.type.sub.px * 1.5 : 0);
   const top = (M.top + LABEL + ruleY) / 2 - blockH / 2;
@@ -495,7 +556,7 @@ LAYOUT.section = (slide, ctx) => {
     text(slide, name, { x, y: rulerY + 4 + 16, w: segW, h: LABEL * LH, color: current ? C.focus : C.textSecondary, bold: current });
   });
   const D = T.type.display.px;
-  const titleH = lines(page.claim ?? '', D, INNER) * D * DISPLAY_LH;
+  const titleH = checkWrap(ctx, 'claim', page.claim ?? '', D, INNER, TITLE_LINES) * D * DISPLAY_LH;
   const blockH = titleH + (page.note ? 28 + T.type.sub.px * 1.5 : 0);
   const top = (M.top + LABEL + rulerY) / 2 - blockH / 2;
   if (page.claim) text(slide, page.claim, { x: M.x, y: top, w: INNER, h: titleH, px: D, color: C.title, bold: true, lineHeight: DISPLAY_LH });
@@ -525,7 +586,7 @@ LAYOUT.statement = (slide, ctx) => {
   const paragraphs = runs.flatMap(({ text, options }) => text.split(/\r\n|\r|\n/).map((text, i, parts) => ({
     text, options: { ...options, breakLine: i < parts.length - 1 },
   })));
-  slide.addText(paragraphs, { x: inch(M.x), y: inch(top), w: inch(width), h: inch(n * S * 1.25), margin: 0, valign: 'top', lineSpacingMultiple: 1.25 });
+  slide.addText(paragraphs, { x: inch(M.x), y: inch(top), w: inch(width), h: inch(n * S * 1.25), margin: 0, valign: 'top', ...spacing(S, 1.25) });
   if (page.lede) {
     checkWrap(ctx, 'lede', page.lede, LABEL, width, 1);
     text(slide, page.lede, { x: M.x, y: top + n * S * 1.25 + 24, w: width, h: LABEL * LH });
@@ -542,8 +603,10 @@ LAYOUT.evidence = (slide, ctx) => {
   const ruleY = sourceRow(slide, ctx);
   const end = ruleY - M.sourceGap;
   if (top >= end) ctx.warn(`第 ${ctx.n} 頁證據頁高度不足`);
+  if (page.visual?.kind === 'table' && page.visual.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁表格是 ${page.visual.rows.length} 列，規格是至多 ${CAP.tableRows} 列：刪列或合併相近的列，或拆成兩頁。`);
   const metric = page.metric && !emptyCell(page.metric) ? page.metric : null;
-  const side = page.note || metric;
+  const side = page.takeaway || page.points?.length || page.note || metric;
+  if (MODE === 'read' && !page.takeaway && !page.points?.length && !page.note) ctx.warn(`第 ${ctx.n} 頁右欄空白：閱讀版的 evidence 要有 takeaway 或 points。`);
   const area = { x: M.x, y: top, w: side ? T.chartArea.evidence.width : T.chartArea.evidenceNoNote.width, h: end - top };
   if (page.visual) chart(slide, page.visual, area, ctx);
   if (!side) return;
@@ -552,9 +615,24 @@ LAYOUT.evidence = (slide, ctx) => {
   if (metric) {
     if (page.metric.label) { text(slide, page.metric.label, { x, y, w, h: LABEL * LH }); y += LABEL * LH + 8; }
     const N = T.type.conclusionNumber.px;
-    slide.addText([run(displayedValue(page.metric.value), { px: N, color: C.focus }), run(page.metric.value !== null && page.metric.unit ? ` ${page.metric.unit}` : '', { px: T.type.body.px, color: C.textSecondary })].filter((r) => r.text),
+    slide.addText([run(displayedValue(page.metric.value, page.metric.digits), { px: N, color: C.focus }), run(page.metric.value !== null && page.metric.unit ? ` ${page.metric.unit}` : '', { px: T.type.body.px, color: C.textSecondary })].filter((r) => r.text),
       { x: inch(x), y: inch(y), w: inch(w), h: inch(N * 1.2), margin: 0, valign: 'bottom' });
     y += N * 1.2 + 32;
+  }
+  // Read decks lead the column with one bold sentence, then 2–4 short points, then the note.
+  if (page.takeaway) {
+    const h = checkWrap(ctx, 'takeaway', page.takeaway, LABEL, w, Math.max(0, Math.floor((end - y) / (LABEL * LH)))) * LABEL * LH;
+    text(slide, page.takeaway, { x, y, w, h, color: C.text, bold: true, lineHeight: LH });
+    y += h + 24;
+  }
+  if (page.points) {
+    if (outside(page.points.length, CAP.points)) ctx.warn(`第 ${ctx.n} 頁 points 是 ${page.points.length} 點，規格是 ${CAP.points.join('～')} 點：增刪 points，細節移到 note。`);
+    page.points.forEach((p, i) => {
+      const h = checkWrap(ctx, `points[${i}]`, p, LABEL, w - LABEL, 2) * LABEL * LH;
+      text(slide, p, { x, y, w, h, color: C.text, lineHeight: LH, bullet: { indent: pt(LABEL) } });
+      y += h + 12;
+    });
+    y += 20;
   }
   if (!page.note) return;
   checkWrap(ctx, 'note', page.note, T.type.body.px, w, Math.floor((end - y) / (T.type.body.px * 1.5)));
@@ -587,14 +665,14 @@ LAYOUT.numbers = (slide, ctx) => {
     rule(slide, x, top, x + cw, top, C.gray);
     rule(slide, x, top, x, top + 16, C.gray);
     text(slide, it.label ?? '', { x: x + 16, y: top + 16, w: cw - 16, h: LABEL * LH });
-    const value = displayedValue(it.value, it.digits ?? 0);
+    const value = displayedValue(it.value, it.digits);
     const unitW = it.value !== null && it.unit ? textWidth(` ${it.unit}`, B) : 0;
     if (textWidth(value, N) * 1.12 + unitW > cw - 16) ctx.warn(`第 ${ctx.n} 頁「${it.label}」的數字超出欄寬；請刪減內容或拆頁`);
     slide.addText([run(value, { px: N }), run(it.value !== null && it.unit ? ` ${it.unit}` : '', { px: B, color: C.textSecondary })].filter((r) => r.text),
       { x: inch(x + 16), y: inch(top + 16 + LABEL * LH + 16), w: inch(cw - 16), h: inch(N * 1.15), margin: 0, valign: 'bottom' });
     if (typeof it.value === 'number' && it.prev !== undefined) {
       if (!it.better) ctx.warn(`第 ${ctx.n} 頁「${it.label}」有前期值但沒寫 better，預設越高越好`);
-      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? 0, suffix: it.deltaSuffix ?? '' });
+      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: shownDigits(it.digits, it.prev, it.value), suffix: it.deltaSuffix ?? '' });
       if (d) text(slide, d.text, { x: x + 16, y: top + 16 + LABEL * LH + 16 + N * 1.15 + 16, w: cw - 16, h: B * 1.4, px: B, color: d.color });
     }
     if (it.note) text(slide, it.note, { x: x + 16, y: top + deltaY + B * 1.4 + 8, w: cw - 16, h: noteN * B * LH, px: B, lineHeight: LH });
@@ -619,10 +697,13 @@ LAYOUT.summary = (slide, ctx) => {
   const items = page.visual.items.map((it, index) => ({ ...it, index })).filter((it) => !emptyCell(page.visual.items[it.index]));
   if (outside(items.length, CAP.summary)) ctx.warn(`第 ${ctx.n} 頁主管摘要是 ${items.length} 格，規格是 ${CAP.summary.join('～')} 格`);
   const rowH = (end - top) / items.length, N = T.type.conclusionNumber.px, B = T.type.body.px;
+  // Rows stretch to fill the column, so fill counts each item at its own height, beside the lead and body.
+  let itemsH = 0;
+  const leftH = leadH + (body ? 24 + lines(body, T.type.body.px, leftW) * T.type.body.px * LH : 0);
   items.forEach((it, i) => {
     const y = top + i * rowH;
     if (i) rule(slide, x, y, x + w, y, C.grid);
-    const value = displayedValue(it.value, it.digits ?? 0);
+    const value = displayedValue(it.value, it.digits);
     const unitW = it.value !== null && it.unit ? textWidth(` ${it.unit}`, B) : 0;
     if (textWidth(value, N) * 1.12 + unitW > w) ctx.warn(`第 ${ctx.n} 頁主管摘要「${it.label}」的數字超出欄寬`);
     slide.addText([run(value, { px: N }), run(it.value !== null && it.unit ? ` ${it.unit}` : '', { px: B, color: C.textSecondary })].filter((r) => r.text),
@@ -638,14 +719,17 @@ LAYOUT.summary = (slide, ctx) => {
     }
     if (typeof it.value === 'number' && it.prev !== undefined) {
       if (!it.better) ctx.warn(`第 ${ctx.n} 頁「${it.label}」有前期值但沒寫 better，預設越高越好`);
-      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? 0, suffix: it.deltaSuffix ?? '' });
+      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: shownDigits(it.digits, it.prev, it.value), suffix: it.deltaSuffix ?? '' });
       if (d) {
         text(slide, d.text, { x, y: textY + 8, w, h: LABEL * LH, color: d.color });
         textY += 8 + LABEL * LH;
       }
     }
-    if (labelN > 1 || textY + 8 > y + rowH) ctx.warn(`第 ${ctx.n} 頁主管摘要「${it.label}」超出單列容量，文字可能重疊`);
+    // 6 px clearance above the next rule lets six bare read-deck items fit under a one-line title.
+    if (labelN > 1 || textY + 6 > y + rowH) ctx.warn(`第 ${ctx.n} 頁主管摘要「${it.label}」超出單列容量，文字可能重疊`);
+    itemsH += textY + 6 - y;
   });
+  sparse(ctx, Math.max(leftH, itemsH), end - top);
 };
 
 LAYOUT.compare = (slide, ctx) => {
@@ -656,6 +740,7 @@ LAYOUT.compare = (slide, ctx) => {
   const { rows } = page.visual;
   const options = page.visual.options.map((o, index) => ({ ...o, index })).filter((o) => !emptyCell(page.visual.options[o.index]));
   if (outside(options.length, CAP.compare)) ctx.warn(`第 ${ctx.n} 頁比較方案是 ${options.length} 個，規格是 ${CAP.compare.join('～')} 個`);
+  if (rows.length > CAP.compareRows) ctx.warn(`第 ${ctx.n} 頁比較列是 ${rows.length} 列，規格是至多 ${CAP.compareRows} 列：刪掉次要的比較列，或拆成兩頁。`);
   const labelW = options.length >= 4 ? 240 : 300, gap = options.length >= 4 ? 32 : 48;
   const ow = (INNER - labelW - gap * options.length) / options.length;
   const end = ruleY - M.sourceGap;
@@ -672,6 +757,9 @@ LAYOUT.compare = (slide, ctx) => {
     if (o.subtitle) text(slide, o.subtitle, { x: x + pad, y: top + 20 + T.type.sub.px * 1.4, w: ow - 2 * pad, h: LABEL * LH, color: o.recommended ? C.onDark[0] : C.textSecondary });
   });
   const rowH = Math.min(110 * 1.8, (end - top - headH) / Math.max(1, rows.length));
+  // Rows stretch to the page; fill counts each row at the height of its tallest cell.
+  sparse(ctx, headH + rows.reduce((sum, label, r) => sum + Math.max(lines(label, LABEL, labelW) * LABEL * LH + 16,
+    ...options.map((o) => lines(displayedValue(o.values?.[r]), T.type.body.px, ow - (o.recommended ? 32 : 0)) * T.type.body.px * LH + 12)), 0), end - top);
   rows.forEach((label, r) => {
     const y = top + headH + r * rowH;
     checkWrap(ctx, `visual.rows[${r}]`, label, LABEL, labelW, Math.max(0, Math.floor((rowH - 16) / (LABEL * LH))));
@@ -697,6 +785,10 @@ LAYOUT.list = (slide, ctx) => {
   if (outside(items.length, CAP.list)) ctx.warn(`第 ${ctx.n} 頁診斷清單是 ${items.length} 項，規格是 ${CAP.list.join('～')} 項`);
   const rowH = (end - top) / items.length, tagW = 200, noteW = 400, gap = 48;
   const midX = M.x + tagW + gap, midW = INNER - tagW - noteW - 2 * gap;
+  // Rows stretch to the page; fill counts each item at its own height: heading, body, 12 px above and below.
+  sparse(ctx, items.reduce((sum, item) => sum + Math.max(24 + lines(item.heading, T.type.sub.px, midW) * T.type.sub.px * 1.2
+    + (item.body ? 8 + Math.min(lines(item.body, T.type.body.px, midW), CAP.listBody) * T.type.body.px * 1.4 : 0),
+  item.tag || item.note ? 32 + LABEL * LH : 0), 0), end - top);
   items.forEach((item, i) => {
     const y = top + i * rowH, focus = item.index === page.visual.focus;
     if (i) rule(slide, M.x, y, W - M.x, y, C.grid);
@@ -760,7 +852,7 @@ LAYOUT.kpi = (slide, ctx) => {
   if (secondary.length > 4) ctx.warn(`第 ${ctx.n} 頁核心數字有 ${secondary.length} 個次要指標，規格是 0～4 個`);
   const gap = 88, leftW = 940, rightX = M.x + leftW + gap, rightW = INNER - leftW - gap;
   text(slide, main.label, { x: M.x, y: top, w: leftW, h: LABEL * LH });
-  const mainValue = displayedValue(main.value, main.digits ?? 0), N = T.type.number.px, B = T.type.body.px;
+  const mainValue = displayedValue(main.value, main.digits), N = T.type.number.px, B = T.type.body.px;
   const mainUnit = main.value !== null && main.unit ? ` ${main.unit}` : '';
   if (textWidth(mainValue, N) + textWidth(mainUnit, B) > leftW) ctx.warn(`第 ${ctx.n} 頁核心數字超出左欄寬`);
   slide.addText([run(mainValue, { px: N, color: C.focus }), run(mainUnit, { px: B, color: C.textSecondary })].filter((r) => r.text),
@@ -768,7 +860,7 @@ LAYOUT.kpi = (slide, ctx) => {
   const rowsTop = top + LABEL * LH + 18 + N * 1.2 + 36;
   const rowH = Math.min(100, (end - rowsTop) / benchmarks.length);
   benchmarks.forEach((item, i) => {
-    const y = rowsTop + i * rowH, value = displayedValue(item.value, item.digits ?? 0) + (item.value !== null && item.unit ? ` ${item.unit}` : '');
+    const y = rowsTop + i * rowH, value = displayedValue(item.value, item.digits) + (item.value !== null && item.unit ? ` ${item.unit}` : '');
     rule(slide, M.x, y, M.x + leftW, y, C.grid);
     text(slide, item.label, { x: M.x, y: y + 16, w: leftW * 0.55, h: B * 1.4, px: B, color: C.text });
     text(slide, value, { x: M.x + leftW * 0.55, y: y + 16, w: leftW * 0.45, h: B * 1.4, px: B, color: C.text, align: 'right' });
@@ -779,7 +871,7 @@ LAYOUT.kpi = (slide, ctx) => {
   if (secondary.length) {
     const secondaryH = (end - top) / secondary.length;
     secondary.forEach((item, i) => {
-      const y = top + i * secondaryH, value = displayedValue(item.value, item.digits ?? 0), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
+      const y = top + i * secondaryH, value = displayedValue(item.value, item.digits), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
       if (i) rule(slide, rightX, y, rightX + rightW, y, C.grid);
       text(slide, item.label, { x: rightX, y: y + 12, w: rightW, h: LABEL * LH });
       slide.addText([run(value, { px: T.type.conclusionNumber.px }), run(unit, { px: B, color: C.textSecondary })].filter((r) => r.text),
@@ -832,12 +924,15 @@ LAYOUT.columns = (slide, ctx) => {
   const items = page.visual.items.map((item, index) => ({ ...item, index })).filter((item) => !emptyCell(page.visual.items[item.index]));
   if (outside(items.length, CAP.columns)) ctx.warn(`第 ${ctx.n} 頁並列重點是 ${items.length} 欄，規格是 ${CAP.columns.join('～')} 欄`);
   const gap = 48, cw = (INNER - gap * (items.length - 1)) / items.length;
-  const blockH = Math.max(...items.map((item) => 28
+  const colsH = Math.max(...items.map((item) => 28
     + (item.kicker ? LABEL * LH + 18 : 0)
     + (item.value !== undefined && item.value !== '' ? T.type.conclusionNumber.px * 1.2 + 24 : 0)
     + lines(item.heading, T.type.sub.px, cw) * T.type.sub.px * 1.2 + 18
     + (item.body ? lines(item.body, T.type.body.px, cw) * T.type.body.px * LH : 0)));
+  const takeawayH = page.takeaway ? lines(page.takeaway, LABEL, INNER) * LABEL * LH : 0;
+  const blockH = colsH + (takeawayH ? TAKEAWAY_GAP + takeawayH : 0);
   const top = topBase;
+  if (page.takeaway) text(slide, page.takeaway, { x: M.x, y: top + colsH + TAKEAWAY_GAP, w: INNER, h: takeawayH, color: C.text, bold: true, lineHeight: LH });
   if (blockH > end - topBase) ctx.warn(`第 ${ctx.n} 頁並列重點高度不足`);
   sparse(ctx, blockH, end - topBase);
   items.forEach((item, i) => {
@@ -846,7 +941,7 @@ LAYOUT.columns = (slide, ctx) => {
     let y = top + 28;
     if (item.kicker) { text(slide, item.kicker, { x, y, w: cw, h: LABEL * LH, color: focus ? C.focus : C.textSecondary }); y += LABEL * LH + 18; }
     if (item.value !== undefined && item.value !== '') {
-      const value = displayedValue(item.value, item.digits ?? 0), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
+      const value = displayedValue(item.value, item.digits), unit = item.value !== null && item.unit ? ` ${item.unit}` : '';
       const N = T.type.conclusionNumber.px;
       slide.addText([run(value, { px: N, color: focus ? C.focus : C.text }), run(unit, { px: T.type.body.px, color: C.textSecondary })].filter((r) => r.text),
         { x: inch(x), y: inch(y), w: inch(cw), h: inch(N * 1.2), margin: 0, valign: 'bottom' });
@@ -858,8 +953,65 @@ LAYOUT.columns = (slide, ctx) => {
     text(slide, item.heading, { x, y, w: cw, h: headingH, px: T.type.sub.px, color: focus ? C.focus : C.text, bold: true });
     y += headingH + 18;
     if (item.kicker) checkWrap(ctx, `visual.items[${item.index}].kicker`, item.kicker, LABEL, cw, 1);
-    if (item.body) { const bodyH = checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, cw, Math.max(0, Math.floor((end - y) / (T.type.body.px * LH)))) * T.type.body.px * LH; text(slide, item.body, { x, y, w: cw, h: bodyH, px: T.type.body.px, color: C.textSecondary, lineHeight: LH }); y += bodyH; }
+    if (item.body) { const bodyH = checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, cw, Math.min(CAP.columnsBody, Math.max(0, Math.floor((end - y) / (T.type.body.px * LH))))) * T.type.body.px * LH; text(slide, item.body, { x, y, w: cw, h: bodyH, px: T.type.body.px, color: C.textSecondary, lineHeight: LH }); y += bodyH; }
   });
+};
+
+// Read decks only: two titled cells side by side, each a chart, table, list or text with a note of up to CAP.panelNote lines.
+LAYOUT.panels = (slide, ctx) => {
+  const { page, story } = ctx;
+  header(slide, page.kicker, story.title);
+  const top = contentTop(slide, ctx);
+  const cells = page.visual.items.map((cell) => ({ ...cell, model: isObject(cell.visual) && cell.visual.kind ? prepare(cell.visual, { categoryOrder: ctx.categoryOrder }) : null }));
+  // The source row lists missing values, so collect them before drawing it.
+  for (const cell of cells) if (cell.model) ctx.missing.push(...cell.model.missing);
+  const end = sourceRow(slide, ctx) - M.sourceGap;
+  const gap = 96, [a, b] = page.visual.split ?? [1, 1];
+  const widths = [a, b].map((s) => ((INNER - gap) * s) / (a + b));
+  const B = T.type.body.px, titleH = LABEL * LH;
+  const noteRows = Math.max(0, ...cells.map((cell, j) => cell.note ? Math.min(CAP.panelNote, checkWrap(ctx, `visual.items[${j}].note`, cell.note, LABEL, widths[j], CAP.panelNote)) : 0));
+  const noteH = noteRows ? 24 + noteRows * LABEL * LH : 0;
+  let filled = top;
+  cells.forEach((cell, j) => {
+    const x = M.x + (j ? widths[0] + gap : 0), w = widths[j], path = `visual.items[${j}]`, v = cell.visual;
+    rule(slide, x, top, x + w, top, C.gray);
+    checkWrap(ctx, `${path}.title`, cell.title, LABEL, w, 1);
+    text(slide, cell.title, { x, y: top + 16, w, h: titleH, color: C.text, bold: true });
+    const y = top + 16 + titleH + 16, area = { x, y, w, h: end - noteH - y };
+    if (area.h < 120) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格高度不足：縮短註或拆頁。`);
+    let bottom = end;
+    if (cell.model) {
+      if (v.kind === 'table' && v.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格表格是 ${v.rows.length} 列，規格是至多 ${CAP.tableRows} 列：刪列，或把這張表移到 evidence 頁。`);
+      chart(slide, v, area, { ...ctx, model: cell.model });
+    } else if (typeof v === 'string') {
+      const n = checkWrap(ctx, `${path}.visual`, v, B, w, Math.max(0, Math.floor(area.h / (B * LH))));
+      text(slide, v, { x, y, w, h: n * B * LH, px: B, color: C.text, lineHeight: LH });
+      bottom = y + n * B * LH;
+    } else {
+      let iy = y;
+      v.items.forEach((item, k) => {
+        if (emptyCell(item)) return;
+        if (iy > y) { rule(slide, x, iy, x + w, iy, C.grid); iy += 16; }
+        const headingH = lines(item.heading, B, w) * B * 1.2;
+        text(slide, item.heading, { x, y: iy, w, h: headingH, px: B, color: C.text, bold: true });
+        iy += headingH;
+        if (item.body) {
+          const bodyH = checkWrap(ctx, `${path}.visual.items[${k}].body`, item.body, B, w, CAP.listBody) * B * LH;
+          text(slide, item.body, { x, y: iy + 8, w, h: bodyH, px: B, lineHeight: LH });
+          iy += 8 + bodyH;
+        }
+        iy += 16;
+      });
+      if (iy - 16 > y + area.h) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格清單高度超出格內空間：請刪項目或拆頁。`);
+      bottom = iy - 16;
+    }
+    // Chart and table notes line up at the foot of both cells; text and list notes follow their content.
+    const noteY = Math.min(bottom + 24, end - noteRows * LABEL * LH);
+    if (cell.note) text(slide, cell.note, { x, y: noteY, w, h: noteRows * LABEL * LH, lineHeight: LH });
+    filled = Math.max(filled, cell.note ? noteY + noteRows * LABEL * LH : bottom);
+  });
+  // Charts and tables fill their cell; only text and list cells leave the page short.
+  if (cells.every((cell) => !cell.model)) sparse(ctx, filled - top, end - top);
 };
 
 const monthIndex = (ym) => { const [y, m] = String(ym).split('-').map(Number); return y * 12 + (m - 1); };
@@ -906,6 +1058,7 @@ LAYOUT.close = (slide, ctx) => {
   const top = contentTop(slide, ctx, ink, muted);
   const ruleY = sourceRow(slide, ctx, { line: muted, ink: muted });
   const rows = page.visual.rows.map((r, index) => ({ ...r, index })).filter((r) => !emptyCell(page.visual.rows[r.index]));
+  if (rows.length > CAP.closeRows) ctx.warn(`第 ${ctx.n} 頁收尾待辦是 ${rows.length} 列，規格是至多 ${CAP.closeRows} 列：合併同一負責人的待辦，或拆成兩頁。`);
   const ownerW = 420, dueW = 240, gap = 48;
   const taskW = INNER - ownerW - dueW - 2 * gap;
   const cols = [[M.x, taskW, '下一步', 'task'], [M.x + taskW + gap, ownerW, '負責人', 'owner'], [M.x + taskW + ownerW + 2 * gap, dueW, '期限', 'due']]
@@ -914,11 +1067,13 @@ LAYOUT.close = (slide, ctx) => {
   const headY = top + LABEL * LH + 12;
   rule(slide, M.x, headY, W - M.x, headY, muted);
   const rowH = Math.min(100 * 1.8, (ruleY - 48 - headY) / Math.max(1, rows.length));
+  // Rows stretch to the page; fill counts each row at the height of its tallest cell.
+  sparse(ctx, headY - top + rows.reduce((sum, r) => sum + Math.max(...cols.map(([, w, , key]) => lines(r[key] ?? '', T.type.body.px, w) * T.type.body.px * LH + 16)), 0), ruleY - 48 - top);
   rows.forEach((r, i) => {
     const y = headY + i * rowH;
     if (i) rule(slide, M.x, y, W - M.x, y, muted);
     for (const [x, w, , key] of cols) {
-      if (r[key]) checkWrap(ctx, `visual.rows[${r.index}].${key}`, r[key], T.type.body.px, w, Math.max(0, Math.floor((rowH - 20) / (T.type.body.px * LH))), key !== 'task');
+      if (r[key]) checkWrap(ctx, `visual.rows[${r.index}].${key}`, r[key], T.type.body.px, w, Math.max(0, Math.floor((rowH - 16) / (T.type.body.px * LH))), key !== 'task');
       text(slide, r[key] ?? '', { x, y, w, h: rowH, px: T.type.body.px, valign: 'middle',
         color: key === 'task' ? ink : muted, bold: key === 'task', align: key === 'task' ? 'left' : 'right' });
     }
@@ -928,8 +1083,7 @@ LAYOUT.close = (slide, ctx) => {
 // Every category in every chart, in order of first appearance: one category keeps one color across the deck.
 export function deckCategories(story) {
   const seen = [];
-  for (const p of story.pages) {
-    const v = p.visual;
+  for (const v of story.pages.flatMap((p) => p.type === 'panels' ? p.visual.items.map((cell) => cell.visual) : [p.visual])) {
     if (!v?.kind) continue;
     const names = ['share', 'sharetrend', 'waffle', 'mekko'].includes(v.kind) ? v.categories
       : v.kind === 'grouped' && v.seriesRole === 'categorical' || v.kind === 'line' && !v.focus && v.series.length > 1 ? v.series.map((s) => s.name) : [];
@@ -980,7 +1134,7 @@ export async function build(story) {
 }
 
 function labelStyle(color, bold = false) {
-  return `<a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${pt(LABEL) * 100}" b="${bold ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill><a:latin typeface="${SLIDE_FONT}"/></a:defRPr></a:pPr></a:p>`;
+  return `<a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${pt(CHART) * 100}" b="${bold ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill><a:latin typeface="${SLIDE_FONT}"/></a:defRPr></a:pPr></a:p>`;
 }
 
 function pointLabel(i, { color = C.text, bold = false, name = false, value = true, pos = 'r', label, formatCode } = {}) {
@@ -1162,6 +1316,7 @@ if (isMain(import.meta.url)) {
     const story = JSON.parse(readFileSync(input, 'utf8'));
     if (rerunForMode(story)) process.exit();
     const { buffer, warnings } = await build(story);
+    mkdirSync(dirname(output), { recursive: true });
     writeFileSync(output, buffer);
     for (const w of warnings) console.error(`警告：${w}`);
     console.log(`已輸出：${output}（${story.pages.length} 頁）`);

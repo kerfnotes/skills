@@ -21,3 +21,17 @@ test('pptx CLI reports the saved path and page count after successful output', a
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('pptx CLI creates a missing output folder', () => {
+  mkdirSync('out', { recursive: true });
+  const dir = mkdtempSync(join('out', 'cli-test-'));
+  try {
+    const input = join(dir, 'story.json'), output = join(dir, 'new', 'deeper', 'deck.pptx');
+    writeFileSync(input, JSON.stringify({ pages: [{ type: 'cover', claim: '封面' }] }));
+    const run = spawnSync(process.execPath, ['scripts/pptx.js', input, output], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    assert.ok(readFileSync(output).length > 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

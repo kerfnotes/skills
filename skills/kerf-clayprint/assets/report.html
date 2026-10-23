@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" style="--report-title: '{{報告標題}} | '">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -52,7 +52,10 @@ a { color: var(--cp-accent); text-underline-offset: .16em; }
 figure { margin: 32px 0; }
 figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .chart-scroll { max-width: 100%; overflow-x: auto; }
-figcaption, .sources { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
+/* Figures and tables: generated 「圖 N」「表 N」 label and title above, notes and source below. */
+.exhibit-title, caption { margin-bottom: 10px; color: var(--cp-title); font-weight: 700; line-height: 1.4; }
+.exhibit-label { display: block; color: var(--cp-accent); font-size: var(--cp-small); letter-spacing: .08em; }
+figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
 .chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
 .chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
 .chart-grid { stroke: var(--cp-line); }
@@ -68,6 +71,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 .comparison .recommended { background: var(--cp-tint); }
 .diagnosis, .flow { padding-left: 1.4em; }
 .diagnosis li, .flow li { padding: 9px 0; border-bottom: 1px solid var(--cp-line); }
+.diagnosis strong, .flow strong { display: block; }
 .flow li::marker { color: var(--cp-accent); font-weight: 700; }
 .missing { display: inline-block; padding: 0 .4em; border: 1px solid var(--cp-muted); color: var(--cp-muted); font-size: var(--cp-small); }
 @media (max-width: 640px) {
@@ -77,19 +81,76 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .summary-metrics { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
   .chart-scroll svg { min-width: 640px; max-width: none; }
 }
-@page { size: A4; margin: 18mm 19mm; }
+/* Chrome clips print content outside the page area and shrinks the whole page when anything overflows on the right,
+   so @page sits on the outermost lines (22 mm left, 14 mm right) and body padding sets the 50 / 25 mm text column.
+   Sizes come from the design layer's print block; @page takes the numbers, element rules the --cp-print-* variables. */
+@page {
+  size: A4; margin: 12mm 14mm 15mm 22mm;
+  /* --report-title carries its own separator (report.js writes '報告名 | '), so without it the footer is just 2 / 4. */
+  @bottom-right { content: var(--report-title, "") counter(page) " / " counter(pages); font: 7pt var(--cp-font); color: var(--cp-muted); padding-right: 11mm; }
+}
+/* The first page has no margin so the cover band can bleed, and no footer. */
+@page :first { margin: 0; @bottom-right { content: none; } }
+/* The PDF printer sets data-paper / data-size on the root; @page cannot match attributes, so they pick named pages. */
+@page clay { background: var(--cp-paper); }
+@page letter { size: letter; }
+@page clay-letter { size: letter; background: var(--cp-paper); }
 @media print {
-  html { background: var(--cp-paper); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  body { max-width: none; padding: 0; }
-  .report-cover { break-after: page; }
-  .section-heading { break-after: avoid; }
-  /* A short section stays on one page so its heading never sits alone; Chrome breaks sections taller than a page anyway. */
-  section { break-inside: avoid; }
+  :root {
+    --cp-print-indent: 28mm; --cp-print-gutter: 11mm; --cp-print-bottom: 15mm;
+    --cp-print-text-left: 50mm; --cp-print-text-right: 25mm;
+    --cp-print-body: 10.5pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;
+    --cp-print-sub: 12pt; --cp-print-small: 7pt; --cp-print-cover: 30pt; --cp-print-summary: 16pt;
+  }
+  html { background: #fff; font-size: var(--cp-print-body); line-height: var(--cp-print-leading); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  html[data-paper="clay"] { background: var(--cp-paper); }
+  html[data-paper="clay"] body { page: clay; }
+  html[data-size="letter"] body { page: letter; }
+  html[data-paper="clay"][data-size="letter"] body { page: clay-letter; }
+  body { max-width: none; padding: 0 var(--cp-print-gutter) 0 var(--cp-print-indent); }
+  h2 { font-size: var(--cp-print-heading); }
+  h3 { font-size: var(--cp-print-sub); }
+  /* The summary claim sits in the narrow left column next to the metrics: section-heading size would wrap it about 9 characters a line. */
+  .summary h2 { font-size: var(--cp-print-summary); }
+  .exhibit-note, figcaption, .sources { font-size: var(--cp-print-small); }
+  .exhibit-title, caption { font-size: var(--cp-print-sub); }
+  /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
+     the cover band cancels that again to reach the paper edge. Sections always start on the next page. */
+  .report-front { margin: 0 calc(-1 * var(--cp-print-gutter)) 0 calc(-1 * var(--cp-print-indent)); padding: 0 var(--cp-print-text-right) var(--cp-print-bottom) var(--cp-print-text-left); break-after: page; }
+  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 24mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-tint); }
+  .report-cover h1 { font-size: var(--cp-print-cover); line-height: 1.2; }
+  /* A full-page cover fills the paper; 1 mm short so it never spills onto a second page. */
+  .report-front[data-cover="page"] { padding-bottom: 0; }
+  .report-front[data-cover="page"] .report-cover { min-height: 296mm; margin-bottom: 0; padding-top: 80mm; }
+  html[data-size="letter"] .report-front[data-cover="page"] .report-cover { min-height: 278mm; }
+  .toc { margin-top: 0; }
+  section { margin-top: 8mm; }
+  .toc h2 { font-size: var(--cp-print-sub); }
+  /* Section headings, contents and pull quotes sit on the 22 mm line, the inner edge of @page. */
+  .toc, .section-heading, .callout { margin-left: calc(-1 * var(--cp-print-indent)); }
+  .section-heading { break-inside: avoid; break-after: avoid; margin-bottom: 4mm; border-top: 1.5pt solid var(--cp-accent); padding-top: 4mm; }
+  .section-heading .eyebrow { margin-bottom: 1mm; }
+  .section-heading h2 { color: var(--cp-accent); margin-bottom: 3mm; }
+  .callout { margin-top: 6mm; margin-bottom: 6mm; padding: 0; background: none; border: 0; }
+  .callout p { font-size: var(--cp-print-heading); line-height: 1.3; color: var(--cp-accent); font-weight: 400; max-width: none; }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
+  /* Tables over eight rows may break; the header repeats on the next page. scripts/pdf.js (splitExhibits) uses the same eight. */
+  .table-scroll:has(tbody tr:nth-child(9)), .table-scroll:has(tbody tr:nth-child(9)) table { break-inside: auto; }
+  thead { display: table-header-group; }
+  caption, thead { break-after: avoid; }
   tr { break-inside: avoid; }
+  /* Charts and tables may run into the body padding, to 14 mm from the right edge (146 mm on A4). */
+  figure, .table-scroll { margin-right: calc(-1 * var(--cp-print-gutter)); max-width: none; }
+  /* wide: true starts on the 22 mm line, the @page edge, for 174 mm on A4; going past it would clip the block. */
+  figure.wide, .table-scroll.wide { margin-left: calc(-1 * var(--cp-print-indent)); }
+  .table-scroll.wide + .exhibit-note { margin-left: calc(-1 * var(--cp-print-indent)); max-width: none; }
+  .table-scroll { margin-bottom: 4mm; }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
+  /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
-  .sources { break-before: avoid; }
+  /* SVG text is in viewBox units (979 wide); 19 units at 146 mm is about 8 pt. */
+  .chart-scroll svg [data-tick] { font-size: 19px; }
+  .sources, .exhibit-note { break-before: avoid; }
   a { color: inherit; }
 }
 </style>
@@ -98,7 +159,11 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 <main class="report">
   <!-- 元件庫：依內容複製需要的區塊；沒有內容就刪除整個元件，不留空框或佔位。 -->
 
-  <!-- 封面：用於交代報告主題、讀者應記住的一句話與最多三項背景資訊。 -->
+  <!-- 第一頁：封面、目錄與摘要放在同一個容器裡，列印時同在第一頁，各節從第二頁開始。
+       整頁封面時加 data-cover="page"，容器只留封面，目錄與摘要移到容器之後。 -->
+  <div class="report-front">
+
+  <!-- 封面：用於交代報告主題、讀者應記住的一句話與最多三項背景資訊；列印時是印到紙邊的色帶。 -->
   <header class="report-cover">
     <p class="eyebrow">{{頁首小字}}</p>
     <h1>{{報告標題}}</h1>
@@ -131,6 +196,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
     </dl>
   </section>
 
+  </div>
+
   <!-- 章節標題：每節以小字標主題、標題寫一句判斷，再用一行補足閱讀脈絡。 -->
   <section aria-labelledby="{{章節錨點}}">
     <header class="section-heading">
@@ -142,24 +209,27 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
     <!-- 段落：說明判斷的原因、限制或下一步，讓報告可以連續閱讀。 -->
     <p>{{段落正文}}</p>
 
-    <!-- 重點框：只有一句需要讀者停下來記住的結論時使用。 -->
+    <!-- 重點框：只有一句需要讀者停下來記住的結論時使用；列印時是無框的引言。 -->
     <aside class="callout"><p>{{重點判斷}}</p></aside>
 
-    <!-- 圖表：有數據可畫時放無標題來源列的 SVG，圖說寫單位、期間、來源與附註。 -->
+    <!-- 圖表：「圖 N」標籤與標題在圖上方；SVG 不含標題與來源列；圖下方的 figcaption 依序寫單位、期間、附註、來源。
+         全寬圖在 figure 加 class="wide"，列印從左 22 mm 起。 -->
     <figure>
+      <p class="exhibit-title"><span class="exhibit-label" data-label>圖 {{圖號}}</span>{{圖表標題}}</p>
       <div class="chart-scroll" tabindex="0" role="region" aria-label="{{圖表捲動區名稱}}">
         <svg viewBox="0 0 680 240" role="img" aria-labelledby="{{圖表標題錨點}}">
           <title id="{{圖表標題錨點}}">{{圖表可存取標題}}</title>
           <text x="24" y="48">{{SVG 圖表內容}}</text>
         </svg>
       </div>
-      <figcaption>{{圖表說明}}｜單位：{{單位}}｜期間：{{期間}}｜來源：{{來源}}｜附註：{{必要附註}}</figcaption>
+      <figcaption>單位：{{單位}}｜期間：{{期間}}｜附註：{{必要附註}}｜來源：{{來源}}</figcaption>
     </figure>
 
-    <!-- 表格：精確數值需要逐格比對時使用；數字靠右，重點列與合計列各自標示。 -->
+    <!-- 表格：精確數值需要逐格比對時使用；數字靠右，重點列與合計列各自標示。「表 N」與標題在 caption，附註與來源在表下方。
+         全寬表在 table-scroll 加 class="wide"。 -->
     <div class="table-scroll" tabindex="0" role="region" aria-label="{{表格捲動區名稱}}">
       <table>
-        <caption>{{表格標題}}</caption>
+        <caption><span class="exhibit-label" data-label>表 {{表號}}</span>{{表格標題}}</caption>
         <thead><tr><th scope="col">{{項目}}</th><th scope="col" class="num">{{數值欄名}}</th></tr></thead>
         <tbody>
           <tr><th scope="row">{{列名}}</th><td class="num">{{數值}}</td></tr>
@@ -168,6 +238,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
         <tfoot><tr class="total"><th scope="row">{{合計列名}}</th><td class="num">{{合計數值}}</td></tr></tfoot>
       </table>
     </div>
+    <p class="exhibit-note">附註：{{必要附註}}｜來源：{{來源}}</p>
 
     <!-- 方案比較：須在幾個方案間取捨時使用，推薦方案整欄加 recommended。 -->
     <div class="table-scroll" tabindex="0" role="region" aria-label="{{方案比較捲動區名稱}}">

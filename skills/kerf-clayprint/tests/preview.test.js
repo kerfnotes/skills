@@ -29,7 +29,8 @@ printf 'fake PDF' > "$outdir/deck.pdf"
 printf 'pdftoppm\\n' >> "$FAKE_LOG"
 printf '%s\\n' "$@" >> "$FAKE_LOG"
 for arg do prefix="$arg"; done
-printf 'fake PNG' > "\${prefix}-1.png"
+n=1
+while [ "$n" -le "\${FAKE_PAGES:-2}" ]; do printf 'fake PNG' > "\${prefix}-$n.png"; n=$((n + 1)); done
 `, { mode: 0o755 });
     writeFileSync(join(bin, 'ffmpeg'), `#!/bin/sh
 printf 'ffmpeg\\n' >> "$FAKE_LOG"
@@ -51,6 +52,16 @@ printf 'fake sheet' > "$sheet"
     assert.ok(existsSync(join(out, 'sheet.png')));
     assert.match(result.stderr, /替代字型.*只能檢查版面/);
     assert.match(result.stdout, /page-1\.png/);
+
+    // One page: ffmpeg's xstack needs two inputs, so the preview skips the sheet instead of failing.
+    rmSync(log);
+    const single = join(dir, 'single');
+    const one = spawnSync(process.execPath, [script, deck, single], {
+      encoding: 'utf8', env: { ...process.env, PATH: bin, FAKE_LOG: log, FAKE_PAGES: '1' },
+    });
+    assert.equal(one.status, 0, one.stderr);
+    assert.ok(!readFileSync(log, 'utf8').includes('ffmpeg'));
+    assert.ok(existsSync(join(single, 'page-1.png')) && !existsSync(join(single, 'sheet.png')));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -104,4 +104,153 @@ test('report.json：跳脫 HTML、缺值標未提供、缺來源的圖與錯誤�
   assert.throws(() => buildReport({ ...base, sections: [{ claim: '判斷', blocks: [{ type: 'compare', rows: ['成本'], options: [{ values: ['低'] }] }] }] }), /options\[0\]\.name/);
   assert.throws(() => buildReport({ ...base, sections: [{ claim: '判斷', blocks: [{ type: 'process', focus: '1', steps: [{ heading: '甲' }, { heading: '乙' }] }] }] }), /focus/);
   assert.throws(() => buildReport({ ...base, sections: [{ id: 'section-2', claim: '判斷', blocks: base.sections[0].blocks }] }), /\.id/);
+});
+
+test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢幕規則不變', () => {
+  const css = themeCss();
+  const at = css.indexOf('@page');
+  const screen = css.slice(0, at), print = css.slice(at);
+  // 螢幕：940 px、米色、圖表橫向捲動與窄螢幕最小寬度都還在，且不受列印屬性影響。
+  assert.match(screen, /body \{[^}]*max-width: 940px/);
+  assert.match(screen, /html \{[^}]*background: var\(--cp-paper\)/);
+  assert.match(screen, /\.chart-scroll \{ max-width: 100%; overflow-x: auto; \}/);
+  assert.match(screen, /\.chart-scroll svg \{ min-width: 640px; max-width: none; \}/);
+  assert.doesNotMatch(screen, /data-paper|data-size|\dmm|\dpt/);
+  // 紙張與邊界：預設 A4 白紙；@page 設在最外的 22／14 mm 線，正文欄由 body 內距推到左 50、右 25 mm；
+  // 第一頁零邊界且無頁尾；Letter 只換紙張大小。
+  assert.match(print, /@page \{[^}]*size: A4; margin: 12mm 14mm 15mm 22mm;/);
+  // The separator comes with the title (report.js writes '報告名 | '), so a page without the variable prints only 2 / 4.
+  assert.match(print, /@bottom-right \{[^}]*content: var\(--report-title, ""\) counter\(page\) " \/ " counter\(pages\);[^}]*font: 7pt var\(--cp-font\);[^}]*padding-right: 11mm;/);
+  assert.doesNotMatch(print, /" \| " counter/);
+  assert.match(print, /@page :first \{ margin: 0;[^}]*@bottom-right \{ content: none; \}/);
+  assert.match(print, /@page letter \{ size: letter; \}/);
+  assert.match(print, /html\[data-size="letter"\] body \{ page: letter; \}/);
+  assert.match(print, /html\[data-paper="clay"\] body \{ page: clay; \}/);
+  assert.match(print, /@page clay \{ background: var\(--cp-paper\); \}/);
+  assert.doesNotMatch(print, /size: letter;[^}]*margin/);
+  // 列印字級與欄寬。
+  const media = print.slice(print.indexOf('@media print'));
+  assert.match(media, /:root \{[^}]*--cp-print-indent: 28mm; --cp-print-gutter: 11mm;[^}]*--cp-print-body: 10\.5pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;[^}]*--cp-print-sub: 12pt; --cp-print-small: 7pt;/);
+  assert.match(media, /html \{[^}]*background: #fff;[^}]*font-size: var\(--cp-print-body\); line-height: var\(--cp-print-leading\);/);
+  assert.match(media, /body \{[^}]*padding: 0 var\(--cp-print-gutter\) 0 var\(--cp-print-indent\);/);
+  assert.match(media, /h2 \{ font-size: var\(--cp-print-heading\);/);
+  assert.match(media, /h3 \{ font-size: var\(--cp-print-sub\);/);
+  assert.match(media, /figcaption, \.sources \{ font-size: var\(--cp-print-small\);/);
+  assert.match(media, /figure, \.table-scroll \{ margin-right: calc\(-1 \* var\(--cp-print-gutter\)\); max-width: none; \}/);
+  assert.match(media, /\.chart-scroll svg \{ min-width: 0; max-width: 100%; \}/);
+  // 列印區塊在窄螢幕規則之後，才能蓋掉它（A4 版心約 510 CSS px，會命中 max-width: 640px）。
+  assert.ok(css.indexOf('@media print') > css.indexOf('@media (max-width: 640px)'));
+});
+
+test('報告名寫在根元素的 CSS 變數，給列印頁尾用，並跳脫引號與反斜線', () => {
+  const { html } = buildReport({ title: `甲's "乙" \\ <丙>\n丁`, message: '帶走這句', sections: [{ claim: '判斷', blocks: [{ type: 'text', text: '內文' }] }] });
+  assert.match(html, /<html lang="zh-Hant" style="--report-title: '甲\\'s &quot;乙&quot; \\\\ &lt;丙&gt; 丁 \| '">/);
+  assert.match(file('examples/report.html'), /<html lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快 \| '">/);
+  assert.match(file('assets/report.html'), /<html lang="zh-Hant" style="--report-title: '\{\{報告標題\}\} \| '">/);
+});
+
+test('圖表區塊：圖、表各自編號，標籤與標題在上，註與來源在下', () => {
+  const html = file('examples/report.html');
+  const figures = html.match(/<figure[\s\S]*?<\/figure>/g);
+  assert.equal(figures.length, 2);
+  figures.forEach((f, i) => {
+    const head = f.indexOf(`<span class="exhibit-label" data-label>圖 ${i + 1}</span>`);
+    assert.ok(head > 0 && head < f.indexOf('<svg'), `圖 ${i + 1} 標籤在圖上方`);
+    assert.ok(f.indexOf('<figcaption>') > f.indexOf('</svg>'), '圖說在圖下方');
+    assert.match(f, /<figcaption>[^<]*來源：/);
+  });
+  assert.match(figures[0], /class="exhibit-title"><span class="exhibit-label" data-label>圖 1<\/span>登錄時間比較<\/p>/);
+  assert.match(figures[0], /<figcaption>[^<]*附註：24 小時是試行目標/);
+  assert.doesNotMatch(figures[0], /<figcaption>登錄時間比較/);
+  assert.match(html, /<caption><span class="exhibit-label" data-label>表 1<\/span>同一流程的時間對照<\/caption>/);
+  assert.match(html, /<\/table>\n<\/div>\n<p class="exhibit-note">來源：/);
+
+  // 圖與表分開從 1 起算；沒有標題的表格也編號；compare 不編號；註與來源只在有填時出現。
+  const chart = { kind: 'rank', source: '原稿', rows: [{ label: '甲', value: 1 }] };
+  const table = { type: 'table', columns: [{ name: '項目' }], rows: [['甲']] };
+  const { html: out, figures: n } = buildReport({ title: '測試', message: '帶走這句', sections: [
+    { claim: '一', blocks: [table, { type: 'chart', title: '甲圖', chart }, { type: 'compare', rows: ['成本'], options: [{ name: 'A', values: ['低'] }] }] },
+    { claim: '二', blocks: [{ type: 'chart', title: '乙圖', chart, note: '區塊附註', wide: true }, { ...table, caption: '乙表', source: '原稿', note: '表附註' }] },
+  ] });
+  assert.equal(n, 2);
+  assert.deepEqual(out.match(/data-label>[^<]+/g).map((s) => s.slice(11)), ['表 1', '圖 1', '圖 2', '表 2']);
+  assert.match(out, /<figure class="wide">/);
+  assert.equal((out.match(/<figure>/g) ?? []).length, 1);
+  assert.match(out, /<figcaption>附註：區塊附註｜來源：原稿<\/figcaption>/);
+  assert.match(out, /<p class="exhibit-note">附註：表附註｜來源：原稿<\/p>/);
+  assert.equal((out.match(/<p class="exhibit-note">/g) ?? []).length, 1);
+  assert.throws(() => buildReport({ title: '測試', message: '帶走這句', sections: [{ claim: '一', blocks: [{ type: 'chart', title: '圖', chart, wide: 'yes' }] }] }), /wide/);
+  assert.throws(() => buildReport({ title: '測試', message: '帶走這句', sections: [{ claim: '一', blocks: [{ ...table, source: '' }] }] }), /source/);
+});
+
+test('全寬圖只在列印時從左 22 mm 起，不伸出 @page', () => {
+  const css = themeCss();
+  const media = css.slice(css.indexOf('@media print'));
+  assert.match(media, /figure\.wide, \.table-scroll\.wide \{ margin-left: calc\(-1 \* var\(--cp-print-indent\)\); \}/);
+  assert.match(media, /\.exhibit-title, caption \{[^}]*font-size: var\(--cp-print-sub\);/);
+  assert.match(media, /\.exhibit-note, figcaption, \.sources \{ font-size: var\(--cp-print-small\);/);
+  assert.doesNotMatch(css.slice(0, css.indexOf('@page')), /\.wide/);
+});
+
+test('驗收器略過產生器加的圖表標籤，正文裡原稿沒有的編號仍核對', () => {
+  const source = '甲 12 件。';
+  const fig = '<figure><p class="exhibit-title"><span class="exhibit-label" data-label>圖 7</span>甲</p><svg><text>12</text></svg><figcaption>來源：原稿</figcaption></figure>';
+  assert.doesNotThrow(() => checkReport(`<section>${fig}<table><caption><span class="exhibit-label" data-label>表 3</span>乙</caption><tr><td>12</td></tr></table></section>`, source));
+  assert.throws(() => checkReport(`<section><p>見圖 7</p>${fig}</section>`, source), /原稿找不到數字 7/);
+  assert.throws(() => checkReport(`<section>${fig.replace('甲</p>', '甲 99 件</p>')}</section>`, source), /99/);
+  assert.throws(() => checkReport(`<section>${fig.replace('>圖 7<', '>圖 7 共 99 件<')}</section>`, source), /原稿找不到數字/);
+  assert.throws(() => checkReport(fig.replace('來源：原稿', '原稿'), source), /figcaption/);
+});
+
+test('列印字級與邊界來自設計層 print 區塊，缺少時用預設值', () => {
+  for (const name of ['tokens.json', 'tokens.blue.json']) {
+    const { print } = JSON.parse(file(`design/${name}`));
+    assert.deepEqual(print, { margin: { top: 12, right: 14, bottom: 15, left: 22, indent: 28, gutter: 11 },
+      type: { body: 10.5, leading: 16, heading: 24, sub: 12, small: 7, cover: 30, summary: 16 } });
+  }
+  const tokens = loadTokens();
+  const { print, ...bare } = tokens;
+  const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-print-'));
+  try {
+    writeFileSync(path.join(dir, 'bare.json'), JSON.stringify(bare));
+    assert.deepEqual(loadTokens(path.join(dir, 'bare.json')).print, print);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const css = themeCss({ ...tokens, print: { margin: { ...print.margin, left: 20, indent: 30 }, type: { ...print.type, body: 9, small: 6.5 } } });
+  assert.match(css, /@page \{[^}]*margin: 12mm 14mm 15mm 20mm;[^}]*font: 6\.5pt var\(--cp-font\)/);
+  const media = css.slice(css.indexOf('@media print'));
+  assert.match(media, /:root \{[^}]*--cp-print-indent: 30mm;[^}]*--cp-print-text-left: 50mm;[^}]*--cp-print-body: 9pt;/);
+  assert.match(media, /html \{[^}]*font-size: var\(--cp-print-body\); line-height: var\(--cp-print-leading\);/);
+});
+
+test('列印：摘要宣稱用 16 pt（設計層 print.type.summary），不沿用 24 pt 節標題', () => {
+  const media = themeCss().slice(themeCss().indexOf('@media print'));
+  assert.match(media, /:root \{[^}]*--cp-print-summary: 16pt;/);
+  assert.match(media, /\.summary h2 \{ font-size: var\(--cp-print-summary\);/);
+  assert.ok(media.indexOf('.summary h2 {') > media.indexOf('h2 { font-size: var(--cp-print-heading)'), '摘要規則在 h2 之後才蓋得掉');
+});
+
+test('列印：wide 表下方的附註與來源也從 22 mm 線起；表格下方留 4 mm', () => {
+  const media = themeCss().slice(themeCss().indexOf('@media print'));
+  assert.match(media, /\.table-scroll\.wide \+ \.exhibit-note \{ margin-left: calc\(-1 \* var\(--cp-print-indent\)\); max-width: none; \}/);
+  assert.match(media, /\.table-scroll \{ margin-bottom: 4mm; \}/);
+});
+
+test('清單與流程的小標自成一行，說明接在下一行（螢幕與列印）', () => {
+  const css = themeCss();
+  assert.match(css.slice(0, css.indexOf('@page')), /\.diagnosis strong, \.flow strong \{ display: block; \}/);
+});
+
+test('report.js 會自己建立輸出資料夾', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-report-cli-'));
+  try {
+    const input = path.join(dir, 'report.json'), output = path.join(dir, 'new', 'deeper', 'report.html');
+    writeFileSync(input, JSON.stringify({ title: '測試', message: '帶走這句', sections: [{ claim: '判斷', blocks: [{ type: 'text', text: '內文' }] }] }));
+    const run = spawnSync(process.execPath, [new URL('../scripts/report.js', import.meta.url).pathname, input, output], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(readFileSync(output, 'utf8'), /<main class="report">/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
