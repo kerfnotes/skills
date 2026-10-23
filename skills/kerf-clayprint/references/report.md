@@ -8,7 +8,7 @@
 2. 寫 `out/report.json`：封面、摘要，再依判斷寫各節的元件。摘要左側放建議，右側只放支撐它的數字。欄位見下方〈report.json〉。
 3. 有數據才放圖。每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），在 `chart` 元件填相對於 `report.json` 的路徑。圖與表各自自動編號：圖上方是「圖 N」標籤與標題，圖下方的圖說由圖表 JSON 的單位、期間、`note`、元件的 `note` 與來源自動組成，所以圖表 JSON 必須填 `source`；表格同樣「表 N」與標題在上，元件填了 `note` 或 `source` 就在表下方列出。無數字時使用段落、清單或流程。
 4. 執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再執行 `node evals/check-report.mjs out/report.html script.md`，核對可見文字與 SVG 數字、未填範本標記及每圖來源。座標軸刻度（`data-tick`）和簡報驗收一樣不核對，產生器加的「圖 N」「表 N」標籤（`data-label`）也不核對；資料標籤與衍生值仍須來自原稿，或在同節寫出可核對的加減算式。範例：`node scripts/report.js examples/report.json out/report.html`，再 `node evals/check-report.mjs out/report.html evals/fixtures/explain-script.md`。
-5. 要列印就依下列指令輸出 PDF 並逐頁看 PDF，檢查分頁、圖表與表格有無切斷；要轉寄就用瀏覽器看手機寬度，檢查閱讀順序與表格橫向捲動。驗收器無法代替視覺檢查。
+5. 執行 `node scripts/pdf.js out/report.html out/print` 輸出 PDF（見下方〈列印 PDF〉），處理警告後逐頁看 `page-NN.png`，檢查分頁、圖表與表格有無切斷；要轉寄就用瀏覽器看手機寬度，檢查閱讀順序與表格橫向捲動。驗收器無法代替視覺檢查。
 6. 交付 HTML、`report.json` 與每張圖的輸入 JSON。和簡報一樣，交付說明集中列出：讀者要帶走的那句話、缺的資料、時間不夠還沒修好的地方。
 
 ## report.json
@@ -37,20 +37,23 @@
 
 ## 列印 PDF
 
-以下從 skill 根目錄執行，會把範例報告印到 `out/report.pdf`。正式交付時換成自己的 HTML 檔名。使用 Chrome 的列印引擎即可，不需要另寫瀏覽器自動化程式。
-
-macOS：
+驗收通過後，從 skill 根目錄執行（範例：先 `node scripts/report.js examples/report.json out/report.html`）：
 
 ```sh
-mkdir -p out
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/out/report.pdf" "file://$PWD/examples/report.html"
+node scripts/pdf.js out/report.html out/print
 ```
 
-一般系統擇一：
+第二個參數是輸出資料夾，會產生 `report.pdf`（檔名沿用 HTML 主檔名）、每頁 `page-NN.png` 與整份縮圖 `sheet.png`。預設 A4 白紙；`--letter` 改印 Letter，`--paper clay` 改印米色滿版，兩者可並用。這兩個選項會在 HTML 同一資料夾寫一份暫存副本並在 `<html>` 加上 `data-size="letter"`、`data-paper="clay"`，印完即刪除，來源 HTML 不變。
 
-```sh
-google-chrome --headless --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/out/report.pdf" "file://$PWD/examples/report.html"
-chromium --headless --disable-gpu --no-pdf-header-footer --print-to-pdf="$PWD/out/report.pdf" "file://$PWD/examples/report.html"
-```
+腳本依序找 `CLAYPRINT_CHROME` 指定的執行檔、PATH 上的 `google-chrome`、`chromium`、`chrome`、`msedge`，再找 macOS 與 Windows 的 Chrome、Chromium、Edge、Brave 安裝位置，以 `--headless --disable-gpu --no-pdf-header-footer --print-to-pdf` 列印；另需 Poppler 的 `pdftoppm`、`pdftotext` 與 `ffmpeg`。找不到瀏覽器時結束碼非零並提示設定 `CLAYPRINT_CHROME`；此時 PDF 標「受阻」並附原因，HTML 與驗收照常交付。
+
+結尾固定印「印出 N 頁（A4）；填滿率 79／97／67／41%。」。填滿率是每頁最後一列墨水在版心（上 12 mm 到離底 15 mm）的高度占比，第 1 頁從紙邊算起。下列警告只提醒、不改結束碼，逐條處理後重印：
+
+| 警告 | 意思與改法 |
+| --- | --- |
+| 第 N 頁只填 X% | 末頁以外低於 70%，通常是下一個圖或表放不下被推到下一頁。把下一節開頭提上來，或把這頁的圖設 `wide: true` 拉高。 |
+| 第 N 頁內容超出右邊界約 M mm | 有墨水伸到離右紙邊 14 mm 以外，Chrome 會整頁縮小。減少表格欄數或設 `wide: true`。 |
+| 圖 N 的標題在第 A 頁、來源在第 B 頁 | 圖被切開。縮短圖上方的段落，或改小圖。 |
+| 表 N 跨第 A–B 頁 | 八列以內的表格被切開（只檢查有 `source` 的表）。縮短表上方的段落。 |
 
 印完逐頁檢查，尤其留意多頁表格、圖說與圖是否分離，以及封面與章節開頭的位置。轉寄前在手機寬度看一次；寬表格應在自己的容器內橫向捲動，頁面本身不應橫向溢出。

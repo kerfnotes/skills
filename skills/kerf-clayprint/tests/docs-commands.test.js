@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const docs = ['README.md', 'docs/install.md', 'docs/make-it-yours.md', 'design/brief.md'];
+const docs = ['README.md', 'SKILL.md', 'references/report.md', 'docs/install.md', 'docs/make-it-yours.md', 'design/brief.md'];
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 
 test('起點文件中的 node／npm 指令指向現有檔案與 npm 任務', () => {

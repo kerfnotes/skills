@@ -76,13 +76,13 @@ node scripts/png.js out/install-check/rank.svg out/install-check/rank.png
 
 ## 4. 整頁預覽
 
-核心產檔不需要 PowerPoint。整頁預覽另外需要 PowerPoint 或 LibreOffice 轉成 PDF，再用 `pdftoppm`（Poppler）與 `ffmpeg` 產生圖片。先檢查已有工具，只補缺少的項目。
+核心產檔不需要 PowerPoint。整頁預覽另外需要 PowerPoint 或 LibreOffice 轉成 PDF，再用 `pdftoppm`（Poppler）與 `ffmpeg` 產生圖片。報告 PDF（`node scripts/pdf.js out/report.html out/print`）改用 Chrome、Edge、Chromium 或 Brave 列印，另需 Poppler 的 `pdftoppm`、`pdftotext` 與 `ffmpeg`；瀏覽器不在下表位置時，設環境變數 `CLAYPRINT_CHROME` 指向執行檔。先檢查已有工具，只補缺少的項目。
 
-| 系統 | 預覽工具與安裝方式 |
-| --- | --- |
-| macOS | 有 `/Applications/Microsoft PowerPoint.app` 時沿用 PowerPoint；其餘用 LibreOffice。Homebrew 的工具套件為 `poppler`、`ffmpeg`，LibreOffice 用 `brew install --cask libreoffice` 安裝。 |
-| Debian／Ubuntu | 使用 LibreOffice；有安裝權限時用 `apt-get install libreoffice poppler-utils ffmpeg`。 |
-| Windows | 自動預覽使用 LibreOffice，單有 Windows PowerPoint 不足。用現有 winget／Scoop 查找並安裝 LibreOffice、Poppler、FFmpeg；將 `pdftoppm.exe` 與 `ffmpeg.exe` 的所在目錄加入本次命令的 PATH。 |
+| 系統 | 預覽工具與安裝方式 | 報告 PDF 的瀏覽器 |
+| --- | --- | --- |
+| macOS | 有 `/Applications/Microsoft PowerPoint.app` 時沿用 PowerPoint；其餘用 LibreOffice。Homebrew 的工具套件為 `poppler`、`ffmpeg`，LibreOffice 用 `brew install --cask libreoffice` 安裝。 | `/Applications` 裡的 Google Chrome、Chromium、Microsoft Edge 或 Brave Browser 擇一。 |
+| Debian／Ubuntu | 使用 LibreOffice；有安裝權限時用 `apt-get install libreoffice poppler-utils ffmpeg`。 | PATH 上的 `google-chrome` 或 `chromium`。 |
+| Windows | 自動預覽使用 LibreOffice，單有 Windows PowerPoint 不足。用現有 winget／Scoop 查找並安裝 LibreOffice、Poppler、FFmpeg；將 `pdftoppm.exe` 與 `ffmpeg.exe` 的所在目錄加入本次命令的 PATH。 | 預設用內建的 Edge；Program Files 下的 Chrome 也可。 |
 
 在可執行安裝的環境，由 agent 補齊工具後執行：
 

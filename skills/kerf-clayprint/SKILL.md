@@ -54,6 +54,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 讀者要連續閱讀、轉寄或列印時，依 [報告流程](references/report.md)寫 `out/report.json`。
 先寫讀者要帶走的一句話與每節判斷；有資料才加圖，圖表 JSON 填單位、期間與來源，圖說會自動組成。
 執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再用 `node evals/check-report.mjs out/report.html script.md` 核對。
+核對通過後執行 `node scripts/pdf.js out/report.html out/print` 印成 PDF，處理填滿率與切頁警告並逐頁看 `page-NN.png`；找不到瀏覽器時 PDF 標「受阻」並附原因，其餘步驟繼續。
 
 ## 套用到既有檔案
 
