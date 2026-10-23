@@ -356,39 +356,43 @@ export function validateStory(story) {
       if (page.visual != null) check(emptyCell(page.visual), 'visual', '將主視覺移至 evidence 等對應版型，或省略此頁不使用的 visual');
       return;
     }
-    const v = page.visual;
-    check(isObject(v), 'visual', `提供 ${page.type} 的主視覺物件，參考 examples/story.json`);
-    if (page.type === 'evidence') {
-      check(CHART_KINDS.has(v.kind), 'visual.kind', `選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
-      if (v.native !== undefined) check(typeof v.native === 'boolean', 'visual.native', '填入 true 或 false');
-      if (v.digits !== undefined) digits(v.digits, 'visual.digits');
-      for (const key of ['categories', 'x', 'periods', 'rowLabels', 'colLabels']) if (v[key] !== undefined) check(Array.isArray(v[key]) && v[key].every((s) => typeof s === 'string'), `visual.${key}`, '改成文字字串陣列');
+    // Evidence charts and chart cells in panels go through the same checks; who names the cell in repair hints.
+    const checkChart = (v, path, who = '') => {
+      check(CHART_KINDS.has(v.kind), `${path}.kind`, `${who ? `為${who}` : ''}選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
+      if (v.native !== undefined) check(typeof v.native === 'boolean', `${path}.native`, '填入 true 或 false');
+      if (v.digits !== undefined) digits(v.digits, `${path}.digits`);
+      for (const key of ['categories', 'x', 'periods', 'rowLabels', 'colLabels']) if (v[key] !== undefined) check(Array.isArray(v[key]) && v[key].every((s) => typeof s === 'string'), `${path}.${key}`, '改成文字字串陣列');
       if (v.columns && Array.isArray(v.columns)) v.columns.forEach((c, j) => {
-        check(isObject(c), `visual.columns[${j}]`, '改成欄位物件');
-        str(c.name, `visual.columns[${j}].name`, true);
-        if (c.digits !== undefined) digits(c.digits, `visual.columns[${j}].digits`);
+        check(isObject(c), `${path}.columns[${j}]`, '改成欄位物件');
+        str(c.name, `${path}.columns[${j}].name`, true);
+        if (c.digits !== undefined) digits(c.digits, `${path}.columns[${j}].digits`);
       });
       if (v.refs !== undefined) {
-        check(Array.isArray(v.refs), 'visual.refs', '改成參考線陣列');
+        check(Array.isArray(v.refs), `${path}.refs`, '改成參考線陣列');
         v.refs.forEach((r, j) => {
-          check(isObject(r), `visual.refs[${j}]`, '改成參考線物件');
-          for (const key of ['x', 'y']) if (r[key] != null) check(isNumber(r[key]), `visual.refs[${j}].${key}`, '填入有限數字');
-          check(v.kind === 'histogram' ? isNumber(r.x) : isNumber(r.x) || isNumber(r.y), `visual.refs[${j}]`, '提供參考線的數字座標');
-          optional(r, ['label'], `visual.refs[${j}].`);
+          check(isObject(r), `${path}.refs[${j}]`, '改成參考線物件');
+          for (const key of ['x', 'y']) if (r[key] != null) check(isNumber(r[key]), `${path}.refs[${j}].${key}`, '填入有限數字');
+          check(v.kind === 'histogram' ? isNumber(r.x) : isNumber(r.x) || isNumber(r.y), `${path}.refs[${j}]`, '提供參考線的數字座標');
+          optional(r, ['label'], `${path}.refs[${j}].`);
         });
       }
       if (v.kind === 'matrix') {
-        if (v.domain != null) check(Array.isArray(v.domain) && v.domain.length === 2 && v.domain.every(isNumber) && v.domain[0] < v.domain[1], 'visual.domain', '提供遞增的兩個有限數字，例如 [0, 10]');
+        if (v.domain != null) check(Array.isArray(v.domain) && v.domain.length === 2 && v.domain.every(isNumber) && v.domain[0] < v.domain[1], `${path}.domain`, '提供遞增的兩個有限數字，例如 [0, 10]');
         if (v.split != null) {
-          check(isObject(v.split), 'visual.split', '改成包含 x 或 y 的分割線物件');
-          for (const key of ['x', 'y']) if (v.split[key] != null) check(isNumber(v.split[key]), `visual.split.${key}`, '填入有限數字');
+          check(isObject(v.split), `${path}.split`, '改成包含 x 或 y 的分割線物件');
+          for (const key of ['x', 'y']) if (v.split[key] != null) check(isNumber(v.split[key]), `${path}.split.${key}`, '填入有限數字');
         }
       }
       try { prepare(v); }
       catch (error) {
         const detail = /[\u3400-\u9fff]/.test(error.message) ? `（${error.message}）` : '';
-        check(false, 'visual', `依 examples/${v.kind}.json 修正圖表欄位、資料型別與陣列長度${detail}`);
+        check(false, path, `依 examples/${v.kind}.json 修正${who ? `${who}的` : ''}圖表欄位、資料型別與陣列長度${detail}`);
       }
+    };
+    const v = page.visual;
+    check(isObject(v), 'visual', `提供 ${page.type} 的主視覺物件，參考 examples/story.json`);
+    if (page.type === 'evidence') {
+      checkChart(v, 'visual');
     } else if (page.type === 'numbers' || page.type === 'summary') {
       if (page.type === 'summary') {
         str(v.lead, 'visual.lead', true);
@@ -489,17 +493,7 @@ export function validateStory(story) {
         if (cell.note != null) check(typeof cell.note === 'string', `${path}.note`, `把${nth}的註改成文字字串`);
         const c = cell.visual;
         if (typeof c === 'string') return check(c.trim().length > 0, `${path}.visual`, `為${nth}填入非空白文字`);
-        if (isObject(c) && c.kind !== undefined) {
-          check(CHART_KINDS.has(c.kind), `${path}.visual.kind`, `為${nth}選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
-          if (c.native !== undefined) check(typeof c.native === 'boolean', `${path}.visual.native`, '填入 true 或 false');
-          if (c.digits !== undefined) digits(c.digits, `${path}.visual.digits`);
-          try { prepare(c); }
-          catch (error) {
-            const detail = /[\u3400-\u9fff]/.test(error.message) ? `（${error.message}）` : '';
-            check(false, `${path}.visual`, `依 examples/${c.kind}.json 修正${nth}的圖表欄位、資料型別與陣列長度${detail}`);
-          }
-          return;
-        }
+        if (isObject(c) && c.kind !== undefined) return checkChart(c, `${path}.visual`, nth);
         if (isObject(c) && c.items !== undefined) {
           objects(c.items, `${path}.visual.items`);
           return c.items.forEach((item, k) => {

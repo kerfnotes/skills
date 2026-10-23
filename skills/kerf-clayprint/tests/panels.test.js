@@ -149,6 +149,20 @@ test('panels：格數不是 2、格內缺 title、visual 種類不支援或 spli
   assert.match(ok.stderr, /驗收失敗：第 2 頁：pages\[1\]\.visual\.items .*恰好兩格/);
 });
 
+test('panels：格內圖表與 evidence 同一套檢查，x、columns、refs 錯誤指出格內欄位', () => {
+  const story = (visual) => ({ mode: 'read', pages: [{ type: 'panels', claim: '兩格', sources: { source: '虛構' }, visual: { items: [
+    { title: '左', visual }, { title: '右', visual: '文字' }] } }] });
+  const cases = [
+    [{ kind: 'line', x: [2024, 2025], series: [{ name: '甲', values: [1, 2] }] }, /pages\[0\]\.visual\.items\[0\]\.visual\.x 格式不正確；請改成文字字串陣列/],
+    [{ kind: 'table', columns: [{ name: '項目' }, { name: ' ' }], rows: [['甲', 1]] }, /pages\[0\]\.visual\.items\[0\]\.visual\.columns\[1\]\.name 格式不正確/],
+    [{ kind: 'rank', rows: [{ label: '甲', value: 1 }], refs: [{ label: '目標' }] }, /pages\[0\]\.visual\.items\[0\]\.visual\.refs\[0\] 格式不正確；請提供參考線的數字座標/],
+  ];
+  for (const [visual, pattern] of cases) {
+    assert.throws(() => validateStory(story(visual)), pattern);
+    assert.throws(() => validateStory({ pages: [{ type: 'evidence', claim: '證據', visual }] }), new RegExp(pattern.source.replace('pages\\[0\\]\\.visual\\.items\\[0\\]\\.visual', 'pages\\[0\\]\\.visual')));
+  }
+});
+
 test('panels：簡報版 story 使用時，validateStory 與驗收器都說明只有閱讀版支援', () => {
   const { mode, ...present } = fixture();
   assert.equal(mode, 'read');
