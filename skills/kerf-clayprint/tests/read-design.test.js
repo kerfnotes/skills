@@ -47,7 +47,7 @@ test('閱讀設計層：字級、上下邊界與新字級鍵只在閱讀模式�
   const present = JSON.parse(readFileSync(path.join(root, 'design/tokens.json'), 'utf8'));
   const read = child(code, 'read');
   assert.deepEqual({ ...read, margin: undefined, capacity: undefined }, { title: 44, body: 22, label: 20, chart: 18, source: 16, minimum: 16, margin: undefined, capacity: undefined });
-  assert.deepEqual(read.margin, { ...present.margin, top: 45, bottom: 40 });
+  assert.deepEqual(read.margin, { ...present.margin, top: 45, bottom: 40, ledeGap: 32, takeawayGap: 32 });
   assert.deepEqual(read.capacity, {
     summary: [2, 6], summaryBody: 10, list: [3, 8], listBody: 3, numbers: [2, 8], numbersNote: 3,
     compare: [2, 5], compareRows: 8, process: [3, 8], columns: [2, 5], columnsBody: 6, tableRows: 14, closeRows: 14,
@@ -188,7 +188,8 @@ test('閱讀版的填滿門檻、points 點數與 panels 註行數放在設計�
 });
 
 test('閱讀版 list、compare、close、summary 以內容自然高度算填滿率：3 項清單警告、8 項不警告', () => {
-  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：加 takeaway 或 points，或併入相鄰頁。$/;
+  // These layouts take no takeaway or points, so the advice asks for items or body text instead.
+  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：加項目或正文，或併入相鄰頁。$/;
   const list = (n) => [{ type: 'list', claim: '清單', sources, visual: { items: Array.from({ length: n }, (_, i) => ({ heading: `問題${i + 1}`, body: '一行說明' })) } }];
   assert.ok(readWarnings(list(3)).some((w) => fill.test(w)), readWarnings(list(3)).join('\n'));
   assert.ok(!readWarnings(list(8)).some((w) => fill.test(w)), readWarnings(list(8)).join('\n'));
@@ -198,4 +199,47 @@ test('閱讀版 list、compare、close、summary 以內容自然高度算填滿�
     { type: 'summary', claim: '摘要', sources, visual: { lead: '先統一欄位', items: [{ label: '時間', value: 18, unit: '小時' }, { label: '件數', value: 240 }] } },
   ];
   for (const page of sparsePages) assert.ok(readWarnings([page]).some((w) => fill.test(w)), `${page.type}\n${readWarnings([page]).join('\n')}`);
+});
+
+// Text boxes with their height and line spacing: exact (spcPts, hundredths of a point) or multiple (spcPct).
+function spaced(xml) {
+  return xml.split('<p:sp>').slice(1).map((sp) => ({
+    y: Number(sp.match(/<a:off x="\d+" y="(\d+)"\/>/)?.[1]) / EMU,
+    h: Number(sp.match(/<a:ext cx="\d+" cy="(\d+)"\/>/)?.[1]) / EMU,
+    text: [...sp.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]).join(''),
+    pts: [...new Set([...sp.matchAll(/<a:spcPts val="(\d+)"\/><\/a:lnSpc>/g)].map((m) => Number(m[1])))],
+    pct: [...new Set([...sp.matchAll(/<a:lnSpc><a:spcPct val="(\d+)"/g)].map((m) => Number(m[1])))],
+  })).filter((s) => s.text);
+}
+
+test('閱讀版用精確行距排字，與高度估算一致；標題到 lede、欄正文到 takeaway 至少隔一個正文行高；簡報版不變', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-read-spacing-'));
+  try {
+    const page = { type: 'columns', claim: '標'.repeat(40), lede: '導言一行', sources,
+      visual: { items: [{ heading: '甲', body: '文'.repeat(36 * 3) }, { heading: '乙', body: '短' }] } };
+    const out = path.join(dir, 'read.pptx');
+    buildIn('read', { title: '行距測試', pages: [{ ...page, takeaway: '兩個方向都要做，先做甲。' }] }, out);
+    const boxes = spaced(await (await JSZip.loadAsync(readFileSync(out))).file('ppt/slides/slide1.xml').async('string'));
+    const find = (text) => boxes.find((s) => s.text === text);
+    const title = find(page.claim), lede = find(page.lede), body = find(page.visual.items[0].body), takeaway = find('兩個方向都要做，先做甲。');
+    // 44 px × 1.25 = 27.5 pt; 22 px × 1.45 = 15.95 pt; 20 px × 1.45 = 14.5 pt. No box keeps a multiple.
+    assert.deepEqual(title.pts, [2750]);
+    assert.deepEqual(body.pts, [1595]);
+    assert.deepEqual(takeaway.pts, [1450]);
+    assert.ok(boxes.every((s) => s.pct.length === 0), JSON.stringify(boxes.filter((s) => s.pct.length)));
+    const line = 22 * 1.45;
+    assert.ok(lede.y - (title.y + title.h) >= line, `標題到 lede ${lede.y - (title.y + title.h)} px`);
+    assert.ok(takeaway.y - (body.y + body.h) >= line, `正文到 takeaway ${takeaway.y - (body.y + body.h)} px`);
+    const { margin } = JSON.parse(readFileSync(path.join(root, 'design/read.json'), 'utf8'));
+    assert.ok(margin.ledeGap >= line && margin.takeawayGap >= line);
+
+    const present = (await build({ title: '行距測試', pages: [page] })).buffer;
+    const pboxes = spaced(await (await JSZip.loadAsync(present)).file('ppt/slides/slide1.xml').async('string'));
+    const ptitle = pboxes.find((s) => s.text === page.claim), plede = pboxes.find((s) => s.text === page.lede);
+    assert.deepEqual(ptitle.pct, [125000]);
+    assert.ok(pboxes.every((s) => s.pts.length === 0));
+    assert.ok(Math.abs(plede.y - (ptitle.y + ptitle.h) - 12) < 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

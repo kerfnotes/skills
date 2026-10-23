@@ -1,6 +1,7 @@
 // Build a PowerPoint deck from story.json: 9 layouts, every page with a source row and page number.
 // node scripts/pptx.js story.json deck.pptx
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
 import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, prepare, decimalsOf, shownDigits, textOn } from './core.js';
@@ -20,12 +21,15 @@ const LABEL = T.type.label.px;
 const CHART = (T.type.chart ?? T.type.label).px, SOURCE = (T.type.source ?? T.type.label).px;
 const LH = 1.45;
 const INNER = W - 2 * M.x;
+// PowerPoint scales a line-spacing multiple by the font's own line height (about 1.2 em), so read decks set exact points
+// equal to the estimate (px × multiple) and render as tall as the layouts plan. Presentation decks keep the multiple.
+const spacing = (px, multiple) => (MODE === 'read' ? { lineSpacing: pt(px * multiple) } : { lineSpacingMultiple: multiple });
 
 function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2, bullet } = {}) {
   if (str === '' || str === null || str === undefined) return;
   slide.addText(String(str), {
     x: inch(x), y: inch(y), w: inch(w), h: inch(h), fontFace: SLIDE_FONT, fontSize: pt(px), color: hex(color),
-    bold: !!bold, align, valign, margin: 0, lineSpacingMultiple: lineHeight, fit: 'none', ...(bullet ? { bullet } : {}),
+    bold: !!bold, align, valign, margin: 0, ...spacing(px, lineHeight), fit: 'none', ...(bullet ? { bullet } : {}),
   });
 }
 
@@ -68,7 +72,9 @@ function checkWrap(ctx, field, str, px, width, limit, orphan = false) {
 // A read deck has no presenter to carry a near-empty page. Only layouts whose height comes from the content call this.
 function sparse(ctx, used, avail) {
   if (MODE !== 'read' || avail <= 0 || used / avail >= CAP.minFill) return;
-  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 ${Math.round(CAP.minFill * 100)}%：加 takeaway 或 points，或併入相鄰頁。`);
+  // list, compare, close and summary take no takeaway or points.
+  const fix = ['list', 'compare', 'close', 'summary'].includes(ctx.page.type) ? '加項目或正文' : '加 takeaway 或 points';
+  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 ${Math.round(CAP.minFill * 100)}%：${fix}，或併入相鄰頁。`);
 }
 
 function sourceItems(sources = {}, missing = []) {
@@ -130,6 +136,8 @@ const DISPLAY_LH = 1.35;
 const TITLE = T.type.title.px;
 // Cover, section and content titles all allow two estimated lines; statement's claim is its body and has its own height check.
 const TITLE_LINES = 2;
+// Read decks widen these to a body line (design/read.json); presentation decks keep 12 and 32.
+const LEDE_GAP = M.ledeGap ?? 12, TAKEAWAY_GAP = M.takeawayGap ?? 32;
 
 function title(slide, str, color = C.title) {
   const n = lines(str, TITLE, INNER);
@@ -142,8 +150,8 @@ function contentTop(slide, ctx, color = C.title, ledeColor = C.textSecondary) {
   const bottom = title(slide, ctx.page.claim, color);
   if (!ctx.page.lede) return bottom + M.contentGap;
   checkWrap(ctx, 'lede', ctx.page.lede, LABEL, INNER, 1);
-  text(slide, ctx.page.lede, { x: M.x, y: bottom + 12, w: INNER, h: LABEL * LH, color: ledeColor });
-  return bottom + 12 + LABEL * LH + M.contentGap;
+  text(slide, ctx.page.lede, { x: M.x, y: bottom + LEDE_GAP, w: INNER, h: LABEL * LH, color: ledeColor });
+  return bottom + LEDE_GAP + LABEL * LH + M.contentGap;
 }
 
 // ---- charts on evidence pages
@@ -577,7 +585,7 @@ LAYOUT.statement = (slide, ctx) => {
   const paragraphs = runs.flatMap(({ text, options }) => text.split(/\r\n|\r|\n/).map((text, i, parts) => ({
     text, options: { ...options, breakLine: i < parts.length - 1 },
   })));
-  slide.addText(paragraphs, { x: inch(M.x), y: inch(top), w: inch(width), h: inch(n * S * 1.25), margin: 0, valign: 'top', lineSpacingMultiple: 1.25 });
+  slide.addText(paragraphs, { x: inch(M.x), y: inch(top), w: inch(width), h: inch(n * S * 1.25), margin: 0, valign: 'top', ...spacing(S, 1.25) });
   if (page.lede) {
     checkWrap(ctx, 'lede', page.lede, LABEL, width, 1);
     text(slide, page.lede, { x: M.x, y: top + n * S * 1.25 + 24, w: width, h: LABEL * LH });
@@ -921,9 +929,9 @@ LAYOUT.columns = (slide, ctx) => {
     + lines(item.heading, T.type.sub.px, cw) * T.type.sub.px * 1.2 + 18
     + (item.body ? lines(item.body, T.type.body.px, cw) * T.type.body.px * LH : 0)));
   const takeawayH = page.takeaway ? lines(page.takeaway, LABEL, INNER) * LABEL * LH : 0;
-  const blockH = colsH + (takeawayH ? 32 + takeawayH : 0);
+  const blockH = colsH + (takeawayH ? TAKEAWAY_GAP + takeawayH : 0);
   const top = topBase;
-  if (page.takeaway) text(slide, page.takeaway, { x: M.x, y: top + colsH + 32, w: INNER, h: takeawayH, color: C.text, bold: true, lineHeight: LH });
+  if (page.takeaway) text(slide, page.takeaway, { x: M.x, y: top + colsH + TAKEAWAY_GAP, w: INNER, h: takeawayH, color: C.text, bold: true, lineHeight: LH });
   if (blockH > end - topBase) ctx.warn(`第 ${ctx.n} 頁並列重點高度不足`);
   sparse(ctx, blockH, end - topBase);
   items.forEach((item, i) => {
@@ -993,7 +1001,7 @@ LAYOUT.panels = (slide, ctx) => {
         }
         iy += 16;
       });
-      if (iy - 16 > y + area.h) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格清單高度超出格內空間；請刪項目或拆頁。`);
+      if (iy - 16 > y + area.h) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格清單高度超出格內空間：請刪項目或拆頁。`);
       bottom = iy - 16;
     }
     // Chart and table notes line up at the foot of both cells; text and list notes follow their content.
@@ -1307,6 +1315,7 @@ if (isMain(import.meta.url)) {
     const story = JSON.parse(readFileSync(input, 'utf8'));
     if (rerunForMode(story)) process.exit();
     const { buffer, warnings } = await build(story);
+    mkdirSync(dirname(output), { recursive: true });
     writeFileSync(output, buffer);
     for (const w of warnings) console.error(`警告：${w}`);
     console.log(`已輸出：${output}（${story.pages.length} 頁）`);

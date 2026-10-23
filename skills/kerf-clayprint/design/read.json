@@ -16,7 +16,7 @@
     "source": 16,
     "minimum": 16
   },
-  "margin": { "top": 45, "bottom": 40 },
+  "margin": { "top": 45, "bottom": 40, "ledeGap": 32, "takeawayGap": 32 },
   "chartArea": {
     "evidence": { "width": 1000, "height": 669 }
   },
