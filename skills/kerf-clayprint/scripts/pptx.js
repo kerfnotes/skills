@@ -594,7 +594,7 @@ LAYOUT.evidence = (slide, ctx) => {
   const ruleY = sourceRow(slide, ctx);
   const end = ruleY - M.sourceGap;
   if (top >= end) ctx.warn(`第 ${ctx.n} 頁證據頁高度不足`);
-  if (page.visual?.kind === 'table' && page.visual.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁表格是 ${page.visual.rows.length} 列，規格是至多 ${CAP.tableRows} 列`);
+  if (page.visual?.kind === 'table' && page.visual.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁表格是 ${page.visual.rows.length} 列，規格是至多 ${CAP.tableRows} 列：刪列或合併相近的列，或拆成兩頁。`);
   const metric = page.metric && !emptyCell(page.metric) ? page.metric : null;
   const side = page.takeaway || page.points?.length || page.note || metric;
   if (MODE === 'read' && !page.takeaway && !page.points?.length && !page.note) ctx.warn(`第 ${ctx.n} 頁右欄空白：閱讀版的 evidence 要有 takeaway 或 points。`);
@@ -617,7 +617,7 @@ LAYOUT.evidence = (slide, ctx) => {
     y += h + 24;
   }
   if (page.points) {
-    if (outside(page.points.length, CAP.points)) ctx.warn(`第 ${ctx.n} 頁 points 是 ${page.points.length} 點，規格是 ${CAP.points.join('～')} 點`);
+    if (outside(page.points.length, CAP.points)) ctx.warn(`第 ${ctx.n} 頁 points 是 ${page.points.length} 點，規格是 ${CAP.points.join('～')} 點：增刪 points，細節移到 note。`);
     page.points.forEach((p, i) => {
       const h = checkWrap(ctx, `points[${i}]`, p, LABEL, w - LABEL, 2) * LABEL * LH;
       text(slide, p, { x, y, w, h, color: C.text, lineHeight: LH, bullet: { indent: pt(LABEL) } });
@@ -726,7 +726,7 @@ LAYOUT.compare = (slide, ctx) => {
   const { rows } = page.visual;
   const options = page.visual.options.map((o, index) => ({ ...o, index })).filter((o) => !emptyCell(page.visual.options[o.index]));
   if (outside(options.length, CAP.compare)) ctx.warn(`第 ${ctx.n} 頁比較方案是 ${options.length} 個，規格是 ${CAP.compare.join('～')} 個`);
-  if (rows.length > CAP.compareRows) ctx.warn(`第 ${ctx.n} 頁比較列是 ${rows.length} 列，規格是至多 ${CAP.compareRows} 列`);
+  if (rows.length > CAP.compareRows) ctx.warn(`第 ${ctx.n} 頁比較列是 ${rows.length} 列，規格是至多 ${CAP.compareRows} 列：刪掉次要的比較列，或拆成兩頁。`);
   const labelW = options.length >= 4 ? 240 : 300, gap = options.length >= 4 ? 32 : 48;
   const ow = (INNER - labelW - gap * options.length) / options.length;
   const end = ruleY - M.sourceGap;
@@ -957,10 +957,10 @@ LAYOUT.panels = (slide, ctx) => {
     checkWrap(ctx, `${path}.title`, cell.title, LABEL, w, 1);
     text(slide, cell.title, { x, y: top + 16, w, h: titleH, color: C.text, bold: true });
     const y = top + 16 + titleH + 16, area = { x, y, w, h: end - noteH - y };
-    if (area.h < 120) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格高度不足；請縮短註或拆頁。`);
+    if (area.h < 120) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格高度不足：縮短註或拆頁。`);
     let bottom = end;
     if (cell.model) {
-      if (v.kind === 'table' && v.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格表格是 ${v.rows.length} 列，規格是至多 ${CAP.tableRows} 列`);
+      if (v.kind === 'table' && v.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁第 ${j + 1} 格表格是 ${v.rows.length} 列，規格是至多 ${CAP.tableRows} 列：刪列，或把這張表移到 evidence 頁。`);
       chart(slide, v, area, { ...ctx, model: cell.model });
     } else if (typeof v === 'string') {
       const n = checkWrap(ctx, `${path}.visual`, v, B, w, Math.max(0, Math.floor(area.h / (B * LH))));
@@ -1037,7 +1037,7 @@ LAYOUT.close = (slide, ctx) => {
   const top = contentTop(slide, ctx, ink, muted);
   const ruleY = sourceRow(slide, ctx, { line: muted, ink: muted });
   const rows = page.visual.rows.map((r, index) => ({ ...r, index })).filter((r) => !emptyCell(page.visual.rows[r.index]));
-  if (rows.length > CAP.closeRows) ctx.warn(`第 ${ctx.n} 頁收尾待辦是 ${rows.length} 列，規格是至多 ${CAP.closeRows} 列`);
+  if (rows.length > CAP.closeRows) ctx.warn(`第 ${ctx.n} 頁收尾待辦是 ${rows.length} 列，規格是至多 ${CAP.closeRows} 列：合併同一負責人的待辦，或拆成兩頁。`);
   const ownerW = 420, dueW = 240, gap = 48;
   const taskW = INNER - ownerW - dueW - 2 * gap;
   const cols = [[M.x, taskW, '下一步', 'task'], [M.x + taskW + gap, ownerW, '負責人', 'owner'], [M.x + taskW + ownerW + 2 * gap, dueW, '期限', 'due']]

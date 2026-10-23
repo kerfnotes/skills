@@ -163,6 +163,13 @@ test('panels：格內圖表與 evidence 同一套檢查，x、columns、refs 錯
   }
 });
 
+test('panels：格內表格超過列數上限時警告並給改法', () => {
+  const rows = Array.from({ length: 15 }, (_, i) => [`列${i}`, i]);
+  const warnings = buildRead({ mode: 'read', pages: [{ type: 'panels', claim: '兩格', sources: { source: '虛構' }, visual: { items: [
+    { title: '左', visual: { kind: 'table', columns: [{ name: '項目' }, { name: '值' }], rows } }, { title: '右', visual: '文字' }] } }] });
+  assert.ok(warnings.includes('第 1 頁第 1 格表格是 15 列，規格是至多 14 列：刪列，或把這張表移到 evidence 頁。'), warnings.join('\n'));
+});
+
 test('panels：簡報版 story 使用時，validateStory 與驗收器都說明只有閱讀版支援', () => {
   const { mode, ...present } = fixture();
   assert.equal(mode, 'read');

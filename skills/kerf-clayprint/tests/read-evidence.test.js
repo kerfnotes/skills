@@ -82,8 +82,8 @@ test('points 少於 2、多於 4 或單點超過兩行時警告並指出頁碼',
     evidence({ points: ['一', '二', '三', '四', '五'] }),
     evidence({ points: ['點'.repeat(56), '點'.repeat(57)] }),
   ]);
-  assert.ok(warnings.includes('第 1 頁 points 是 1 點，規格是 2～4 點'), warnings.join('\n'));
-  assert.ok(warnings.includes('第 2 頁 points 是 5 點，規格是 2～4 點'), warnings.join('\n'));
+  assert.ok(warnings.includes('第 1 頁 points 是 1 點，規格是 2～4 點：增刪 points，細節移到 note。'), warnings.join('\n'));
+  assert.ok(warnings.includes('第 2 頁 points 是 5 點，規格是 2～4 點：增刪 points，細節移到 note。'), warnings.join('\n'));
   assert.ok(!warnings.some((w) => /第 3 頁 points\[0\]/.test(w)), warnings.join('\n'));
   assert.ok(warnings.some((w) => /^第 3 頁 points\[1\]：估算 3 行，上限 2 行/.test(w)), warnings.join('\n'));
 });
