@@ -10,7 +10,7 @@ export const MODE = mode;
 
 // Report print page: margins in mm (indent and gutter are the body padding inside the 22 / 14 mm @page lines), type in pt.
 const PRINT = { margin: { top: 12, right: 14, bottom: 15, left: 22, indent: 28, gutter: 11 },
-  type: { body: 10.5, leading: 16, heading: 24, sub: 12, small: 7, cover: 30 } };
+  type: { body: 10.5, leading: 16, heading: 24, sub: 12, small: 7, cover: 30, summary: 16 } };
 
 // Explicit and environment paths follow cwd; the default follows this module.
 export function loadTokens(path = process.env.CLAYPRINT_TOKENS || fileURLToPath(new URL('../design/tokens.json', import.meta.url))) {

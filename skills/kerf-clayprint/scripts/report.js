@@ -1,7 +1,7 @@
 // Build a continuous-reading HTML report from report.json: cover, contents, summary, then sections of blocks.
 // node scripts/report.js report.json report.html
 // Markup and classes follow assets/report.html; charts come from scripts/svg.js, tables from the same model as the deck.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { T, formatValue, prepare, shownDigits } from './core.js';
 import { render, reportHeight } from './svg.js';
@@ -196,8 +196,8 @@ ${s.kicker ? `<p class="eyebrow">${esc(s.kicker)}</p>\n` : ''}<h2 id="${ids[i]}"
 ${body.join('\n')}${sources}
 </section>`);
   });
-  // The print footer reads the title from this CSS string; escape it for CSS first, then for the attribute.
-  const footerTitle = report.title.replace(/[\\']/g, '\\$&').replace(/\s+/g, ' ');
+  // The print footer reads the title and its separator from this CSS string; escape it for CSS first, then for the attribute.
+  const footerTitle = `${report.title.replace(/[\\']/g, '\\$&').replace(/\s+/g, ' ')} | `;
   const html = `<!doctype html>
 <html lang="zh-Hant" style="--report-title: '${esc(footerTitle)}'">
 <head>
@@ -230,6 +230,7 @@ if (isMain(import.meta.url)) {
       try { report = JSON.parse(readFileSync(input, 'utf8')); }
       catch { throw new Error(`無法讀取 ${input} 為 JSON；請確認路徑、雙引號與逗號。`); }
       const result = buildReport(report, { baseDir: dirname(input) });
+      mkdirSync(dirname(output), { recursive: true });
       writeFileSync(output, result.html);
       for (const w of result.warnings) console.error(`警告：${w}`);
       console.log(`完成：${result.sections} 節、${result.figures} 張圖，${result.warnings.length} 項警告 → ${output}`);

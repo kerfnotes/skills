@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Clayprint 簡報 skill：文字稿變成故事線與可編輯的 PowerPoint",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test \"tests/**/*.test.js\""
   },
   "dependencies": {
     "@resvg/resvg-js": "2.6.2",

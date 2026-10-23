@@ -94,7 +94,7 @@ test('pdf.js prints with the browser, rasterizes pages, and warns about fill, ov
 
     const fill = (last, from) => Math.round((last - from) / (bottom - from) * 100);
     assert.match(result.stdout, new RegExp(`印出 3 頁（A4）；填滿率 ${fill(bottom - 10, 0)}／${fill(300, top)}／${fill(150, top)}%。`));
-    assert.match(result.stderr, new RegExp(`第 2 頁只填 ${fill(300, top)}%：把下一節開頭提上來，或把這頁的圖設 wide: true 拉高。`));
+    assert.match(result.stderr, new RegExp(`第 2 頁只填 ${fill(300, top)}%：把被推到下一頁的整塊元件前移，或在它前面加一段文字。`));
     assert.doesNotMatch(result.stderr, /第 [13] 頁只填/);
     assert.match(result.stderr, /第 2 頁內容超出右邊界約 \d+ mm：減少表格欄數或設 wide: true。/);
     assert.doesNotMatch(result.stderr, /第 [13] 頁內容超出右邊界/);
@@ -119,11 +119,41 @@ test('Chrome shrinks a page whose content runs past the right edge: the body col
     const wide = pgm(rows(top + 10, 6), rows(top + 200, 8).map((y) => [51, y]));
     const result = run(dir, [html, out], {}, [pgm([5, bottom - 10]), shrunk, wide]);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stderr, /第 2 頁內容超出右邊界，整頁被縮成 76%：減少表格欄數或設 wide: true。/);
+    assert.match(result.stderr, /內容超出右邊界，整份被縮成 76%（第 2 頁起）：減少表格欄數或設 wide: true。/);
     assert.doesNotMatch(result.stderr, /第 [13] 頁內容超出右邊界/);
+    // Chrome shrinks the whole document, so later shrunk pages do not repeat the warning.
+    const second = join(dir, 'again');
+    mkdirSync(second);
+    const again = run(second, [html, join(second, 'print')], {}, [pgm([5, bottom - 10]), shrunk, shrunk, wide]);
+    assert.equal(again.stderr.match(/整份被縮成/g)?.length, 1, again.stderr);
+    assert.match(again.stderr, /整份被縮成 76%（第 2 頁起）/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('page 1 ends at a fixed page break, so its low fill asks to shorten the summary or contents', { skip: process.platform === 'win32' && 'POSIX shell shims' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
+  try {
+    const html = join(dir, 'report.html'), out = join(dir, 'print');
+    writeFileSync(html, readFileSync(example));
+    const result = run(dir, [html, out], {}, [pgm([5, 200]), pgm([top + 10, bottom - 10]), pgm([top + 10])]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, new RegExp(`第 1 頁只填 ${Math.round(200 / bottom * 100)}%：縮短摘要或目錄，或把下一節的開頭段落放進第 1 頁前的摘要。`));
+    assert.doesNotMatch(result.stderr, /第 1 頁只填[^\n]*整塊元件/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('unknown flags and a --paper other than clay print the usage and exit 2', () => {
+  for (const args of [['--leter'], ['--paper clay'], ['--paper', 'white'], ['--paper']]) {
+    const result = spawnSync(process.execPath, [script, example, join(tmpdir(), 'clayprint-unused'), ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 2, `${args.join(' ')}\n${result.stderr}`);
+    assert.match(result.stderr, /用法：node scripts\/pdf\.js out\/report\.html out\/print \[--letter\] \[--paper clay\]/);
+  }
+  const extra = spawnSync(process.execPath, [script, example, join(tmpdir(), 'clayprint-unused'), 'third'], { encoding: 'utf8' });
+  assert.equal(extra.status, 2, extra.stderr);
 });
 
 test('--letter --paper clay prints a marked temporary copy, deletes it, and skips long tables', { skip: process.platform === 'win32' && 'POSIX shell shims' }, () => {
@@ -137,7 +167,7 @@ test('--letter --paper clay prints a marked temporary copy, deletes it, and skip
     assert.equal(result.status, 0, result.stderr);
 
     const printed = readFileSync(join(dir, 'calls.html'), 'utf8');
-    assert.match(printed, /<html data-paper="clay" data-size="letter" lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快'">/);
+    assert.match(printed, /<html data-paper="clay" data-size="letter" lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快 \| '">/);
     const target = readFileSync(join(dir, 'calls'), 'utf8').split('\n').find((l) => l.startsWith('file://'));
     assert.notEqual(target, `file://${html}`);
     assert.ok(target.startsWith(`file://${dir}/`));

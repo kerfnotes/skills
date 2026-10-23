@@ -53,7 +53,7 @@
 - 圖與表各自自動編號。圖上方是「圖 N」標籤與 `title`；圖下方的圖說（figcaption）依序是單位、期間、附註、來源，由圖表 JSON 的 `unit`、`period`、`note`、`source` 與元件的 `note` 組成，缺值項目也寫進附註。
 - 表的「表 N」標籤與 `caption` 在表上方；填了 `note` 或 `source` 就在表下方印「附註：…｜來源：…」。
 - 預設寬度是正文欄，列印時可伸到離右紙邊 14 mm（A4 寬 146 mm）；`wide: true` 從左 22 mm 線起全寬（A4 寬 174 mm），適合長標籤或多欄。
-- 列印時圖、表、引言、摘要不切頁；表格超過八列才可分頁，並在下一頁重複表頭。
+- 列印時圖、表、引言、摘要、清單（`list`）、流程（`process`）、比較（`compare`）與追蹤事項表（`close`）都整塊不切頁；表格超過八列才可分頁，並在下一頁重複表頭。
 
 報告與簡報共用目前生效的設計層，預設為 clay。`scripts/report.js` 產生時同時寫入樣式與圖表顏色；換成 blue 就用 `CLAYPRINT_TOKENS=design/tokens.blue.json node scripts/report.js out/report.json out/report.html` 重建。手工組成的報告用 `node scripts/theme-css.js report.html` 同步樣式，其中由 `scripts/svg.js` 產生的圖也要用同一設計層重產。沒有檔名時，`node scripts/theme-css.js` 會把 CSS 印到終端。
 
@@ -62,9 +62,10 @@
 螢幕 HTML 維持 940 px 版面與米色底；列印另有一套版心，不需手動設定：
 
 - 紙張預設 A4 白紙。版心左 50 mm、正文欄 135 mm、右 25 mm，上 12 mm、下 15 mm；節標題、目錄、引言與全寬圖對齊左 22 mm 線。
-- 字級：正文 10.5 pt、行距 16 pt；節標題 24 pt 強調色加一條色線；小節與圖表標題 12 pt；軸標約 8 pt；圖說、來源與頁尾 7 pt。
-- 頁尾在右下：「報告名 | 頁碼 / 總頁數」。第 1 頁沒有頁尾，封面印到紙邊。
+- 字級：正文 10.5 pt、行距 16 pt；節標題 24 pt 強調色加一條色線；摘要的建議句 16 pt；小節與圖表標題 12 pt；軸標約 8 pt；圖說、來源與頁尾 7 pt。
+- 頁尾在右下：「報告名 | 頁碼 / 總頁數」；手工 HTML 的 `<html>` 沒有 `--report-title` 時只印「頁碼 / 總頁數」。第 1 頁沒有頁尾，封面印到紙邊。
 - 第 1 頁放封面、目錄與摘要並以分頁結束，各節從第 2 頁開始；節與節在頁中接續，不另起新頁。節標題與其後第一段同頁。第 1 頁放不下時，溢到第 2 頁的部分會多縮排，請縮短摘要。
+- 圖、表、引言、摘要、清單、流程、比較與追蹤事項表整塊不切：剩餘空間放不下就整塊移到下一頁，上一頁留白。排元件順序時把長的清單或表放在段落之後、不要接在另一個整塊元件後面，或拆成兩個較短的元件。
 
 ## 列印 PDF
 
@@ -76,7 +77,7 @@ node scripts/pdf.js out/report.html out/print
 
 第二個參數是輸出資料夾，會產生 `report.pdf`（檔名沿用 HTML 主檔名）、每頁 `page-NN.png` 與整份縮圖 `sheet.png`；只有一頁時沒有 `sheet.png`（`report.js` 產生的報告至少兩頁，手工單頁 HTML 才會遇到）。`--letter` 改印 Letter，左右邊界維持同樣的毫米數；`--paper clay` 改印米色滿版；兩者可並用。這兩個選項會在 HTML 同一資料夾寫一份暫存副本，在 `<html>` 加上 `data-size="letter"`、`data-paper="clay"`，印完即刪除，來源 HTML 不變。
 
-腳本依序找 `CLAYPRINT_CHROME` 指定的執行檔、PATH 上的 `google-chrome`、`chromium`、`chrome`、`msedge`，再找 macOS 與 Windows 的 Chrome、Chromium、Edge、Brave 安裝位置，以 headless 模式列印；另需 Poppler 的 `pdftoppm`、`pdftotext` 與 `ffmpeg`。找不到瀏覽器時印「找不到 Chrome、Edge、Chromium 或 Brave；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。」並以非零結束碼結束。
+腳本依序找 `CLAYPRINT_CHROME` 指定的執行檔、PATH 上的 `google-chrome`、`chromium`、`chrome`、`msedge`，再找 macOS 與 Windows 的 Chrome、Chromium、Edge、Brave 安裝位置，以 headless 模式列印；另需 Poppler 的 `pdftoppm`、`pdftotext` 與 `ffmpeg`。不認得的參數（例如打錯的 `--leter`，或把 `--paper clay` 包成一個參數）與 `clay` 以外的紙色會印用法並以結束碼 2 結束。找不到瀏覽器時印「找不到 Chrome、Edge、Chromium 或 Brave；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。」並以非零結束碼結束。
 
 ### 讀輸出
 
@@ -84,7 +85,7 @@ node scripts/pdf.js out/report.html out/print
 
 ```text
 PDF：…/out/print/report.pdf；每頁 PNG 與 sheet.png 在 …/out/print
-印出 4 頁（A4）；填滿率 79／97／76／41%。
+印出 4 頁（A4）；填滿率 79／98／89／41%。
 ```
 
 填滿率是每頁最後一列墨水的位置占版心高度的比例：從上邊界 12 mm 量到離紙底 15 mm，頁尾不算。第 1 頁從紙張上緣算起，因為封面印到紙邊。末頁不檢查填滿率。
@@ -95,7 +96,9 @@ PDF：…/out/print/report.pdf；每頁 PNG 與 sheet.png 在 …/out/print
 
 | 警告 | 原因與改法 |
 | --- | --- |
-| `第 N 頁只填 X%：…` | 末頁以外低於 70%，通常是下一個圖、表或引言整塊放不下，被推到下一頁。把後面較短的元件提到前面、把下一節開頭提上來，或把這頁的圖設 `wide: true` 拉高。 |
+| `第 1 頁只填 X%：縮短摘要或目錄，或把下一節的開頭段落放進第 1 頁前的摘要。` | 第 1 頁固定在摘要後分頁；低於 70% 通常是摘要整塊放不下，被推到第 2 頁。縮短摘要或目錄，讓摘要留在第 1 頁。 |
+| `第 N 頁只填 X%：把被推到下一頁的整塊元件前移，或在它前面加一段文字。` | 第 2 頁起、末頁以外低於 70%，通常是下一個圖、表、引言、清單、流程、比較或追蹤事項表整塊放不下，被推到下一頁。把那個元件移到較前面，或在它前面補一段文字填滿這頁。 |
+| `內容超出右邊界，整份被縮成 X%（第 N 頁起）：…` | 有內容比版面寬，Chrome 把整份文件等比縮小（正文欄左緣離開 50 mm 線），所以只警告一次。減少表格欄數或設 `wide: true`。 |
 | `第 N 頁內容超出右邊界約 M mm：…` | 有墨水伸到離右紙邊 14 mm 以外；Chrome 遇到右側溢出會整頁縮小。減少表格欄數或設 `wide: true`。封面橫幅與色線本來就印到紙邊，不算溢出。 |
 | `圖 N 的標題在第 A 頁、來源在第 B 頁：…` | 圖被切開：標籤所在頁和其後第一行「來源」不同頁。縮短圖上方的段落，或改小圖。 |
 | `表 N 跨第 A–B 頁：…` | 八列以內的表被切開。只檢查填了 `source` 的表；超過八列的表本來就可分頁。縮短表上方的段落。 |

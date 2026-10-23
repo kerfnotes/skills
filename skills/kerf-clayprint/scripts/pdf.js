@@ -122,26 +122,40 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
     rmSync(tmp, { recursive: true, force: true });
   }
   const warnings = [];
-  pages.forEach(({ fill, overflow, scale }, i) => {
-    if (i < pages.length - 1 && fill < 70) warnings.push(`第 ${i + 1} 頁只填 ${fill}%：把下一節開頭提上來，或把這頁的圖設 wide: true 拉高。`);
-    if (scale < 0.97) warnings.push(`第 ${i + 1} 頁內容超出右邊界，整頁被縮成 ${Math.round(scale * 100)}%：減少表格欄數或設 wide: true。`);
-    else if (overflow) warnings.push(`第 ${i + 1} 頁內容超出右邊界約 ${overflow} mm：減少表格欄數或設 wide: true。`);
+  // Page 1 always ends with a page break after the front matter; on later pages a short fill means a block that may not
+  // split moved whole to the next page.
+  pages.forEach(({ fill }, i) => {
+    if (i < pages.length - 1 && fill < 70) warnings.push(i === 0
+      ? `第 1 頁只填 ${fill}%：縮短摘要或目錄，或把下一節的開頭段落放進第 1 頁前的摘要。`
+      : `第 ${i + 1} 頁只填 ${fill}%：把被推到下一頁的整塊元件前移，或在它前面加一段文字。`);
+  });
+  // Chrome shrinks the whole document, not one page: warn once, at the first page that shows it.
+  const shrunk = pages.findIndex((p) => p.scale < 0.97);
+  if (shrunk >= 0) warnings.push(`內容超出右邊界，整份被縮成 ${Math.round(pages[shrunk].scale * 100)}%（第 ${shrunk + 1} 頁起）：減少表格欄數或設 wide: true。`);
+  else pages.forEach(({ overflow }, i) => {
+    if (overflow) warnings.push(`第 ${i + 1} 頁內容超出右邊界約 ${overflow} mm：減少表格欄數或設 wide: true。`);
   });
   warnings.push(...splitExhibits(execFileSync('pdftotext', [pdf, '-'], { encoding: 'utf8' }).split('\f'), source));
   return { pdf, pngs, sheet, fills: pages.map((p) => p.fill), size: letter ? 'Letter' : 'A4', warnings };
 }
 
 if (isMain(import.meta.url)) {
-  const args = process.argv.slice(2);
-  const paperAt = args.indexOf('--paper');
-  const paper = paperAt < 0 ? 'white' : args[paperAt + 1];
-  const [html, outDir] = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--paper');
-  if (!html || !outDir || !['white', 'clay'].includes(paper)) {
+  // Anything unknown (a typo such as --leter, or "--paper clay" passed as one argument) stops with the usage.
+  const args = process.argv.slice(2), paths = [];
+  let letter = false, paper = 'white', ok = true;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--letter') letter = true;
+    else if (args[i] === '--paper') { paper = args[++i]; ok &&= paper === 'clay'; }
+    else if (args[i].startsWith('--')) ok = false;
+    else paths.push(args[i]);
+  }
+  const [html, outDir] = paths;
+  if (!ok || paths.length !== 2) {
     console.error('用法：node scripts/pdf.js out/report.html out/print [--letter] [--paper clay]');
     process.exit(2);
   }
   try {
-    const result = printPdf(html, outDir, { letter: args.includes('--letter'), paper });
+    const result = printPdf(html, outDir, { letter, paper });
     for (const w of result.warnings) console.error(`警告：${w}`);
     console.log(`PDF：${result.pdf}；每頁 PNG${result.sheet ? ' 與 sheet.png' : ''} 在 ${resolve(outDir)}`);
     console.log(`印出 ${result.fills.length} 頁（${result.size}）；填滿率 ${result.fills.join('／')}%。`);

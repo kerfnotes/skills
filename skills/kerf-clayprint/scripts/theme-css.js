@@ -75,6 +75,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 .comparison .recommended { background: var(--cp-tint); }
 .diagnosis, .flow { padding-left: 1.4em; }
 .diagnosis li, .flow li { padding: 9px 0; border-bottom: 1px solid var(--cp-line); }
+.diagnosis strong, .flow strong { display: block; }
 .flow li::marker { color: var(--cp-accent); font-weight: 700; }
 .missing { display: inline-block; padding: 0 .4em; border: 1px solid var(--cp-muted); color: var(--cp-muted); font-size: var(--cp-small); }
 @media (max-width: 640px) {
@@ -89,7 +90,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
    Sizes come from the design layer's print block; @page takes the numbers, element rules the --cp-print-* variables. */
 @page {
   size: A4; margin: ${pm.top}mm ${pm.right}mm ${pm.bottom}mm ${pm.left}mm;
-  @bottom-right { content: var(--report-title, "") " | " counter(page) " / " counter(pages); font: ${pt.small}pt var(--cp-font); color: var(--cp-muted); padding-right: ${pm.gutter}mm; }
+  /* --report-title carries its own separator (report.js writes '報告名 | '), so without it the footer is just 2 / 4. */
+  @bottom-right { content: var(--report-title, "") counter(page) " / " counter(pages); font: ${pt.small}pt var(--cp-font); color: var(--cp-muted); padding-right: ${pm.gutter}mm; }
 }
 /* The first page has no margin so the cover band can bleed, and no footer. */
 @page :first { margin: 0; @bottom-right { content: none; } }
@@ -102,7 +104,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
     --cp-print-indent: ${pm.indent}mm; --cp-print-gutter: ${pm.gutter}mm; --cp-print-bottom: ${pm.bottom}mm;
     --cp-print-text-left: ${pm.left + pm.indent}mm; --cp-print-text-right: ${pm.right + pm.gutter}mm;
     --cp-print-body: ${pt.body}pt; --cp-print-leading: ${pt.leading}pt; --cp-print-heading: ${pt.heading}pt;
-    --cp-print-sub: ${pt.sub}pt; --cp-print-small: ${pt.small}pt; --cp-print-cover: ${pt.cover}pt;
+    --cp-print-sub: ${pt.sub}pt; --cp-print-small: ${pt.small}pt; --cp-print-cover: ${pt.cover}pt; --cp-print-summary: ${pt.summary}pt;
   }
   html { background: #fff; font-size: var(--cp-print-body); line-height: var(--cp-print-leading); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   html[data-paper="clay"] { background: var(--cp-paper); }
@@ -112,6 +114,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   body { max-width: none; padding: 0 var(--cp-print-gutter) 0 var(--cp-print-indent); }
   h2 { font-size: var(--cp-print-heading); }
   h3 { font-size: var(--cp-print-sub); }
+  /* The summary claim sits in the narrow left column next to the metrics: section-heading size would wrap it about 9 characters a line. */
+  .summary h2 { font-size: var(--cp-print-summary); }
   .exhibit-note, figcaption, .sources { font-size: var(--cp-print-small); }
   .exhibit-title, caption { font-size: var(--cp-print-sub); }
   /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
@@ -143,6 +147,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   figure, .table-scroll { margin-right: calc(-1 * var(--cp-print-gutter)); max-width: none; }
   /* wide: true starts on the 22 mm line, the @page edge, for 174 mm on A4; going past it would clip the block. */
   figure.wide, .table-scroll.wide { margin-left: calc(-1 * var(--cp-print-indent)); }
+  .table-scroll.wide + .exhibit-note { margin-left: calc(-1 * var(--cp-print-indent)); max-width: none; }
+  .table-scroll { margin-bottom: 4mm; }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }

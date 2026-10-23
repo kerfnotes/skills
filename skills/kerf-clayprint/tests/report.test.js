@@ -119,7 +119,9 @@ test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢�
   // 紙張與邊界：預設 A4 白紙；@page 設在最外的 22／14 mm 線，正文欄由 body 內距推到左 50、右 25 mm；
   // 第一頁零邊界且無頁尾；Letter 只換紙張大小。
   assert.match(print, /@page \{[^}]*size: A4; margin: 12mm 14mm 15mm 22mm;/);
-  assert.match(print, /@bottom-right \{[^}]*content: var\(--report-title, ""\) " \| " counter\(page\) " \/ " counter\(pages\);[^}]*font: 7pt var\(--cp-font\);[^}]*padding-right: 11mm;/);
+  // The separator comes with the title (report.js writes '報告名 | '), so a page without the variable prints only 2 / 4.
+  assert.match(print, /@bottom-right \{[^}]*content: var\(--report-title, ""\) counter\(page\) " \/ " counter\(pages\);[^}]*font: 7pt var\(--cp-font\);[^}]*padding-right: 11mm;/);
+  assert.doesNotMatch(print, /" \| " counter/);
   assert.match(print, /@page :first \{ margin: 0;[^}]*@bottom-right \{ content: none; \}/);
   assert.match(print, /@page letter \{ size: letter; \}/);
   assert.match(print, /html\[data-size="letter"\] body \{ page: letter; \}/);
@@ -142,9 +144,9 @@ test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢�
 
 test('報告名寫在根元素的 CSS 變數，給列印頁尾用，並跳脫引號與反斜線', () => {
   const { html } = buildReport({ title: `甲's "乙" \\ <丙>\n丁`, message: '帶走這句', sections: [{ claim: '判斷', blocks: [{ type: 'text', text: '內文' }] }] });
-  assert.match(html, /<html lang="zh-Hant" style="--report-title: '甲\\'s &quot;乙&quot; \\\\ &lt;丙&gt; 丁'">/);
-  assert.match(file('examples/report.html'), /<html lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快'">/);
-  assert.match(file('assets/report.html'), /<html lang="zh-Hant" style="--report-title: '\{\{報告標題\}\}'">/);
+  assert.match(html, /<html lang="zh-Hant" style="--report-title: '甲\\'s &quot;乙&quot; \\\\ &lt;丙&gt; 丁 \| '">/);
+  assert.match(file('examples/report.html'), /<html lang="zh-Hant" style="--report-title: '讓標本登錄從交接開始變快 \| '">/);
+  assert.match(file('assets/report.html'), /<html lang="zh-Hant" style="--report-title: '\{\{報告標題\}\} \| '">/);
 });
 
 test('圖表區塊：圖、表各自編號，標籤與標題在上，註與來源在下', () => {
@@ -204,7 +206,7 @@ test('列印字級與邊界來自設計層 print 區塊，缺少時用預設值'
   for (const name of ['tokens.json', 'tokens.blue.json']) {
     const { print } = JSON.parse(file(`design/${name}`));
     assert.deepEqual(print, { margin: { top: 12, right: 14, bottom: 15, left: 22, indent: 28, gutter: 11 },
-      type: { body: 10.5, leading: 16, heading: 24, sub: 12, small: 7, cover: 30 } });
+      type: { body: 10.5, leading: 16, heading: 24, sub: 12, small: 7, cover: 30, summary: 16 } });
   }
   const tokens = loadTokens();
   const { print, ...bare } = tokens;
@@ -220,4 +222,35 @@ test('列印字級與邊界來自設計層 print 區塊，缺少時用預設值'
   const media = css.slice(css.indexOf('@media print'));
   assert.match(media, /:root \{[^}]*--cp-print-indent: 30mm;[^}]*--cp-print-text-left: 50mm;[^}]*--cp-print-body: 9pt;/);
   assert.match(media, /html \{[^}]*font-size: var\(--cp-print-body\); line-height: var\(--cp-print-leading\);/);
+});
+
+test('列印：摘要宣稱用 16 pt（設計層 print.type.summary），不沿用 24 pt 節標題', () => {
+  const media = themeCss().slice(themeCss().indexOf('@media print'));
+  assert.match(media, /:root \{[^}]*--cp-print-summary: 16pt;/);
+  assert.match(media, /\.summary h2 \{ font-size: var\(--cp-print-summary\);/);
+  assert.ok(media.indexOf('.summary h2 {') > media.indexOf('h2 { font-size: var(--cp-print-heading)'), '摘要規則在 h2 之後才蓋得掉');
+});
+
+test('列印：wide 表下方的附註與來源也從 22 mm 線起；表格下方留 4 mm', () => {
+  const media = themeCss().slice(themeCss().indexOf('@media print'));
+  assert.match(media, /\.table-scroll\.wide \+ \.exhibit-note \{ margin-left: calc\(-1 \* var\(--cp-print-indent\)\); max-width: none; \}/);
+  assert.match(media, /\.table-scroll \{ margin-bottom: 4mm; \}/);
+});
+
+test('清單與流程的小標自成一行，說明接在下一行（螢幕與列印）', () => {
+  const css = themeCss();
+  assert.match(css.slice(0, css.indexOf('@page')), /\.diagnosis strong, \.flow strong \{ display: block; \}/);
+});
+
+test('report.js 會自己建立輸出資料夾', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-report-cli-'));
+  try {
+    const input = path.join(dir, 'report.json'), output = path.join(dir, 'new', 'deeper', 'report.html');
+    writeFileSync(input, JSON.stringify({ title: '測試', message: '帶走這句', sections: [{ claim: '判斷', blocks: [{ type: 'text', text: '內文' }] }] }));
+    const run = spawnSync(process.execPath, [new URL('../scripts/report.js', import.meta.url).pathname, input, output], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(readFileSync(output, 'utf8'), /<main class="report">/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

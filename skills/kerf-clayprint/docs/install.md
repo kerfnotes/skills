@@ -56,7 +56,7 @@ Set-Location $ClayprintSkill
 ```sh
 node -p "process.versions.node"
 npm ci --engine-strict
-node --test
+npm test
 node scripts/check-design.js
 node evals/check.mjs examples/story.json evals/fixtures/example-script.md
 node evals/check-report.mjs examples/report.html evals/fixtures/explain-script.md
