@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>前主管要底稿：權力地圖</title>
+<style>
+.pm{font-family:var(--font-sans,-apple-system,"PingFang TC","Noto Sans TC",sans-serif);color:var(--foreground,#1f2937);max-width:1100px;margin:0 auto;padding:8px 12px;line-height:1.45}
+.pm h2{font-size:18px;margin:0 0 6px;font-weight:600}
+.pm .row{display:flex;gap:20px;align-items:flex-start}
+.pm svg{flex:0 0 640px;width:640px;height:auto}
+.pm .side{flex:1 1 320px;min-width:260px;font-size:14px}
+.pm .side h3{font-size:14px;margin:8px 0 4px;font-weight:600}
+.pm table{border-collapse:collapse;width:100%;font-size:13px}
+.pm th,.pm td{border:1px solid var(--border,#d1d5db);padding:5px 8px;text-align:left;vertical-align:top}
+.pm th{font-weight:600}
+.pm .today{color:#2563eb;font-weight:600}
+.pm .legend{font-size:12px;color:var(--muted-foreground,#6b7280);margin-top:10px}
+.pm .node{fill:transparent;stroke:currentColor;stroke-width:1.5;rx:6}
+.pm .guess{stroke-dasharray:6 4}
+.pm .name{font-size:15px;fill:currentColor;text-anchor:middle;dominant-baseline:central}
+.pm .ring{fill:none;stroke:var(--border,#d1d5db);stroke-width:1}
+.pm .ringlabel{font-size:12px;fill:var(--muted-foreground,#6b7280)}
+.pm .dep{stroke:currentColor;stroke-width:3;fill:none}
+.pm .info{stroke:var(--muted-foreground,#6b7280);stroke-width:1.2;fill:none}
+.pm .todayline{stroke:#2563eb;stroke-width:4;fill:none}
+.pm .lbl{font-size:12px;fill:var(--muted-foreground,#6b7280)}
+.pm .lbl.today{fill:#2563eb;font-weight:600}
+@media (max-width:900px){.pm .row{flex-direction:column}.pm svg{flex-basis:auto;width:100%}}
+</style>
+</head>
+<body>
+<div class="pm">
+<h2>前主管要底稿：誰拍板、他靠誰、今天動哪條線</h2>
+<div class="row">
+<svg viewBox="0 0 640 580" role="img" aria-labelledby="t d">
+<title id="t">權力地圖：前主管要底稿</title>
+<desc id="d">同心圓：圓心是總經理（推測是儲能機進不進開發計畫的拍板者）。第二圈左邊是副總（總經理的業績靠通路，推測）和另一位通路主管，右下是你（產品評估靠你）；你和副總互相需要。外圈是電芯廠（新衰退率更高）和品保（書面意見還沒有）。今天要動的線：你回副總，檔案不給，換當面說明。</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+<marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker>
+</defs>
+<!-- rings, center (300,295) -->
+<circle class="ring" cx="300" cy="295" r="275"/>
+<circle class="ring" cx="300" cy="295" r="185"/>
+<circle class="ring" cx="300" cy="295" r="70"/>
+<text class="ringlabel" x="300" y="40" text-anchor="middle">意見會被聽、定規則</text>
+<text class="ringlabel" x="300" y="128" text-anchor="middle">他靠誰、少了誰不行</text>
+<text class="ringlabel" x="300" y="342" text-anchor="middle">拍板（推測）</text>
+
+<!-- dependency lines -->
+<line class="dep guess" x1="272" y1="312" x2="238" y2="371" marker-end="url(#a)"/>
+<text class="lbl" x="226" y="300" text-anchor="end">業績靠通路（推測）</text>
+<line class="dep" x1="328" y1="312" x2="362" y2="371" marker-end="url(#a)"/>
+<text class="lbl" x="356" y="336">產品評估靠你</text>
+<line class="dep" x1="252" y1="392" x2="348" y2="392" marker-start="url(#a)" marker-end="url(#a)"/>
+<text class="lbl" x="300" y="426" text-anchor="middle">你的產品要他賣，他要你出產品</text>
+
+<!-- info lines -->
+<line class="info" x1="492" y1="302" x2="428" y2="378" marker-end="url(#m)"/>
+<text class="lbl" x="472" y="344">新衰退率更高</text>
+<line class="info guess" x1="485" y1="390" x2="430" y2="392" marker-end="url(#m)"/>
+<text class="lbl" x="444" y="424">書面意見（還沒有）</text>
+<path class="info guess" d="M412,375 Q430,292 352,292" marker-end="url(#m)"/>
+<text class="lbl" x="372" y="262">你的評估到了沒（不知道）</text>
+
+<!-- today line -->
+<path class="todayline" d="M402,411 C402,494 198,494 198,413" marker-end="url(#b)"/>
+<text class="lbl today" x="300" y="496" text-anchor="middle">檔案不給，換當面說明</text>
+<text class="lbl today" x="300" y="512" text-anchor="middle">＋說清楚什麼資訊會讓你重評</text>
+
+<!-- nodes -->
+<rect class="node" x="252" y="278" width="96" height="34"/><text class="name" x="300" y="295">總經理</text>
+<rect class="node" x="155" y="196" width="112" height="34"/><text class="name" x="211" y="213">另一位通路主管</text>
+<rect class="node" x="176" y="375" width="72" height="34"/><text class="name" x="212" y="392">副總</text>
+<rect class="node" x="352" y="375" width="72" height="34"/><text class="name" x="388" y="392">你</text>
+<rect class="node" x="490" y="268" width="80" height="34"/><text class="name" x="530" y="285">電芯廠</text>
+<rect class="node" x="485" y="373" width="60" height="34"/><text class="name" x="515" y="390">品保</text>
+</svg>
+<div class="side">
+<h3>總經理眼中的選擇（推測）</h3>
+<table>
+<thead><tr><th>說好（照你的建議，暫不開發）</th><th>說不（叫你重評）</th></tr></thead>
+<tbody>
+<tr><td>通路少一款儲能機</td><td>只花他一句話</td></tr>
+<tr><td>副總不滿（推測）</td><td>他自己幾乎不付代價</td></tr>
+<tr><td>不必擔昱禾那種設計的安規疑慮</td><td>通路覺得被聽見</td></tr>
+</tbody>
+</table>
+<p>要改的是這張表：「說不」對他太便宜，所以你先把正式重評的路擺出來，排不排由他決定；品保的書面意見，讓「說好」有公司的標準撐腰。</p>
+<h3>今天動哪條線</h3>
+<p><span class="today">你 → 副總：檔案不給，換當面說明</span>。信裡說清楚什麼資訊會讓你重評，寫到轉給總經理也站得住。總經理那條線同一天動，不提副總；品保那條線這週問書面意見。</p>
+<p class="legend">粗實線＝誰離不開誰（箭頭指向被依賴的人）　細線＝話怎麼傳　藍粗線＝今天要動　虛框、虛線＝推測或還沒有</p>
+</div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>權力地圖</title>
+<!-- 只改這段 JSON。欄位說明見 map.md。 -->
+<script type="application/json" id="map-data">
+{
+  "title": "主管不放人：誰拍板、他靠誰、今天動哪條線",
+  "people": [
+    { "name": "你的主管", "ring": 1 },
+    { "name": "你", "ring": 2 },
+    { "name": "主管的上級", "ring": 2, "guess": true },
+    { "name": "珮君", "ring": 3 },
+    { "name": "人資", "ring": 3 }
+  ],
+  "lines": [
+    { "from": "你的主管", "to": "你", "kind": "depend", "label": "月結只有你會" },
+    { "from": "你的主管", "to": "主管的上級", "kind": "depend", "label": "月結要交差（推測）", "guess": true },
+    { "from": "人資", "to": "你", "kind": "talk", "label": "要主管簽、月底截止" },
+    { "from": "你", "to": "珮君", "kind": "talk", "label": "先要：到任可延？願意開口？" },
+    { "from": "珮君", "to": "你的主管", "kind": "talk", "label": "她親口要人（還沒有）", "guess": true },
+    { "from": "你", "to": "你的主管", "kind": "talk", "label": "交接方案換簽字\n月底前簽、交接完再到任", "today": true }
+  ],
+  "choice": {
+    "who": "你的主管",
+    "yesMeans": "放人",
+    "noMeans": "等明年",
+    "yes": ["下個月月結有風險", "要補人", "要向上級解釋（推測）"],
+    "no": ["今天什麼事都沒有", "你繼續跑月結", "不用給任何人理由"],
+    "note": "要改的是這張表：交接方案讓「好」變安全；珮君親口要人，讓「不」得給理由。"
+  },
+  "today": "去之前先向珮君要兩樣帶過去：到任日可延、她願不願意親口要人。上級那條線先不動，留作第二步。"
+}
+</script>
+<style>
+.pm{font-family:var(--font-sans,-apple-system,"PingFang TC","Noto Sans TC",sans-serif);color:var(--foreground,#1f2937);max-width:1100px;margin:0 auto;padding:8px 12px;line-height:1.45}
+.pm h2{font-size:18px;margin:0 0 6px;font-weight:600}
+.pm .row{display:flex;gap:20px;align-items:flex-start}
+.pm svg{flex:0 0 640px;width:640px;height:auto}
+.pm .side{flex:1 1 320px;min-width:260px;font-size:14px}
+.pm .side h3{font-size:14px;margin:8px 0 4px;font-weight:600}
+.pm table{border-collapse:collapse;width:100%;font-size:13px}
+.pm th,.pm td{border:1px solid var(--border,#d1d5db);padding:5px 8px;text-align:left;vertical-align:top}
+.pm th{font-weight:600}
+.pm .today{color:#2563eb;font-weight:600}
+.pm .legend{font-size:12px;color:var(--muted-foreground,#6b7280);margin-top:10px}
+.pm .node{fill:transparent;stroke:currentColor;stroke-width:1.5}
+.pm .guess{stroke-dasharray:6 4}
+.pm .name{font-size:15px;fill:currentColor;text-anchor:middle;dominant-baseline:central}
+.pm .ring{fill:none;stroke:var(--border,#d1d5db);stroke-width:1}
+.pm .ringlabel{font-size:12px;fill:var(--muted-foreground,#6b7280);text-anchor:middle;dominant-baseline:central}
+.pm .dep{stroke:currentColor;stroke-width:3;fill:none}
+.pm .info{stroke:var(--muted-foreground,#6b7280);stroke-width:1.2;fill:none}
+.pm .todayline{stroke:#2563eb;stroke-width:4;fill:none}
+.pm .lbl{font-size:12px;fill:var(--muted-foreground,#6b7280);text-anchor:middle;dominant-baseline:central}
+.pm .lbl.today{fill:#2563eb;font-weight:600}
+.pm .ah-a{fill:currentColor}
+.pm .ah-m{fill:var(--muted-foreground,#6b7280)}
+.pm .ah-b{fill:#2563eb}
+@media (max-width:900px){.pm .row{flex-direction:column}.pm svg{flex-basis:auto;width:100%}}
+</style>
+</head>
+<body>
+<div class="pm">
+<h2 id="pm-title"></h2>
+<div class="row">
+<svg id="pm-map" viewBox="0 0 640 580" role="img" aria-labelledby="pm-t pm-d">
+<title id="pm-t">權力地圖</title>
+<desc id="pm-d"></desc>
+<defs>
+<marker id="pm-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-a" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="pm-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="ah-m" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="pm-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-b" d="M0,0 L10,5 L0,10 z"/></marker>
+<mask id="pm-holes" maskUnits="userSpaceOnUse" x="-600" y="-600" width="1840" height="1780"><rect x="-600" y="-600" width="1840" height="1780" fill="white"/></mask>
+</defs>
+</svg>
+<div class="side" id="pm-side"></div>
+</div>
+</div>
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  const W = 640, H = 580, CX = 300, CY = 300;
+  const RING_R = [100, 200, 275];   // 三圈的邊界
+  const NODE_R = [0, 150, 238];    // 節點放在每圈帶狀的中線；第二圈太近，圓心連過去的線會短到只剩箭頭
+  const RING_TEXT = ['拍板', '他靠誰、少了誰不行', '意見會被聽、定規則'];
+  const NW = 104, NH = 34, LH = 15;
+
+  const root = document.querySelector('.pm');
+  let data;
+  try { data = JSON.parse(document.getElementById('map-data').textContent); }
+  catch (e) { root.textContent = '地圖資料不是合法的 JSON：' + e.message; return; }
+  document.title = data.title || '權力地圖';
+  document.getElementById('pm-title').textContent = data.title || '';
+
+  const svg = document.getElementById('pm-map');
+  const mask = document.getElementById('pm-holes');
+  const el = (tag, attrs, parent, text) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    parent.appendChild(e);
+    return e;
+  };
+  const measure = (str, cls) => {
+    const t = el('text', { class: cls }, svg, str), w = t.getComputedTextLength();
+    t.remove();
+    return w || str.length * 13;
+  };
+  const box = (cx, cy, w, h, pad = 0) => ({ x1: cx - w / 2 - pad, y1: cy - h / 2 - pad, x2: cx + w / 2 + pad, y2: cy + h / 2 + pad });
+  const grow = (b, pad) => ({ x1: b.x1 - pad, y1: b.y1 - pad, x2: b.x2 + pad, y2: b.y2 + pad });
+  const hit = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
+  const has = (b, p) => p[0] > b.x1 && p[0] < b.x2 && p[1] > b.y1 && p[1] < b.y2;
+  const hole = b => el('rect', { x: b.x1, y: b.y1, width: b.x2 - b.x1, height: b.y2 - b.y1, fill: 'black' }, mask);
+  const gRings = el('g', { mask: 'url(#pm-holes)' }, svg);
+  const gLines = el('g', {}, svg), gNodes = el('g', {}, svg), gLabels = el('g', {}, svg);
+
+  // 人：圓心放拍板者；第二圈分下、上兩群，外圈分右、左兩群，群內等距，照 JSON 順序順時針排
+  // 三人以內第一個人在正下（外圈正右）。不整圈平均分：第二圈的人落在左右會貼住圓心的框，外圈落在正上會壓住圈名
+  const people = data.people || [];
+  if (people.length > 6) console.warn(`地圖有 ${people.length} 個人，超過 6 個會擠；照畫。`);
+  const ringOf = p => [1, 2].includes(+p.ring) ? +p.ring : 3;
+  const nodes = {};
+  [1, 2, 3].forEach(ring => {
+    const list = people.filter(p => ringOf(p) === ring);
+    list.forEach((p, i) => {
+      let x = CX + (i - (list.length - 1) / 2) * (NW + 12), y = CY;
+      if (ring > 1) {
+        const k1 = Math.max(1, Math.floor(list.length / 2)), g = i < k1 ? 0 : 1;
+        const j = g ? i - k1 : i, k = g ? list.length - k1 : k1;
+        const a = ((ring === 2 ? 90 : 0) + g * 180 + (j - (k - 1) / 2) * (ring === 2 ? 58 : 50)) * Math.PI / 180;
+        x = CX + NODE_R[ring - 1] * Math.cos(a);
+        y = CY + NODE_R[ring - 1] * Math.sin(a);
+      }
+      const w = Math.max(NW, measure(p.name, 'name') + 20);   // 名字太長才加寬
+      nodes[p.name] = { ...p, ring, x, y, w, b: box(x, y, w, NH) };
+    });
+  });
+  const nodeList = Object.values(nodes);
+  nodeList.forEach((a, i) => nodeList.slice(i + 1).forEach(b => {
+    if (hit(grow(a.b, 4), b.b)) console.warn(`「${a.name}」和「${b.name}」的框疊在一起，換一個人到別圈。`);
+  }));
+
+  // 線：二次曲線，從框邊連到框邊；h 是曲線中點偏離直線的距離，0 就是直線
+  const lines = (data.lines || []).filter(l => {
+    const ok = nodes[l.from] && nodes[l.to] && l.from !== l.to;
+    if (!ok) console.warn('這條線的人名對不上 people，略過：', l);
+    return ok;
+  });
+  const todays = lines.filter(l => l.today);
+  if (todays.length > 1) console.warn(`今天要動的線只能一條，現在有 ${todays.length} 條；照畫。`);
+  const qp = (q, t) => [0, 1].map(i => (1 - t) * (1 - t) * q[0][i] + 2 * (1 - t) * t * q[1][i] + t * t * q[2][i]);
+  const qd = (q, t) => [0, 1].map(i => 2 * (1 - t) * (q[1][i] - q[0][i]) + 2 * t * (q[2][i] - q[1][i]));
+  const samples = (q, n) => Array.from({ length: n + 1 }, (_, i) => qp(q, i / n));
+  function route(a, b, h, both) {
+    const P0 = [a.x, a.y], P2 = [b.x, b.y];
+    const dx = P2[0] - P0[0], dy = P2[1] - P0[1], len = Math.hypot(dx, dy);
+    const C = [(P0[0] + P2[0]) / 2 - dy / len * 2 * h, (P0[1] + P2[1]) / 2 + dx / len * 2 * h];
+    const q = [P0, C, P2];
+    const cross = (n, lo, hi, pad) => {   // 二分找曲線穿出框的位置
+      const bx = grow(n.b, pad), inLo = has(bx, qp(q, lo));
+      for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; has(bx, qp(q, m)) === inLo ? lo = m : hi = m; }
+      return (lo + hi) / 2;
+    };
+    const t0 = cross(a, 0, 0.5, both ? 3 : 1), t1 = cross(b, 0.5, 1, 3);
+    const Cs = [0, 1].map(i => (1 - t0) * (1 - t1) * P0[i] + ((1 - t0) * t1 + t0 * (1 - t1)) * C[i] + t0 * t1 * P2[i]);
+    return [qp(q, t0), Cs, qp(q, t1)];
+  }
+  const drawn = [];
+  lines.forEach(l => {
+    const a = nodes[l.from], b = nodes[l.to];
+    let best;
+    for (const h of [0, 45, -45, 80, -80, 120, -120]) {
+      const q = route(a, b, h, l.both);
+      let s = Math.abs(h) * 0.1;
+      samples(q, 40).forEach(p => {
+        nodeList.forEach(n => { if (n !== a && n !== b && has(grow(n.b, 6), p)) s += 50; });
+        if (drawn.some(d => Math.hypot(d[0] - p[0], d[1] - p[1]) < 5)) s += 1;   // 和已畫的線重疊
+      });
+      if (!best || s < best.s) best = { q, s };
+    }
+    if (best.s >= 50) console.warn(`「${l.from} → ${l.to}」繞不開別的節點。`);
+    l.q = best.q;
+    drawn.push(...samples(l.q, 40));
+  });
+
+  RING_R.forEach(r => el('circle', { class: 'ring', cx: CX, cy: CY, r }, gRings));
+  const f = p => p.map(v => +v.toFixed(1)).join(',');
+  lines.forEach(l => {
+    const kind = l.today ? 'b' : l.kind === 'depend' ? 'a' : 'm';
+    const cls = { a: 'dep', m: 'info', b: 'todayline' }[kind] + (l.guess ? ' guess' : '');
+    const path = el('path', { class: cls, d: `M${f(l.q[0])} Q${f(l.q[1])} ${f(l.q[2])}`, 'marker-end': `url(#pm-${kind})` }, gLines);
+    if (l.both) path.setAttribute('marker-start', `url(#pm-${kind})`);
+  });
+  nodeList.forEach(n => {
+    el('rect', { class: 'node' + (n.guess ? ' guess' : ''), x: n.b.x1, y: n.b.y1, width: n.w, height: NH, rx: 6 }, gNodes);
+    el('text', { class: 'name', x: n.x, y: n.y }, gNodes, n.name);
+    hole(grow(n.b, 4));
+  });
+
+  // 標籤：每個候選位置算分，撞到節點、別的標籤、線都扣分，挑最低分的
+  // ponytail: 貪婪逐一放，不回頭重排；真的擠到放不下，console 會警告，改 JSON（縮短標籤、換圈）比改演算法快
+  lines.forEach(l => { l.pts = samples(l.q, 60); });
+  const placed = [], linePts = lines.flatMap(l => l.pts);
+  const gap = (b, pts) => Math.min(...pts.map(p => Math.hypot(Math.max(b.x1 - p[0], 0, p[0] - b.x2), Math.max(b.y1 - p[1], 0, p[1] - b.y2))));
+  function score(b, blue, own) {
+    let bad = 0, s = 0;
+    if (own) {   // 別條線沒比自己的線遠出 12px，就會被讀成別條線的標籤；夾在兩條線中間也算
+      const mine = gap(b, own.pts);
+      if (lines.some(l => l !== own && gap(b, l.pts) < mine + 12)) bad += 150;
+    }
+    nodeList.forEach(n => { if (hit(b, grow(n.b, 4))) bad += 200; else if (hit(b, grow(n.b, 14))) s += 40; });   // 貼著框會被讀成那個人的註解
+    placed.forEach(p => { if (hit(b, p.b)) bad += 200; else if (p.blue === blue && hit(b, grow(p.b, 8))) s += 12; });   // 同色又太近會讀成同一個標籤
+    const bl = grow(b, 4);
+    linePts.forEach(p => { if (has(bl, p)) bad += 15; });
+    s += 3 * (Math.max(0, 4 - b.x1) + Math.max(0, b.x2 - W + 4) + Math.max(0, 4 - b.y1) + Math.max(0, b.y2 - H + 4));
+    const dx = Math.max(b.x1 - CX, 0, CX - b.x2), dy = Math.max(b.y1 - CY, 0, CY - b.y2);
+    const near = Math.hypot(dx, dy), far = Math.hypot(Math.max(Math.abs(b.x1 - CX), Math.abs(b.x2 - CX)), Math.max(Math.abs(b.y1 - CY), Math.abs(b.y2 - CY)));
+    s += 4 * RING_R.filter(r => near < r && r < far).length;   // 壓在圈線上
+    return [s + bad, bad];
+  }
+  function put(texts, cls, cands, own) {
+    const w = Math.max(...texts.map(t => measure(t, cls))), h = texts.length * LH;
+    let best;
+    cands(w, h).forEach(c => {
+      const b = box(c.x, c.y, w, h), [s, bad] = score(b, cls.includes('today'), own);
+      if (!best || s + c.cost < best.s) best = { b, s: s + c.cost, bad, c };
+    });
+    if (best.bad) console.warn(`標籤「${texts.join(' ')}」找不到乾淨的位置，縮短它或換人的圈。`);
+    texts.forEach((t, i) => el('text', { class: cls, x: best.c.x, y: best.b.y1 + LH * (i + 0.5) }, gLabels, t));
+    placed.push({ b: grow(best.b, 3), blue: cls.includes('today') });
+    hole(grow(best.b, 2));
+  }
+  [1, 2].forEach(i => put([RING_TEXT[i]], 'ringlabel', () => [
+    { x: CX, y: CY - RING_R[i] + 11, cost: 0 }, { x: CX, y: CY + RING_R[i] - 11, cost: 5 }]));
+  [...lines].sort((a, b) => !!b.today - !!a.today || (b.kind === 'depend') - (a.kind === 'depend')).forEach(l => {
+    if (!l.label) return;
+    put(String(l.label).split('\n'), 'lbl' + (l.today ? ' today' : ''), (w, h) => {
+      const out = [];
+      [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8].forEach(t => {
+        const P = qp(l.q, t), D = qd(l.q, t), len = Math.hypot(D[0], D[1]);
+        [1, -1].forEach(side => {
+          const nx = -D[1] / len * side, ny = D[0] / len * side;
+          [7, 10, 14, 18, 22, 26, 32, 40].forEach(d => {
+            const e = d + Math.abs(nx) * w / 2 + Math.abs(ny) * h / 2;
+            out.push({ x: P[0] + nx * e, y: P[1] + ny * e, cost: Math.abs(t - 0.5) * 60 + d * 0.5 });
+          });
+        });
+      });
+      return out;
+    }, l);
+  });
+  // 「拍板」最後放：圓心附近六個位置挑空的
+  const centerGuess = nodeList.some(n => n.ring === 1 && n.guess);
+  put([RING_TEXT[0] + (centerGuess ? '（推測）' : '')], 'ringlabel', w => [[1, 1], [-1, 1], [0, 1], [1, -1], [-1, -1], [0, -1]].map(([sx, sy], k) => (
+    { x: CX + sx * Math.max(55 - w / 2, w / 2 + 8), y: CY + sy * 33, cost: k })));   // 長的從圓心往外長，不跨過直上直下的線
+
+  // 標籤超出畫框時把 viewBox 撐大，不截字
+  const bb = svg.getBBox();
+  const x1 = Math.min(0, bb.x - 6), y1 = Math.min(0, bb.y - 6);
+  const x2 = Math.max(W, bb.x + bb.width + 6), y2 = Math.max(H, bb.y + bb.height + 6);
+  svg.setAttribute('viewBox', `${x1} ${y1} ${x2 - x1} ${y2 - y1}`);
+  const names = r => nodeList.filter(n => n.ring === r).map(n => n.name).join('、') || '沒有人';
+  const first = l => l.label ? '：' + String(l.label).split('\n')[0] : '';
+  svg.querySelector('desc').textContent = `同心圓：圓心是${names(1)}（拍板）。第二圈是${names(2)}。外圈是${names(3)}。`
+    + todays.map(l => `今天要動的線：${l.from} → ${l.to}${first(l)}。`).join('');
+
+  // 右欄
+  const side = document.getElementById('pm-side');
+  const h = (tag, parent, text, cls) => {
+    const e = document.createElement(tag);
+    if (text != null) e.textContent = text;
+    if (cls) e.className = cls;
+    parent.appendChild(e);
+    return e;
+  };
+  const c = data.choice;
+  if (c) {
+    h('h3', side, `${c.who || '拍板者'}眼中的選擇${nodes[c.who] && nodes[c.who].guess ? '（推測）' : ''}`);
+    const table = h('table', side), hr = h('tr', h('thead', table)), body = h('tbody', table);
+    h('th', hr, '說好' + (c.yesMeans ? `（${c.yesMeans}）` : ''));
+    h('th', hr, '說不' + (c.noMeans ? `（${c.noMeans}）` : ''));
+    const yes = c.yes || [], no = c.no || [];
+    for (let i = 0; i < Math.max(yes.length, no.length); i++) {
+      const tr = h('tr', body);
+      h('td', tr, yes[i] || '');
+      h('td', tr, no[i] || '');
+    }
+    if (c.note) h('p', side, c.note);
+  }
+  if (todays.length || data.today) {
+    h('h3', side, '今天動哪條線');
+    const p = h('p', side);
+    todays.forEach((l, i) => h('span', p, `${i ? '；' : ''}${l.from} → ${l.to}${first(l)}`, 'today'));
+    if (data.today) p.append((todays.length ? '。' : '') + data.today);
+  }
+  const legend = [];
+  if (lines.some(l => !l.today && l.kind === 'depend')) legend.push('粗實線＝誰離不開誰（箭頭指向被依賴的人）');
+  if (lines.some(l => !l.today && l.kind !== 'depend')) legend.push('細線＝話怎麼傳');
+  if (todays.length) legend.push('藍粗線＝今天要動');
+  if (people.some(p => p.guess) || lines.some(l => l.guess)) legend.push('虛框、虛線＝推測或還沒有');
+  h('p', side, legend.join('　'), 'legend');
+})();
+</script>
+</body>
+</html>
