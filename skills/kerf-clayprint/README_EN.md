@@ -120,7 +120,7 @@ Turn these meeting notes into a printable HTML report
 Make this script a pre-read deck; people will read it on their own before the meeting, with no presenter
 ```
 
-A pre-read deck uses smaller type and fits more on each page, and what a presenter would say goes on the page itself; see [read decks](references/layouts.md#閱讀型簡報) (Traditional Chinese).
+A pre-read deck uses smaller type (22 pt titles, 11 pt body) and holds about 600–900 characters per content page, with two-panel pages, takeaways and footnotes; what a presenter would say goes on the page itself; see [read decks](references/layouts.md#閱讀型簡報) (Traditional Chinese).
 
 Or invoke `$kerf-clayprint` in Codex and `/kerf-clayprint` in Claude Code.
 

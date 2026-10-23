@@ -119,7 +119,7 @@ npx skills add kerfnotes/skills --list
 把這份稿子做成會前閱讀版簡報，大家先自己看，不會有人講解
 ```
 
-閱讀版簡報字級較小、每頁容量較大，要說的話直接寫在頁面上，見[閱讀型簡報](references/layouts.md#閱讀型簡報)。
+閱讀版簡報字級較小（標題 22 pt、正文 11 pt），每個內容頁約放 600 到 900 字元，可並排兩格、加結論句與註腳，要說的話直接寫在頁面上，見[閱讀型簡報](references/layouts.md#閱讀型簡報)與範例 [story-read.json](examples/story-read.json)。
 
 Codex 也可用 `$kerf-clayprint`，Claude Code 可用 `/kerf-clayprint`。
 

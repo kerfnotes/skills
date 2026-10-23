@@ -81,24 +81,75 @@
 
 ## 閱讀型簡報
 
-會前先寄、讀者自己看、沒有人講解時，根層填 `"mode": "read"`。整份改用 [design/read.json](../design/read.json) 的字級、上下邊界與證據圖寬：頁標題 22 pt、最多兩行；正文 11 pt；標籤文字（頁首、`lede`）10 pt；圖表文字（軸標、資料標籤、表格）9 pt；來源列與頁碼 8 pt，也是最小字級。上邊界 8 mm、下邊界 7 mm。13.33 吋投影片印在 A4 橫式約縮為 0.88 倍，8 pt 印出約 7 pt；讀者會印出細看時，先預覽 PDF 確認可讀。字級是整份一致的設計，不是逐頁縮字；放不下仍刪內容或拆頁。證據頁圖表縮窄，右側 `note` 欄加寬，每行約 26 個中文字。
+會前先寄、讀者自己看、沒有人講解時，根層填 `"mode": "read"`。閱讀型簡報每頁放的訊息比現場簡報多：整份改用 [design/read.json](../design/read.json) 的字級、上下邊界、證據圖寬與容量。`node evals/check.mjs` 與 `node scripts/pptx.js` 讀到 `mode` 會自動切換，指令不變。
 
-`node evals/check.mjs` 與 `node scripts/pptx.js` 讀到 `mode` 會自動用對應字級建檔，指令不變。下表是放寬後的容量，其餘版型同上：
+| 層級 | 字級 | 用在 |
+| --- | --- | --- |
+| 頁標題 | 22 pt，最多兩行 | 每頁 `claim` |
+| 正文 | 11 pt | 摘要理由、清單與並列的 `body`、證據頁 `note`、收尾表、panels 的文字格 |
+| 小字正文與標籤 | 10 pt | 頁首、`lede`、`takeaway`（粗體）、`points`、panels 格標題與 `note` |
+| 圖表文字 | 9 pt | 軸標、資料標籤、表格 |
+| 註腳與來源 | 8 pt | `footnotes`、來源列、頁碼；也是最小字級 |
+
+上邊界 8 mm、下邊界 7 mm，左右邊界不變。來源列與頁碼在同一行。證據頁圖表縮窄為 1000 px，右欄加寬，正文每行約 26 個中文字。13.33 吋投影片印在 A4 橫式約縮為 0.88 倍，8 pt 印出約 7 pt；讀者會印出細看時，先預覽 PDF 確認可讀。字級是整份一致的設計，不是逐頁縮字；放不下仍刪內容或拆頁。
+
+每個內容頁建議放 600 到 900 個字元的可見文字（`claim`、`kicker`、`lede`、`note`、`takeaway`、`points`、`footnotes`、`visual` 內的標籤與數值、來源列，不算換行）。這是寫作目標，驗收器不檢查；少於 600 字元時多半是該併頁，或證據頁右欄還能補理由。
+
+### 容量
+
+超出下表只警告，不擋建檔；高度估算超出內容區時另有警告，那是硬門檻。
 
 | 版型 | 現場簡報 | 閱讀型 |
 | --- | --- | --- |
-| `numbers` | 2～4 格，`note` 1 行 | 2～8 格，4 格以上排兩列，`note` 至多 3 行 |
 | `summary` | 2～3 格，理由至多 3 行 | 2～6 格，理由至多 10 行 |
-| `compare` | 2～4 個方案 | 2～5 個方案，至多 8 列 |
-| `list` | 3～5 項，`body` 1 行 | 3～8 項，`body` 至多 3 行（項數多時仍受高度限制） |
+| `numbers` | 2～4 格，`note` 1 行 | 2～8 格，4 格以上排兩列，`note` 至多 3 行 |
+| `list` | 3～5 項，`body` 1 行 | 3～8 項，`body` 至多 3 行 |
 | `process` | 3～6 步 | 3～8 步 |
-| `columns` | 2～4 欄 | 2～5 欄，每欄 `body` 至多 6 行 |
+| `columns` | 2～4 欄 | 2～5 欄，每欄 `body` 至多 6 行，可加一列 `takeaway` |
+| `compare` | 2～4 個方案 | 2～5 個方案，至多 8 列 |
 | `evidence` 的 `table` | 依可用高度 | 至多 14 列 |
 | `evidence` 的 `points` | 不支援 | 2～4 點，每點至多 2 行 |
 | `close` | 依可用高度 | 至多 14 列 |
 | `panels` | 不支援 | 恰好 2 格，每格 `note` 至多 3 行 |
+| `footnotes` | 不支援 | 不限則數，8 pt 依頁寬換行，佔用內容區下方高度 |
 
-`panels` 只在閱讀型使用，一頁並排兩格，各放一張圖、一張表、一份清單或一段文字；現場簡報用到會驗收失敗。`visual` 為 `{items: [{title, visual, note?}, {title, visual, note?}], split?}`：`items` 恰好兩格；格標題 10 pt；格內 `visual` 是圖表或表格的 `{kind, …}`（同[圖表欄位](charts.md)，表格用 `table` 圖種）、清單 `{items: [{heading, body?}]}` 或一段文字字串（正文 11 pt）；`note` 10 pt、至多 3 行，超出警告。預設兩格等寬，`split: [3, 2]` 依比例分寬。格內數字與註一樣要能在原稿找到；兩格都是文字或清單時也套用 70% 填滿警告。
+`summary` 6 格與 `close` 14 列是標題一行、沒有 `lede` 時的上限：摘要每格只放數字與標籤；每格加 `note` 時約放 4 格。兩行標題或加 `lede` 會少一點高度，依警告刪格或拆頁。
+
+### 新欄位
+
+沒有講者，要說的話就要寫在頁面上。以下欄位只有閱讀型支援，現場簡報用到時驗收失敗：
+
+- `evidence` 右欄：`takeaway` 一句結論（10 pt 粗體），`points` 2～4 點理由（10 pt，每點至多 2 行），其後接既有的 `note`（11 pt，寫怎麼讀與資料限制）。三者都沒有時建檔會警告右欄空白。重點數字 `metric` 仍在右欄最上方，但會占掉 `points` 與 `note` 的高度。
+- `columns` 的 `takeaway`：頁面層一句，以一列 10 pt 粗體排在各欄下方。
+- 任一頁的 `footnotes`：字串陣列，自動編號為「(1)」「(2)」，以 8 pt 排在來源列上方。正文自己寫半形「(1)」標記，不用上標。驗收器掃數字時會剔除不超過註腳數的「(N)」，其餘數字（含 `takeaway`、`points`、`footnotes` 裡的數字）都要有原稿依據。
+- `panels` 版型：見下節。
+
+```json
+{
+  "type": "evidence",
+  "claim": "甲區 12 件，多於乙區的 8 件",
+  "takeaway": "甲區是目前最主要的案件來源(1)。",
+  "points": ["甲區 12 件，乙區 8 件。", "乙區仍在成長，差距可能縮小。"],
+  "note": "只計已結案件；未結案件不列入。",
+  "footnotes": ["案件以受理地區歸類。"],
+  "visual": { "kind": "rank", "rows": [{ "label": "甲區", "value": 12 }, { "label": "乙區", "value": 8 }] },
+  "sources": { "source": "虛構測試文字稿" }
+}
+```
+
+```json
+{
+  "type": "columns",
+  "claim": "三項工作並行，五月底前完成",
+  "visual": { "items": [{ "heading": "核定費率", "body": "營運科負責。" }, { "heading": "增補條款", "body": "法務室負責。" }, { "heading": "擴容評估", "body": "規劃科負責。" }] },
+  "takeaway": "三項都要在下次會議前完成，才能如期全區上線。",
+  "sources": { "source": "虛構測試文字稿" }
+}
+```
+
+### panels
+
+`panels` 一頁並排兩格，各放一張圖、一張表、一份清單或一段文字。`visual` 為 `{items: [{title, visual, note?}, {title, visual, note?}], split?}`：`items` 恰好兩格；格標題 10 pt；格內 `visual` 是圖表或表格的 `{kind, …}`（同[圖表欄位](charts.md)，表格用 `table` 圖種）、清單 `{items: [{heading, body?}]}` 或一段文字字串（正文 11 pt）；`note` 10 pt、至多 3 行，超出警告。預設兩格等寬，`split: [3, 2]` 依比例分寬。格內數字與註一樣要能在原稿找到。
 
 ```json
 {
@@ -115,30 +166,14 @@
 }
 ```
 
-沒有講者，要說的話就要寫在頁面上：
+### 填滿與頁數
 
-- 每張證據頁的右欄都要有內容：`takeaway` 一句結論（10 pt 粗體），`points` 2～4 點理由（10 pt），`note` 寫怎麼讀與資料限制；三者都沒有時建檔會警告右欄空白。重點數字 `metric` 仍在右欄最上方。
-- `columns` 可在頁面層加 `takeaway`，以一列 10 pt 粗體顯示在各欄下方。
-- 任一頁可加 `footnotes`，自動編號為「(1)」「(2)」，以 8 pt 置於來源列上方；正文自己寫「(1)」標記，不用上標。驗收器掃數字時會剔除不超過註腳數的「(N)」，其餘數字（含 `takeaway`、`points`、`footnotes` 裡的數字）都要有原稿依據。
-- 這三個欄位只有閱讀型支援；現場簡報用到時驗收失敗。
+- 數字格、流程、並列、時程、一句話頁，以及兩格都是文字或清單的 `panels`，內容填滿低於內容區 70% 時驗收器會警告：加 `takeaway` 或 `points`，或併入相鄰頁；不湊字、不放大字級。
 - `lede` 交代指標、範圍、期間與單位；清單與流程的 `body` 寫原因或做法，不只寫名詞。
-- 現場簡報用來鋪陳的 `statement`、`section` 頁，改把判斷併入相鄰內容頁的 `claim` 或 `note`，頁數通常比現場版少。數字格、流程、並列、時程與一句話頁填滿低於 70% 時驗收器會警告；先併入相鄰頁，不湊字、不放大字級。
+- 現場簡報用來鋪陳的 `statement`、`section` 頁，改把判斷併入相鄰內容頁的 `claim`、`takeaway` 或 `note`，頁數通常比現場版少。
 - `notes` 不會被讀者看到，只放計算行與資料限制，不必寫講稿。
 
-```json
-{
-  "type": "evidence",
-  "claim": "甲區 12 件，多於乙區的 8 件",
-  "takeaway": "甲區是目前最主要的案件來源(1)。",
-  "points": ["甲區 12 件，乙區 8 件。", "乙區仍在成長，差距可能縮小。"],
-  "note": "只計已結案件；未結案件不列入。",
-  "footnotes": ["案件以受理地區歸類。"],
-  "visual": { "kind": "rank", "rows": [{ "label": "甲區", "value": 12 }, { "label": "乙區", "value": 8 }] },
-  "sources": { "source": "虛構測試文字稿" }
-}
-```
-
-範例見 [story-read.json](../examples/story-read.json)，和現場版 [story.json](../examples/story.json) 用同一份原稿。
+範例見 [story-read.json](../examples/story-read.json)：封面加五個內容頁，用到 summary、evidence 的 `takeaway`／`points`、`panels`、compare 與 columns 的 `takeaway`，各頁有 `footnotes` 與兩行標題；和現場版 [story.json](../examples/story.json) 用同一份原稿。
 
 ## 預覽與交付
 
