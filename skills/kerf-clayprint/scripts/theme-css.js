@@ -105,8 +105,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .exhibit-note, figcaption, .sources { font-size: 7pt; }
   .exhibit-title, caption { font-size: 12pt; }
   /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
-     the cover band cancels that again to reach the paper edge. Sections always start on the next page.
-     ponytail: front matter longer than one page keeps the 50 mm padding on top of page 2's margin; shorten the summary if it spills. */
+     the cover band cancels that again to reach the paper edge. Sections always start on the next page. */${''
+  /* ponytail: front matter longer than one page keeps the 50 mm padding on top of page 2's margin; shorten the summary if it spills. */}
   .report-front { margin: 0 -11mm 0 -28mm; padding: 0 25mm 15mm 50mm; break-after: page; }
   .report-cover { margin: 0 -25mm 10mm -50mm; padding: 24mm 25mm 12mm 50mm; background: var(--cp-tint); }
   .report-cover h1 { font-size: 30pt; line-height: 1.2; }
@@ -123,7 +123,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .section-heading .eyebrow { margin-bottom: 1mm; }
   .section-heading h2 { color: var(--cp-accent); margin-bottom: 3mm; }
   .callout { margin-top: 6mm; margin-bottom: 6mm; padding: 0; background: none; border: 0; }
-  .callout p { font-size: 24pt; line-height: 1.3; color: var(--cp-accent); font-weight: 700; max-width: none; }
+  .callout p { font-size: 24pt; line-height: 1.3; color: var(--cp-accent); font-weight: 400; max-width: none; }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
   /* Tables over eight rows may break; the header repeats on the next page. */
   .table-scroll:has(tbody tr:nth-child(9)), .table-scroll:has(tbody tr:nth-child(9)) table { break-inside: auto; }

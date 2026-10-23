@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { buildReport } from '../scripts/report.js';
 import { themeCss } from '../scripts/theme-css.js';
 
@@ -55,6 +56,13 @@ test('列印：callout 是 24 pt 強調色、無框無底色的引言；螢幕�
   const print = printCss();
   assert.match(print, /\.callout \{[^}]*padding: 0;[^}]*background: none;[^}]*border: 0;/);
   assert.match(print, /\.callout p \{[^}]*font-size: 24pt;[^}]*line-height: [\d.]+;[^}]*color: var\(--cp-accent\)/);
+  // 字重 400 才讀得出是引言，不像另一個節標題。
+  assert.match(print, /\.callout p \{[^}]*font-weight: 400;/);
+});
+
+test('ponytail 註解留在原始碼，不輸出到報告 HTML', () => {
+  assert.doesNotMatch(themeCss(), /ponytail/);
+  assert.match(readFileSync(new URL('../scripts/theme-css.js', import.meta.url), 'utf8'), /ponytail:/);
 });
 
 test('列印：圖、表、摘要不切；超過八列的表格才可分頁並重複表頭', () => {

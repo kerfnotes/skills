@@ -104,10 +104,12 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
     renameSync(join(outDir, f), png);
     return png;
   });
-  // Portrait pages, four to a row.
-  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', ...pngs.flatMap((p) => ['-i', p]),
+  // Portrait pages, four to a row; ffmpeg's xstack needs at least two, so a one-page print has no sheet.
+  const sheet = pngs.length > 1 ? join(outDir, 'sheet.png') : null;
+  rmSync(join(outDir, 'sheet.png'), { force: true });
+  if (sheet) execFileSync('ffmpeg', ['-loglevel', 'error', '-y', ...pngs.flatMap((p) => ['-i', p]),
     '-filter_complex', `${pngs.map((_, i) => `[${i}]scale=400:560:force_original_aspect_ratio=decrease,pad=420:580:(ow-iw)/2:10:white[p${i}]`).join(';')};${pngs.map((_, i) => `[p${i}]`).join('')}xstack=inputs=${pngs.length}:layout=${pngs.map((_, i) => `${(i % 4) * 420}_${Math.floor(i / 4) * 580}`).join('|')}:fill=white`,
-    join(outDir, 'sheet.png')]);
+    sheet]);
 
   const tmp = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
   let pages;
@@ -123,7 +125,7 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
     if (overflow) warnings.push(`第 ${i + 1} 頁內容超出右邊界約 ${overflow} mm：減少表格欄數或設 wide: true。`);
   });
   warnings.push(...splitExhibits(execFileSync('pdftotext', [pdf, '-'], { encoding: 'utf8' }).split('\f'), source));
-  return { pdf, pngs, sheet: join(outDir, 'sheet.png'), fills: pages.map((p) => p.fill), size: letter ? 'Letter' : 'A4', warnings };
+  return { pdf, pngs, sheet, fills: pages.map((p) => p.fill), size: letter ? 'Letter' : 'A4', warnings };
 }
 
 if (isMain(import.meta.url)) {
@@ -138,7 +140,7 @@ if (isMain(import.meta.url)) {
   try {
     const result = printPdf(html, outDir, { letter: args.includes('--letter'), paper });
     for (const w of result.warnings) console.error(`警告：${w}`);
-    console.log(`PDF：${result.pdf}；每頁 PNG 與 sheet.png 在 ${resolve(outDir)}`);
+    console.log(`PDF：${result.pdf}；每頁 PNG${result.sheet ? ' 與 sheet.png' : ''} 在 ${resolve(outDir)}`);
     console.log(`印出 ${result.fills.length} 頁（${result.size}）；填滿率 ${result.fills.join('／')}%。`);
   } catch (error) {
     console.error(`錯誤：${error.message}`);

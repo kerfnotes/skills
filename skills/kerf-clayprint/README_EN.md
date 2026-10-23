@@ -54,7 +54,7 @@ The three showcase scripts use public data. Every number was traced to a primary
 | ![Ranked bars: top five solar generators in 2025](docs/images/energy-rank.png) | ![Option comparison: structural demand versus cyclical peak](docs/images/ai-compare.png) |
 | Ranked bars with a computed key number | Option comparison: the recommended column is tinted (AI deck, page 8) |
 
-The same AI exports script also becomes an HTML report ([ai-exports-report.html](examples/showcase/ai-exports-report.html)) for printing or forwarding:
+The same AI exports script also becomes an HTML report ([ai-exports-report.html](examples/showcase/ai-exports-report.html)) to forward or print to PDF: white paper with a wide left margin, the 「圖 N」 (Figure N) label and title above each chart, notes and source below, a page footer, and sections that run on without page breaks.
 
 <img src="docs/images/report.png" alt="HTML report: cover, contents, summary numbers and export line chart" width="480">
 
@@ -64,6 +64,7 @@ The showcase only organises public figures and is not investment or policy advic
 node evals/check.mjs examples/showcase/energy.json examples/showcase/energy.md
 node scripts/pptx.js examples/showcase/energy.json out/energy.pptx
 node scripts/preview.js out/energy.pptx out/energy
+node scripts/pdf.js examples/showcase/ai-exports-report.html out/ai-exports
 ```
 
 ## How it checks itself
@@ -75,6 +76,7 @@ node scripts/preview.js out/energy.pptx out/energy
 | Numbers | Every number on screen must appear in the script or come from an add/subtract line on the same page; otherwise the build stops | `evals/check.mjs`, `evals/check-report.mjs` |
 | Fit | Estimates whether text fits each box using the design layer's glyph widths; warns on orphans and overflow instead of shrinking type | `scripts/pptx.js` |
 | Preview | Renders each page and a contact sheet through PowerPoint or LibreOffice, then reviews claim, emphasis and reading order page by page | `scripts/preview.js` |
+| Print | Prints the report to PDF with Chrome, Edge or another Chromium browser and warns about underfilled pages, split figures or tables, and right-edge overflow | `scripts/pdf.js` |
 
 Passing the checks only means numbers and fit are fine; meaning, overlaps and whether the story holds still need a look at the pages.
 
@@ -89,7 +91,7 @@ When you hand over a script, say who it is for and what judgement or decision it
 | Code | `scripts/` | Chart types, layouts or outputs change |
 | Checks | `tests/`, `examples/`, `evals/` | A new problem appears or a new example is needed |
 
-`scripts/pptx.js` reads `story.json` and the design layer; `scripts/report.js` reads `report.json` and the design layer for the HTML report; SVG charts read chart JSON and the design layer. To change the look or the workflow, see [make it yours](docs/make-it-yours.md) (Traditional Chinese).
+`scripts/pptx.js` reads `story.json` and the design layer; `scripts/report.js` reads `report.json` and the design layer for the HTML report, and `scripts/pdf.js` prints it to PDF; SVG charts read chart JSON and the design layer. To change the look or the workflow, see [make it yours](docs/make-it-yours.md) (Traditional Chinese).
 
 ## Install with your agent
 

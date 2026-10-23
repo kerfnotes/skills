@@ -41,7 +41,7 @@ ${log}
 for arg do prefix="$arg"; done
 case " $* " in
   *" -gray "*) for f in "$FAKE_FIXTURES"/*.pgm; do cp "$f" "$prefix-$(basename "$f")"; done ;;
-  *) for n in 1 2 3; do printf 'fake PNG' > "$prefix-$n.png"; done ;;
+  *) for n in $(seq "\${FAKE_PAGES:-3}"); do printf 'fake PNG' > "$prefix-$n.png"; done ;;
 esac
 `, { mode: 0o755 });
   writeFileSync(join(bin, 'pdftotext'), `#!/bin/sh
@@ -125,6 +125,21 @@ test('--letter --paper clay prints a marked temporary copy, deletes it, and skip
     assert.ok(existsSync(join(out, 'brief.pdf')));
     assert.match(result.stdout, /印出 3 頁（Letter）/);
     assert.doesNotMatch(result.stderr, /表 1 跨/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a one-page print skips sheet.png instead of failing', { skip: process.platform === 'win32' && 'POSIX shell shims' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
+  try {
+    const html = join(dir, 'one.html'), out = join(dir, 'print');
+    writeFileSync(html, '<html><body><p>一頁</p></body></html>');
+    const result = run(dir, [html, out], { FAKE_PAGES: '1' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(readdirSync(out).sort(), ['one.pdf', 'page-01.png']);
+    assert.ok(!readFileSync(join(dir, 'calls'), 'utf8').includes('ffmpeg'));
+    assert.match(result.stdout, /每頁 PNG 在 /);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -54,7 +54,7 @@ AI 做簡報不難，難的是做出能拿去開會的簡報：每頁標題要�
 | ![排名長條：2025 年太陽能發電前五名](docs/images/energy-rank.png) | ![方案比較：結構性需求與週期高峰](docs/images/ai-compare.png) |
 | 排名長條：右側放計算出的重點數字 | 方案比較：建議欄整欄標色（AI 那份第 8 頁） |
 
-同一份 AI 出口稿也能做成 HTML 報告（[ai-exports-report.html](examples/showcase/ai-exports-report.html)），可以列印或轉寄：
+同一份 AI 出口稿也能做成 HTML 報告（[ai-exports-report.html](examples/showcase/ai-exports-report.html)），可以轉寄，也能印成 PDF：白紙學者版心、圖表的「圖 N」與標題在上、註與來源在下，每頁有頁尾頁碼，章節在頁中接續。
 
 <img src="docs/images/report.png" alt="HTML 報告：封面、目錄、摘要數字與出口折線圖" width="480">
 
@@ -64,6 +64,7 @@ AI 做簡報不難，難的是做出能拿去開會的簡報：每頁標題要�
 node evals/check.mjs examples/showcase/energy.json examples/showcase/energy.md
 node scripts/pptx.js examples/showcase/energy.json out/energy.pptx
 node scripts/preview.js out/energy.pptx out/energy
+node scripts/pdf.js examples/showcase/ai-exports-report.html out/ai-exports
 ```
 
 ## 它怎麼把關
@@ -75,6 +76,7 @@ node scripts/preview.js out/energy.pptx out/energy
 | 核數字 | 畫面上每個數字都要出現在原稿，或寫成同頁可核對的加減算式；找不到就擋下 | `evals/check.mjs`、`evals/check-report.mjs` |
 | 估容量 | 依設計層字寬估算每格放不放得下，警告孤字與溢出，不自動縮字 | `scripts/pptx.js` |
 | 看預覽 | 用 PowerPoint 或 LibreOffice 輸出每頁 PNG 與整份概覽，逐頁看主張、強調與閱讀順序 | `scripts/preview.js` |
+| 印報告 | 用 Chrome、Edge 等瀏覽器把報告印成 PDF，警告填滿率不足、圖表被切開與右側溢出 | `scripts/pdf.js` |
 
 檢查通過只代表數字和容量沒問題；頁面語意、遮擋與故事是否成立，仍要看圖。
 
@@ -89,7 +91,7 @@ node scripts/preview.js out/energy.pptx out/energy
 | 程式 | `scripts/` | 改圖種、版型或輸出方式時 |
 | 檢查成品 | `tests/`、`examples/`、`evals/` | 發現新問題或需要新範例時 |
 
-簡報由 `scripts/pptx.js` 讀 `story.json` 與設計層；報告由 `scripts/report.js` 讀 `report.json` 與設計層；SVG 另讀圖表 JSON 與設計層。換外觀或改流程，見[改造步驟](docs/make-it-yours.md)。
+簡報由 `scripts/pptx.js` 讀 `story.json` 與設計層；報告由 `scripts/report.js` 讀 `report.json` 與設計層，再由 `scripts/pdf.js` 印成 PDF；SVG 另讀圖表 JSON 與設計層。換外觀或改流程，見[改造步驟](docs/make-it-yours.md)。
 
 ## 交給 agent 安裝
 

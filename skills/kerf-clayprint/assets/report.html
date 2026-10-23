@@ -104,8 +104,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .exhibit-note, figcaption, .sources { font-size: 7pt; }
   .exhibit-title, caption { font-size: 12pt; }
   /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
-     the cover band cancels that again to reach the paper edge. Sections always start on the next page.
-     ponytail: front matter longer than one page keeps the 50 mm padding on top of page 2's margin; shorten the summary if it spills. */
+     the cover band cancels that again to reach the paper edge. Sections always start on the next page. */
   .report-front { margin: 0 -11mm 0 -28mm; padding: 0 25mm 15mm 50mm; break-after: page; }
   .report-cover { margin: 0 -25mm 10mm -50mm; padding: 24mm 25mm 12mm 50mm; background: var(--cp-tint); }
   .report-cover h1 { font-size: 30pt; line-height: 1.2; }
@@ -122,7 +121,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .section-heading .eyebrow { margin-bottom: 1mm; }
   .section-heading h2 { color: var(--cp-accent); margin-bottom: 3mm; }
   .callout { margin-top: 6mm; margin-bottom: 6mm; padding: 0; background: none; border: 0; }
-  .callout p { font-size: 24pt; line-height: 1.3; color: var(--cp-accent); font-weight: 700; max-width: none; }
+  .callout p { font-size: 24pt; line-height: 1.3; color: var(--cp-accent); font-weight: 400; max-width: none; }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
   /* Tables over eight rows may break; the header repeats on the next page. */
   .table-scroll:has(tbody tr:nth-child(9)), .table-scroll:has(tbody tr:nth-child(9)) table { break-inside: auto; }
@@ -200,21 +199,24 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
     <!-- 重點框：只有一句需要讀者停下來記住的結論時使用；列印時是無框的引言。 -->
     <aside class="callout"><p>{{重點判斷}}</p></aside>
 
-    <!-- 圖表：有數據可畫時放無標題來源列的 SVG，圖說寫單位、期間、來源與附註。 -->
+    <!-- 圖表：「圖 N」標籤與標題在圖上方；SVG 不含標題與來源列；圖下方的 figcaption 依序寫單位、期間、附註、來源。
+         全寬圖在 figure 加 class="wide"，列印從左 22 mm 起。 -->
     <figure>
+      <p class="exhibit-title"><span class="exhibit-label" data-label>圖 {{圖號}}</span>{{圖表標題}}</p>
       <div class="chart-scroll" tabindex="0" role="region" aria-label="{{圖表捲動區名稱}}">
         <svg viewBox="0 0 680 240" role="img" aria-labelledby="{{圖表標題錨點}}">
           <title id="{{圖表標題錨點}}">{{圖表可存取標題}}</title>
           <text x="24" y="48">{{SVG 圖表內容}}</text>
         </svg>
       </div>
-      <figcaption>{{圖表說明}}｜單位：{{單位}}｜期間：{{期間}}｜來源：{{來源}}｜附註：{{必要附註}}</figcaption>
+      <figcaption>單位：{{單位}}｜期間：{{期間}}｜附註：{{必要附註}}｜來源：{{來源}}</figcaption>
     </figure>
 
-    <!-- 表格：精確數值需要逐格比對時使用；數字靠右，重點列與合計列各自標示。 -->
+    <!-- 表格：精確數值需要逐格比對時使用；數字靠右，重點列與合計列各自標示。「表 N」與標題在 caption，附註與來源在表下方。
+         全寬表在 table-scroll 加 class="wide"。 -->
     <div class="table-scroll" tabindex="0" role="region" aria-label="{{表格捲動區名稱}}">
       <table>
-        <caption>{{表格標題}}</caption>
+        <caption><span class="exhibit-label" data-label>表 {{表號}}</span>{{表格標題}}</caption>
         <thead><tr><th scope="col">{{項目}}</th><th scope="col" class="num">{{數值欄名}}</th></tr></thead>
         <tbody>
           <tr><th scope="row">{{列名}}</th><td class="num">{{數值}}</td></tr>
@@ -223,6 +225,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
         <tfoot><tr class="total"><th scope="row">{{合計列名}}</th><td class="num">{{合計數值}}</td></tr></tfoot>
       </table>
     </div>
+    <p class="exhibit-note">附註：{{必要附註}}｜來源：{{來源}}</p>
 
     <!-- 方案比較：須在幾個方案間取捨時使用，推薦方案整欄加 recommended。 -->
     <div class="table-scroll" tabindex="0" role="region" aria-label="{{方案比較捲動區名稱}}">
