@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480" font-family="PingFang TC, 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif" role="img" aria-labelledby="t d">
+<title id="t">Power Map 權力地圖示意</title>
+<desc id="d">三圈同心圓，圓心是拍板者；第二圈是你和他的上級（推測），外圈是人資和盟友。粗實線是誰離不開誰，細線是話怎麼傳，藍色粗線是今天要動的那一條（你到拍板）。右側一張小表列拍板者說好、說不各付出什麼，下方是圖例。</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e9eaec"/></marker>
+<marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b5b6ad"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5b9cf6"/></marker>
+</defs>
+<rect width="800" height="480" rx="20" fill="#1a1a19"/>
+<circle cx="46" cy="46" r="16" fill="none" stroke="#d5b279" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="90.5 10.1" transform="rotate(-72.0 46 46)"/>
+<text x="74" y="44" font-size="20" font-weight="700" fill="#e9eaec">Power Map</text>
+<text x="74" y="66" font-size="13" fill="#b5b6ad">看懂誰拍板、該合作還是該硬 · Who decides, cooperate or get hard</text>
+<line x1="24" y1="92" x2="776" y2="92" stroke="#b07a35" stroke-width="1.5"/>
+
+<!-- rings, center (230,290) -->
+<circle cx="230" cy="290" r="170" fill="none" stroke="#3b3a35" stroke-width="1.2"/>
+<circle cx="230" cy="290" r="112" fill="none" stroke="#3b3a35" stroke-width="1.2"/>
+<circle cx="230" cy="290" r="52" fill="none" stroke="#3b3a35" stroke-width="1.2"/>
+<text x="230" y="137" text-anchor="middle" font-size="11" fill="#b5b6ad">意見會被聽、定規則</text>
+<text x="230" y="194" text-anchor="middle" font-size="11" fill="#b5b6ad">他靠誰、少了誰不行</text>
+
+<!-- who can't do without whom -->
+<line x1="230" y1="305" x2="230" y2="356" stroke="#e9eaec" stroke-width="3" marker-end="url(#a)"/>
+<line x1="250" y1="275" x2="266" y2="253" stroke="#e9eaec" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#a)"/>
+<!-- how word travels -->
+<line x1="344" y1="268" x2="263" y2="285" stroke="#b5b6ad" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#m)"/>
+<line x1="136" y1="371" x2="203" y2="371" stroke="#b5b6ad" stroke-width="1.2" marker-end="url(#m)"/>
+<!-- today -->
+<path d="M207,362 Q160,330 199,300" fill="none" stroke="#5b9cf6" stroke-width="4" marker-end="url(#b)"/>
+<text x="174" y="334" text-anchor="end" font-size="13" font-weight="700" fill="#5b9cf6">今天要動</text>
+
+<!-- nodes: names only -->
+<rect x="198" y="276" width="64" height="28" rx="6" fill="#1a1a19" stroke="#e9eaec" stroke-width="1.5"/>
+<text x="230" y="290" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" fill="#e9eaec">拍板</text>
+<rect x="208" y="358" width="44" height="26" rx="6" fill="#1a1a19" stroke="#e9eaec" stroke-width="1.5"/>
+<text x="230" y="371" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#e9eaec">你</text>
+<rect x="257" y="225" width="72" height="26" rx="6" fill="#1a1a19" stroke="#e9eaec" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="293" y="238" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#e9eaec">他的上級</text>
+<rect x="346" y="252" width="48" height="26" rx="6" fill="#1a1a19" stroke="#e9eaec" stroke-width="1.5"/>
+<text x="370" y="265" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#e9eaec">盟友</text>
+<rect x="90" y="358" width="48" height="26" rx="6" fill="#1a1a19" stroke="#e9eaec" stroke-width="1.5"/>
+<text x="114" y="371" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#e9eaec">人資</text>
+
+<!-- side: the choice as the decision-maker sees it -->
+<text x="440" y="126" font-size="14" font-weight="700" fill="#e9eaec">拍板者眼中的選擇<tspan dx="8" font-size="11" font-weight="400" fill="#b5b6ad">What yes and no cost</tspan></text>
+<rect x="440" y="140" width="336" height="106" rx="6" fill="none" stroke="#3b3a35" stroke-width="1.2"/>
+<line x1="608" y1="140" x2="608" y2="246" stroke="#3b3a35" stroke-width="1.2"/>
+<line x1="440" y1="168" x2="776" y2="168" stroke="#3b3a35" stroke-width="1.2"/>
+<text x="452" y="159" font-size="13" font-weight="700" fill="#e9eaec">說好</text>
+<text x="620" y="159" font-size="13" font-weight="700" fill="#e9eaec">說不</text>
+<rect x="452" y="180" width="120" height="8" rx="4" fill="#3b3a35"/>
+<rect x="452" y="204" width="92" height="8" rx="4" fill="#3b3a35"/>
+<rect x="452" y="228" width="132" height="8" rx="4" fill="#3b3a35"/>
+<rect x="620" y="180" width="104" height="8" rx="4" fill="#3b3a35"/>
+<rect x="620" y="204" width="136" height="8" rx="4" fill="#3b3a35"/>
+<rect x="620" y="228" width="80" height="8" rx="4" fill="#3b3a35"/>
+
+<text x="440" y="282" font-size="14" font-weight="700" fill="#e9eaec">今天動哪條線<tspan dx="8" font-size="11" font-weight="400" fill="#b5b6ad">The one move today</tspan></text>
+<text x="440" y="306" font-size="13" font-weight="700" fill="#5b9cf6">你 → 拍板</text>
+<rect x="520" y="298" width="196" height="8" rx="4" fill="#3b3a35"/>
+
+<!-- legend -->
+<line x1="440" y1="346" x2="480" y2="346" stroke="#e9eaec" stroke-width="3"/>
+<text x="492" y="346" dominant-baseline="central" font-size="12" fill="#b5b6ad">粗實線：誰離不開誰，箭頭指向被依賴的人</text>
+<line x1="440" y1="372" x2="480" y2="372" stroke="#b5b6ad" stroke-width="1.2"/>
+<text x="492" y="372" dominant-baseline="central" font-size="12" fill="#b5b6ad">細線：話怎麼傳</text>
+<line x1="440" y1="398" x2="480" y2="398" stroke="#5b9cf6" stroke-width="4"/>
+<text x="492" y="398" dominant-baseline="central" font-size="12" fill="#b5b6ad">藍粗線：今天要動的那一條，只有一條</text>
+<rect x="440" y="415" width="40" height="18" rx="4" fill="none" stroke="#e9eaec" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="492" y="424" dominant-baseline="central" font-size="12" fill="#b5b6ad">虛框、虛線：推測或還沒有</text>
+</svg>

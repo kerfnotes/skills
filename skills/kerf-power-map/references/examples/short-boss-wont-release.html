@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>主管不放人：權力地圖</title>
+<style>
+.pm{font-family:var(--font-sans,-apple-system,"PingFang TC","Noto Sans TC",sans-serif);color:var(--foreground,#1f2937);max-width:1100px;margin:0 auto;padding:8px 12px;line-height:1.45}
+.pm h2{font-size:18px;margin:0 0 6px;font-weight:600}
+.pm .row{display:flex;gap:20px;align-items:flex-start}
+.pm svg{flex:0 0 640px;width:640px;height:auto}
+.pm .side{flex:1 1 320px;min-width:260px;font-size:14px}
+.pm .side h3{font-size:14px;margin:8px 0 4px;font-weight:600}
+.pm table{border-collapse:collapse;width:100%;font-size:13px}
+.pm th,.pm td{border:1px solid var(--border,#d1d5db);padding:5px 8px;text-align:left;vertical-align:top}
+.pm th{font-weight:600}
+.pm .today{color:#2563eb;font-weight:600}
+.pm .legend{font-size:12px;color:var(--muted-foreground,#6b7280);margin-top:10px}
+.pm .node{fill:transparent;stroke:currentColor;stroke-width:1.5;rx:6}
+.pm .guess{stroke-dasharray:6 4}
+.pm .name{font-size:15px;fill:currentColor;text-anchor:middle;dominant-baseline:central}
+.pm .ring{fill:none;stroke:var(--border,#d1d5db);stroke-width:1}
+.pm .ringlabel{font-size:12px;fill:var(--muted-foreground,#6b7280)}
+.pm .dep{stroke:currentColor;stroke-width:3;fill:none}
+.pm .info{stroke:var(--muted-foreground,#6b7280);stroke-width:1.2;fill:none}
+.pm .todayline{stroke:#2563eb;stroke-width:4;fill:none}
+.pm .lbl{font-size:12px;fill:var(--muted-foreground,#6b7280)}
+.pm .lbl.today{fill:#2563eb;font-weight:600}
+@media (max-width:900px){.pm .row{flex-direction:column}.pm svg{flex-basis:auto;width:100%}}
+</style>
+</head>
+<body>
+<div class="pm">
+<h2>主管不放人：誰拍板、他靠誰、今天動哪條線</h2>
+<div class="row">
+<svg viewBox="0 0 640 580" role="img" aria-labelledby="t d">
+<title id="t">權力地圖：主管不放人</title>
+<desc id="d">同心圓：圓心是你的主管（拍板）。第二圈是你（他離不開你跑月結）和主管的上級（推測）。外圈是珮君和人資。今天要動的線：你拿交接方案去換主管簽字；去之前先向珮君要到任日彈性。</desc>
+<defs>
+<marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+<marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+<marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker>
+</defs>
+<!-- rings, center (300,300) -->
+<circle class="ring" cx="300" cy="300" r="250"/>
+<circle class="ring" cx="300" cy="300" r="160"/>
+<circle class="ring" cx="300" cy="300" r="70"/>
+<text class="ringlabel" x="300" y="66" text-anchor="middle">意見會被聽、定規則</text>
+<text class="ringlabel" x="300" y="156" text-anchor="middle">他靠誰、少了誰不行</text>
+<text class="ringlabel" x="355" y="340" text-anchor="end">拍板</text>
+
+<!-- dependency lines -->
+<line class="dep" x1="300" y1="317" x2="300" y2="396" marker-end="url(#a)"/>
+<text class="lbl" x="308" y="372">月結只有你會</text>
+<line class="dep guess" x1="300" y1="283" x2="300" y2="204" marker-end="url(#a)"/>
+<text class="lbl" x="308" y="246">月結要交差（推測）</text>
+
+<!-- info lines -->
+<line class="info" x1="212" y1="436" x2="246" y2="428" marker-end="url(#m)"/>
+<text class="lbl" x="150" y="478">要主管簽、月底截止</text>
+<line class="info" x1="352" y1="402" x2="458" y2="320" marker-end="url(#m)"/>
+<text class="lbl" x="412" y="384">先要：到任可延？願意開口？</text>
+<line class="info guess" x1="448" y1="300" x2="354" y2="300" marker-end="url(#m)"/>
+<text class="lbl" x="400" y="272" text-anchor="middle">她親口要人（還沒有）</text>
+
+<!-- today line -->
+<path class="todayline" d="M270,398 Q210,357 270,319" marker-end="url(#b)"/>
+<text class="lbl today" x="214" y="352" text-anchor="end">交接方案換簽字</text>
+<text class="lbl today" x="214" y="368" text-anchor="end">月底前簽、交接完再到任</text>
+
+<!-- nodes -->
+<rect class="node" x="248" y="283" width="104" height="34"/><text class="name" x="300" y="300">你的主管</text>
+<rect class="node" x="248" y="398" width="104" height="34"/><text class="name" x="300" y="415">你</text>
+<rect class="node guess" x="248" y="168" width="104" height="34"/><text class="name" x="300" y="185">主管的上級</text>
+<rect class="node" x="448" y="283" width="104" height="34"/><text class="name" x="500" y="300">珮君</text>
+<rect class="node" x="108" y="423" width="104" height="34"/><text class="name" x="160" y="440">人資</text>
+</svg>
+<div class="side">
+<h3>你的主管眼中的選擇</h3>
+<table>
+<thead><tr><th>說好（放人）</th><th>說不（等明年）</th></tr></thead>
+<tbody>
+<tr><td>下個月月結有風險</td><td>今天什麼事都沒有</td></tr>
+<tr><td>要補人</td><td>你繼續跑月結</td></tr>
+<tr><td>要向上級解釋（推測）</td><td>不用給任何人理由</td></tr>
+</tbody>
+</table>
+<p>要改的是這張表：交接方案讓「好」變安全；珮君親口要人，讓「不」得給理由。</p>
+<h3>今天動哪條線</h3>
+<p><span class="today">你 → 主管：交接方案換簽字</span>。去之前先向珮君要兩樣帶過去：到任日可延、她願不願意親口要人。上級那條線先不動，留作第二步。</p>
+<p class="legend">粗實線＝誰離不開誰（箭頭指向被依賴的人）　細線＝話怎麼傳　藍粗線＝今天要動　虛框、虛線＝推測或還沒有</p>
+</div>
+</div>
+</div>
+</body>
+</html>

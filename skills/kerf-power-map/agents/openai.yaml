@@ -1,0 +1,6 @@
+interface:
+  display_name: "Power Map"
+  short_description: "Career strategist: who decides, cooperate or get hard, and a power map"
+  default_prompt: "Use $kerf-power-map to read my situation with the three books' lenses (Power, Getting to Yes, The Dictator's Handbook), say whether to cooperate or get hard and why, show the three questions you used to read it, challenge where I may be wrong, give me the words I can send or the path I can take, and draw a power map."
+policy:
+  allow_implicit_invocation: true

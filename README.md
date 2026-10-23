@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | [Clayprint](skills/kerf-clayprint/) | 把文字稿整理成提出判斷、附上來源的簡報或 HTML 報告 | [從需要，到自己的工具](https://youtu.be/dIQ2amlA6HY) |
 | [Wordprint](skills/kerf-wordprint/) | 在本機把錄音轉成逐字稿，附時間戳與說話者標記 | 製作中 |
-| [Power Map（已停用）](skills/kerf-power-map-deprecated/) | 舊版，新版重做中。用三本書的機制與案例，給職場權力局能直接用的建議與開口說法，每輪附一張權力地圖 | — |
+| [Power Map](skills/kerf-power-map/) | 職涯策略軍師：用三本書的框架看懂誰拍板、這局該合作還是該硬，給能寄的稿或下一步，附一張權力地圖 | — |
 
 ## 安裝
 
