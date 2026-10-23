@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
-import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, prepare, decimalsOf, textOn } from './core.js';
+import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, prepare, decimalsOf, shownDigits, textOn } from './core.js';
 import { render } from './svg.js';
 import { svgToPng } from './png.js';
 import { isMain, rerunForMode } from './main.js';
@@ -293,8 +293,7 @@ const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
 const emptyCell = (v) => isObject(v) && Object.values(v).every((x) => x === null || x === undefined || x === '' || (Array.isArray(x) && !x.length));
-// Without digits a number keeps its own decimals: 24.7 stays 24.7, never a silent 25.
-const displayedValue = (value, digits = decimalsOf([value])) => value === null ? '未提供' : typeof value === 'string' ? value : formatValue(value, { digits }) ?? '';
+const displayedValue = (value, digits) => value === null ? '未提供' : typeof value === 'string' ? value : formatValue(value, { digits: shownDigits(digits, value) }) ?? '';
 
 // Validate before category collection or rendering, so malformed JSON points back to its editable field.
 export function validateStory(story) {
@@ -671,7 +670,7 @@ LAYOUT.numbers = (slide, ctx) => {
       { x: inch(x + 16), y: inch(top + 16 + LABEL * LH + 16), w: inch(cw - 16), h: inch(N * 1.15), margin: 0, valign: 'bottom' });
     if (typeof it.value === 'number' && it.prev !== undefined) {
       if (!it.better) ctx.warn(`第 ${ctx.n} 頁「${it.label}」有前期值但沒寫 better，預設越高越好`);
-      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? decimalsOf([it.prev, it.value]), suffix: it.deltaSuffix ?? '' });
+      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: shownDigits(it.digits, it.prev, it.value), suffix: it.deltaSuffix ?? '' });
       if (d) text(slide, d.text, { x: x + 16, y: top + 16 + LABEL * LH + 16 + N * 1.15 + 16, w: cw - 16, h: B * 1.4, px: B, color: d.color });
     }
     if (it.note) text(slide, it.note, { x: x + 16, y: top + deltaY + B * 1.4 + 8, w: cw - 16, h: noteN * B * LH, px: B, lineHeight: LH });
@@ -715,7 +714,7 @@ LAYOUT.summary = (slide, ctx) => {
     }
     if (typeof it.value === 'number' && it.prev !== undefined) {
       if (!it.better) ctx.warn(`第 ${ctx.n} 頁「${it.label}」有前期值但沒寫 better，預設越高越好`);
-      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: it.digits ?? decimalsOf([it.prev, it.value]), suffix: it.deltaSuffix ?? '' });
+      const d = delta(it.prev, it.value, { better: it.better ?? 'higher', mode: it.mode ?? 'abs', digits: shownDigits(it.digits, it.prev, it.value), suffix: it.deltaSuffix ?? '' });
       if (d) {
         text(slide, d.text, { x, y: textY + 8, w, h: LABEL * LH, color: d.color });
         textY += 8 + LABEL * LH;

@@ -3,7 +3,7 @@
 // Markup and classes follow assets/report.html; charts come from scripts/svg.js, tables from the same model as the deck.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { T, decimalsOf, formatValue, prepare } from './core.js';
+import { T, formatValue, prepare, shownDigits } from './core.js';
 import { render, reportHeight } from './svg.js';
 import { themeCss } from './theme-css.js';
 import { isMain } from './main.js';
@@ -13,9 +13,8 @@ const MISSING = '<span class="missing">未提供</span>';
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const BLOCKS = ['text', 'callout', 'chart', 'table', 'compare', 'list', 'process', 'close', 'missing'];
 // A summary or meta value: number formatted like the deck, text as written, null marked in place.
-// Without digits a number keeps its own decimals, as in the deck: 24.7 stays 24.7.
-const shown = (value, { digits = decimalsOf([value]), unit } = {}) => value === null ? MISSING
-  : `${esc(typeof value === 'number' ? formatValue(value, { digits }) : value)}${unit ? ` ${esc(unit)}` : ''}`;
+const shown = (value, { digits, unit } = {}) => value === null ? MISSING
+  : `${esc(typeof value === 'number' ? formatValue(value, { digits: shownDigits(digits, value) }) : value)}${unit ? ` ${esc(unit)}` : ''}`;
 const scroll = (label, inner, wide) => `<div class="table-scroll${wide ? ' wide' : ''}" tabindex="0" role="region" aria-label="${esc(label)}，可橫向捲動">\n${inner}\n</div>`;
 
 function validate(report) {
@@ -111,7 +110,7 @@ ${body.map(row).join('\n')}
 
 function compare(block) {
   const rec = (o) => (o.recommended ? ' class="recommended"' : '');
-  const value = (v) => (v === null || v === undefined ? MISSING : esc(typeof v === 'number' ? formatValue(v, { digits: decimalsOf([v]) }) : v));
+  const value = (v) => (v === undefined ? MISSING : shown(v));
   return scroll(block.caption ?? '方案比較', `<table class="comparison">${block.caption ? `<caption>${esc(block.caption)}</caption>` : ''}
 <thead><tr><th scope="col">比較項目</th>${block.options.map((o) => `<th scope="col"${rec(o)}>${esc(o.name)}${o.recommended ? '（建議）' : ''}</th>`).join('')}</tr></thead>
 <tbody>

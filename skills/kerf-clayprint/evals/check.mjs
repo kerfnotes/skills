@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { build, validateStory, deckCategories } from '../scripts/pptx.js';
 import { normalize, numbers, found, calculations, calculationPattern } from './numbers.mjs';
 import { isMain, rerunForMode } from '../scripts/main.js';
-import { prepare, delta, decimalsOf } from '../scripts/core.js';
+import { prepare, delta, shownDigits } from '../scripts/core.js';
 
 function visibleText(value, path) {
   if (typeof value === 'number' || typeof value === 'string') return [{ text: String(value), path }];
@@ -75,7 +75,7 @@ export async function check(story, script) {
     }
     if (page.type === 'numbers' || page.type === 'summary') for (const item of page.visual.items) {
       if (typeof item.value !== 'number' || item.prev === undefined) continue;
-      const change = delta(item.prev, item.value, { better: item.better ?? 'higher', mode: item.mode ?? 'abs', digits: item.digits ?? decimalsOf([item.prev, item.value]), suffix: item.deltaSuffix ?? '' });
+      const change = delta(item.prev, item.value, { better: item.better ?? 'higher', mode: item.mode ?? 'abs', digits: shownDigits(item.digits, item.prev, item.value), suffix: item.deltaSuffix ?? '' });
       const labels = numbers(change?.text ?? '');
       picture.push(...labels, ...labels.map((n) => ({ ...n, value: Math.abs(n.value) })));
     }
