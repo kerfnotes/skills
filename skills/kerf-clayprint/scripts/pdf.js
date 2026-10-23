@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url';
 import { isMain } from './main.js';
 import { executable } from './preview.js';
 
-const NO_BROWSER = '找不到 Chrome、Edge 或 Chromium；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。';
+const NO_BROWSER = '找不到 Chrome、Edge、Chromium 或 Brave；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。';
 
 export function findBrowser({ platform = process.platform, env = process.env, exists = existsSync } = {}) {
   if (env.CLAYPRINT_CHROME) return exists(env.CLAYPRINT_CHROME) ? env.CLAYPRINT_CHROME : null;
@@ -20,7 +20,8 @@ export function findBrowser({ platform = process.platform, env = process.env, ex
     ? ['Google Chrome', 'Chromium', 'Microsoft Edge', 'Brave Browser'].map((app) => `/Applications/${app}.app/Contents/MacOS/${app}`)
     : platform === 'win32'
       ? [env.ProgramFiles, env['ProgramFiles(x86)']].filter(Boolean).flatMap((dir) => [
-        join(dir, 'Google', 'Chrome', 'Application', 'chrome.exe'), join(dir, 'Microsoft', 'Edge', 'Application', 'msedge.exe')])
+        join(dir, 'Google', 'Chrome', 'Application', 'chrome.exe'), join(dir, 'Chromium', 'Application', 'chrome.exe'),
+        join(dir, 'Microsoft', 'Edge', 'Application', 'msedge.exe'), join(dir, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe')])
       : [];
   return installed.find((path) => exists(path)) ?? null;
 }
@@ -86,7 +87,7 @@ function splitExhibits(pages, html) {
     if (!source || source.page === page) return;
     warnings.push(kind === '圖'
       ? `圖 ${n} 的標題在第 ${page} 頁、來源在第 ${source.page} 頁：縮短圖上方的段落，或改小圖。`
-      : `表 ${n} 跨第 ${page}–${source.page} 頁：列數少於 8 不該分頁，縮短表上方的段落。`);
+      : `表 ${n} 跨第 ${page}–${source.page} 頁：8 列以內不該分頁，縮短表上方的段落。`);
   });
   return warnings;
 }

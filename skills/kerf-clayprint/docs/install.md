@@ -82,7 +82,7 @@ node scripts/png.js out/install-check/rank.svg out/install-check/rank.png
 | --- | --- | --- |
 | macOS | 有 `/Applications/Microsoft PowerPoint.app` 時沿用 PowerPoint；其餘用 LibreOffice。Homebrew 的工具套件為 `poppler`、`ffmpeg`，LibreOffice 用 `brew install --cask libreoffice` 安裝。 | `/Applications` 裡的 Google Chrome、Chromium、Microsoft Edge 或 Brave Browser 擇一。 |
 | Debian／Ubuntu | 使用 LibreOffice；有安裝權限時用 `apt-get install libreoffice poppler-utils ffmpeg`。 | PATH 上的 `google-chrome` 或 `chromium`。 |
-| Windows | 自動預覽使用 LibreOffice，單有 Windows PowerPoint 不足。用現有 winget／Scoop 查找並安裝 LibreOffice、Poppler、FFmpeg；將 `pdftoppm.exe` 與 `ffmpeg.exe` 的所在目錄加入本次命令的 PATH。 | 預設用內建的 Edge；Program Files 下的 Chrome 也可。 |
+| Windows | 自動預覽使用 LibreOffice，單有 Windows PowerPoint 不足。用現有 winget／Scoop 查找並安裝 LibreOffice、Poppler、FFmpeg；將 `pdftoppm.exe` 與 `ffmpeg.exe` 的所在目錄加入本次命令的 PATH。 | 預設用內建的 Edge；Program Files 下的 Chrome、Chromium 或 Brave 也可。 |
 
 在可執行安裝的環境，由 agent 補齊工具後執行：
 

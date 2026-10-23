@@ -100,7 +100,7 @@ test('pdf.js prints with the browser, rasterizes pages, and warns about fill, ov
     assert.doesNotMatch(result.stderr, /第 [13] 頁內容超出右邊界/);
     assert.match(result.stderr, /圖 1 的標題在第 1 頁、來源在第 2 頁：縮短圖上方的段落，或改小圖。/);
     assert.doesNotMatch(result.stderr, /圖 2 的標題/);
-    assert.match(result.stderr, /表 1 跨第 2–3 頁：列數少於 8 不該分頁，縮短表上方的段落。/);
+    assert.match(result.stderr, /表 1 跨第 2–3 頁：8 列以內不該分頁，縮短表上方的段落。/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -175,7 +175,7 @@ test('a missing browser ends with the CLAYPRINT_CHROME hint', () => {
       encoding: 'utf8', env: { ...process.env, PATH: dir, CLAYPRINT_CHROME: join(dir, 'no-such-browser') },
     });
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /找不到 Chrome、Edge 或 Chromium；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。/);
+    assert.match(result.stderr, /找不到 Chrome、Edge、Chromium 或 Brave；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。/);
     assert.equal(existsSync(join(dir, 'print', 'report.pdf')), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -193,6 +193,9 @@ test('findBrowser() tries CLAYPRINT_CHROME, then PATH, then install locations', 
     assert.equal(findBrowser({ platform: 'darwin', env: { PATH: '' }, exists: (p) => p === edge }), edge);
     const win = join('C:\\Program Files (x86)', 'Microsoft', 'Edge', 'Application', 'msedge.exe');
     assert.equal(findBrowser({ platform: 'win32', env: { PATH: '', 'ProgramFiles(x86)': 'C:\\Program Files (x86)' }, exists: (p) => p === win }), win);
+    for (const exe of [join('C:\\Program Files', 'Chromium', 'Application', 'chrome.exe'), join('C:\\Program Files', 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe')]) {
+      assert.equal(findBrowser({ platform: 'win32', env: { PATH: '', ProgramFiles: 'C:\\Program Files' }, exists: (p) => p === exe }), exe);
+    }
     assert.equal(findBrowser({ platform: 'linux', env: { PATH: '' }}), null);
   } finally {
     rmSync(dir, { recursive: true, force: true });

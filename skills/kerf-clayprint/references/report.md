@@ -76,7 +76,7 @@ node scripts/pdf.js out/report.html out/print
 
 第二個參數是輸出資料夾，會產生 `report.pdf`（檔名沿用 HTML 主檔名）、每頁 `page-NN.png` 與整份縮圖 `sheet.png`；只有一頁時沒有 `sheet.png`（`report.js` 產生的報告至少兩頁，手工單頁 HTML 才會遇到）。`--letter` 改印 Letter，左右邊界維持同樣的毫米數；`--paper clay` 改印米色滿版；兩者可並用。這兩個選項會在 HTML 同一資料夾寫一份暫存副本，在 `<html>` 加上 `data-size="letter"`、`data-paper="clay"`，印完即刪除，來源 HTML 不變。
 
-腳本依序找 `CLAYPRINT_CHROME` 指定的執行檔、PATH 上的 `google-chrome`、`chromium`、`chrome`、`msedge`，再找 macOS 與 Windows 的 Chrome、Chromium、Edge、Brave 安裝位置，以 headless 模式列印；另需 Poppler 的 `pdftoppm`、`pdftotext` 與 `ffmpeg`。找不到瀏覽器時印「找不到 Chrome、Edge 或 Chromium；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。」並以非零結束碼結束。
+腳本依序找 `CLAYPRINT_CHROME` 指定的執行檔、PATH 上的 `google-chrome`、`chromium`、`chrome`、`msedge`，再找 macOS 與 Windows 的 Chrome、Chromium、Edge、Brave 安裝位置，以 headless 模式列印；另需 Poppler 的 `pdftoppm`、`pdftotext` 與 `ffmpeg`。找不到瀏覽器時印「找不到 Chrome、Edge、Chromium 或 Brave；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。」並以非零結束碼結束。
 
 ### 讀輸出
 
