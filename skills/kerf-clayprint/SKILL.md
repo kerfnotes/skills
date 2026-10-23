@@ -14,6 +14,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 3. 先寫結論，再選最能支持它的圖或版型。
 4. 放不下就刪內容或拆頁，不逐頁縮字級；閱讀型簡報是整份換成較小字級，不是例外。
 5. `claim` 點名的數字與項目要在當頁可見，強調項目要與主張一致。
+6. 依讀者的先備知識安排解釋，簡報與報告都適用。讀者不熟主題時，以白話說清結論，用熟悉的情境或具體例子說明用途與運作；必要術語在首次出現時就地解釋，每頁／節回答一個主要問題。讀者熟悉主題時，直接聚焦證據與取捨。比喻有助理解才用，角色對應須一致；自行設計的例子標為「示意情境」，比喻須明示（如「可以想成……」），可放正文但不作事實證據、不補造數字或因果。影響判斷的限制放同頁／節正文。交付前檢查：依已知背景與文中解釋，讀者能否說明結論及其理由；斷點補在首次需要理解之處。只換樣式時沿用原文。
 
 每個版型都有對應的主張；原稿無法支持時就換版型，未決事項用沒有 `tag`／`focus` 的 `list` 或 `columns`。各版型的主張、欄位與容量見 [版型說明](references/layouts.md)。
 
@@ -35,10 +36,10 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 
 以下指令從 skill 根目錄執行；需要 Node 22.7.0 以上。首次安裝、Node 版本不足或缺少套件時，先依 [agent 安裝指引](docs/install.md)完成安裝與驗證。先建立 `out/`，輸出統一放在此處；`script.md` 換成本次原稿。
 
-1. 讀文字稿，確認聽眾、目的、可用數字、來源與資料缺口。使用者說明的背景優先；聽眾或目的不明且會改變取捨時，先問一次。
+1. 讀文字稿，確認聽眾及其先備知識、目的、可用數字、來源與資料缺口，依原則 6 決定解釋深度。使用者說明的背景優先；聽眾或目的不明且會改變取捨時，先問一次。
 2. 選合適的骨架，寫故事線和每頁一句結論。
 3. 依 [版型說明](references/layouts.md)挑支撐結論的版型；需要圖表時依 [圖表選單](references/charts.md)選圖。
-4. 寫 `out/story.json`，每張內容頁在 `notes` 放 1～3 句講稿（要說的話、資料限制），計算另列；閱讀型簡報改把這些話寫在頁面上。執行 `node evals/check.mjs out/story.json script.md` 核對；範例：`node evals/check.mjs examples/story.json evals/fixtures/example-script.md`。
+4. 寫 `out/story.json`，每張內容頁在 `notes` 放 1～3 句講稿（要說的話、補充細節），計算另列；影響判斷的限制依原則 6 放在頁面上；閱讀型簡報改把講稿寫在頁面上。執行 `node evals/check.mjs out/story.json script.md` 核對；範例：`node evals/check.mjs examples/story.json evals/fixtures/example-script.md`。
 5. 執行 `node scripts/pptx.js out/story.json out/deck.pptx` 建檔。
 6. 依 [預覽與交付](references/layouts.md#預覽與交付)執行 `node scripts/preview.js out/deck.pptx out/preview`；輸出 `page-N.png`、`sheet.png`（整份概覽）、`deck.pdf`。0 項容量警告只代表未偵測到溢出，仍逐頁找孤字與不均勻換行。
 7. 依警告和預覽修正最弱的一頁，再重建、重驗。能派 subagent 時，可請不同 subagent 對照原稿與需求，分別檢查數字、版面和敘事，再整合修正。交付集中列：核心判斷、缺資料／未完成頁、最弱頁修改前後及原因、哪些圖為原生可編輯／SVG，以及「實際在 PowerPoint 改一個原生圖數值：完成／未驗」。編輯限制見 [設計差異](docs/design-diff.md)。

@@ -8,7 +8,7 @@
 
 固定三步：產生 HTML → 驗收 → 印 PDF。
 
-1. 讀原稿，寫下讀者要帶走的一句話；替每節先寫一句判斷。確認對象、單位、期間、來源與缺口，不補造數字。
+1. 讀原稿，寫下讀者要帶走的一句話；替每節先寫一句判斷。確認對象及其先備知識，依 [SKILL.md 原則 6](../SKILL.md#原則)安排解釋並在交付前檢查理解斷點；核對單位、期間、來源與缺口，不補造數字。
 2. 寫 `out/report.json`：封面、摘要，再依判斷寫各節的元件。摘要左側放建議，右側只放支撐它的數字。欄位見下方〈report.json〉。有數據才放圖：每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），圖表 JSON 必須填 `source`；無數字時使用段落、清單或流程。
 3. 產生 HTML：`node scripts/report.js out/report.json out/report.html`，結尾印「完成：N 節、M 張圖，K 項警告」（節數含摘要）。
 4. 驗收：`node evals/check-report.mjs out/report.html script.md`，核對所有可見文字與 SVG 數字、未填的 `{{…}}` 示意文字，以及每張圖都有含「來源」的圖說。座標軸刻度（`data-tick`）和簡報驗收一樣不核對，產生器加的「圖 N」「表 N」標籤（`data-label`）也不核對；其他數字，包括摘要、引言與資料標籤，都必須出現在原稿，或在同節寫出可核對的加減算式。範例：`node scripts/report.js examples/report.json out/report.html`，再 `node evals/check-report.mjs out/report.html evals/fixtures/explain-script.md`。
