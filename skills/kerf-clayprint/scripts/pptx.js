@@ -688,6 +688,9 @@ LAYOUT.summary = (slide, ctx) => {
   const items = page.visual.items.map((it, index) => ({ ...it, index })).filter((it) => !emptyCell(page.visual.items[it.index]));
   if (outside(items.length, CAP.summary)) ctx.warn(`第 ${ctx.n} 頁主管摘要是 ${items.length} 格，規格是 ${CAP.summary.join('～')} 格`);
   const rowH = (end - top) / items.length, N = T.type.conclusionNumber.px, B = T.type.body.px;
+  // Rows stretch to fill the column, so fill counts each item at its own height, beside the lead and body.
+  let itemsH = 0;
+  const leftH = leadH + (body ? 24 + lines(body, T.type.body.px, leftW) * T.type.body.px * LH : 0);
   items.forEach((it, i) => {
     const y = top + i * rowH;
     if (i) rule(slide, x, y, x + w, y, C.grid);
@@ -715,7 +718,9 @@ LAYOUT.summary = (slide, ctx) => {
     }
     // 6 px clearance above the next rule lets six bare read-deck items fit under a one-line title.
     if (labelN > 1 || textY + 6 > y + rowH) ctx.warn(`第 ${ctx.n} 頁主管摘要「${it.label}」超出單列容量，文字可能重疊`);
+    itemsH += textY + 6 - y;
   });
+  sparse(ctx, Math.max(leftH, itemsH), end - top);
 };
 
 LAYOUT.compare = (slide, ctx) => {
@@ -743,6 +748,9 @@ LAYOUT.compare = (slide, ctx) => {
     if (o.subtitle) text(slide, o.subtitle, { x: x + pad, y: top + 20 + T.type.sub.px * 1.4, w: ow - 2 * pad, h: LABEL * LH, color: o.recommended ? C.onDark[0] : C.textSecondary });
   });
   const rowH = Math.min(110 * 1.8, (end - top - headH) / Math.max(1, rows.length));
+  // Rows stretch to the page; fill counts each row at the height of its tallest cell.
+  sparse(ctx, headH + rows.reduce((sum, label, r) => sum + Math.max(lines(label, LABEL, labelW) * LABEL * LH + 16,
+    ...options.map((o) => lines(displayedValue(o.values?.[r]), T.type.body.px, ow - (o.recommended ? 32 : 0)) * T.type.body.px * LH + 12)), 0), end - top);
   rows.forEach((label, r) => {
     const y = top + headH + r * rowH;
     checkWrap(ctx, `visual.rows[${r}]`, label, LABEL, labelW, Math.max(0, Math.floor((rowH - 16) / (LABEL * LH))));
@@ -768,6 +776,10 @@ LAYOUT.list = (slide, ctx) => {
   if (outside(items.length, CAP.list)) ctx.warn(`第 ${ctx.n} 頁診斷清單是 ${items.length} 項，規格是 ${CAP.list.join('～')} 項`);
   const rowH = (end - top) / items.length, tagW = 200, noteW = 400, gap = 48;
   const midX = M.x + tagW + gap, midW = INNER - tagW - noteW - 2 * gap;
+  // Rows stretch to the page; fill counts each item at its own height: heading, body, 12 px above and below.
+  sparse(ctx, items.reduce((sum, item) => sum + Math.max(24 + lines(item.heading, T.type.sub.px, midW) * T.type.sub.px * 1.2
+    + (item.body ? 8 + Math.min(lines(item.body, T.type.body.px, midW), CAP.listBody) * T.type.body.px * 1.4 : 0),
+  item.tag || item.note ? 32 + LABEL * LH : 0), 0), end - top);
   items.forEach((item, i) => {
     const y = top + i * rowH, focus = item.index === page.visual.focus;
     if (i) rule(slide, M.x, y, W - M.x, y, C.grid);
@@ -1046,6 +1058,8 @@ LAYOUT.close = (slide, ctx) => {
   const headY = top + LABEL * LH + 12;
   rule(slide, M.x, headY, W - M.x, headY, muted);
   const rowH = Math.min(100 * 1.8, (ruleY - 48 - headY) / Math.max(1, rows.length));
+  // Rows stretch to the page; fill counts each row at the height of its tallest cell.
+  sparse(ctx, headY - top + rows.reduce((sum, r) => sum + Math.max(...cols.map(([, w, , key]) => lines(r[key] ?? '', T.type.body.px, w) * T.type.body.px * LH + 16)), 0), ruleY - 48 - top);
   rows.forEach((r, i) => {
     const y = headY + i * rowH;
     if (i) rule(slide, M.x, y, W - M.x, y, muted);

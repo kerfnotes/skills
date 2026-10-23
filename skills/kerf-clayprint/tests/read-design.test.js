@@ -186,3 +186,16 @@ test('閱讀版的填滿門檻、points 點數與 panels 註行數放在設計�
   const pptx = readFileSync(path.join(root, 'scripts/pptx.js'), 'utf8');
   assert.doesNotMatch(pptx, /MIN_FILL|PANEL_NOTE|points: \[2, 4\]|低於 70%/);
 });
+
+test('閱讀版 list、compare、close、summary 以內容自然高度算填滿率：3 項清單警告、8 項不警告', () => {
+  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：加 takeaway 或 points，或併入相鄰頁。$/;
+  const list = (n) => [{ type: 'list', claim: '清單', sources, visual: { items: Array.from({ length: n }, (_, i) => ({ heading: `問題${i + 1}`, body: '一行說明' })) } }];
+  assert.ok(readWarnings(list(3)).some((w) => fill.test(w)), readWarnings(list(3)).join('\n'));
+  assert.ok(!readWarnings(list(8)).some((w) => fill.test(w)), readWarnings(list(8)).join('\n'));
+  const sparsePages = [
+    { type: 'compare', claim: '比較', sources, visual: { rows: ['成本', '時間'], options: [{ name: '甲', values: ['低', '短'] }, { name: '乙', values: ['高', '長'] }] } },
+    { type: 'close', claim: '下一步', sources, visual: { rows: [{ task: '確認欄位', owner: '甲', due: '下週' }, { task: '排定交接', owner: '乙', due: '月底' }] } },
+    { type: 'summary', claim: '摘要', sources, visual: { lead: '先統一欄位', items: [{ label: '時間', value: 18, unit: '小時' }, { label: '件數', value: 240 }] } },
+  ];
+  for (const page of sparsePages) assert.ok(readWarnings([page]).some((w) => fill.test(w)), `${page.type}\n${readWarnings([page]).join('\n')}`);
+});
