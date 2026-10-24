@@ -120,7 +120,7 @@ test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢�
   // 第一頁零邊界且無頁尾；Letter 只換紙張大小。
   assert.match(print, /@page \{[^}]*size: A4; margin: 12mm 14mm 15mm 22mm;/);
   // The separator comes with the title (report.js writes '報告名 | '), so a page without the variable prints only 2 / 4.
-  assert.match(print, /@bottom-right \{[^}]*content: var\(--report-title, ""\) counter\(page\) " \/ " counter\(pages\);[^}]*font: 7pt var\(--cp-font\);[^}]*padding-right: 11mm;/);
+  assert.match(print, /@bottom-right \{[^}]*content: var\(--report-title, ""\) counter\(page\) " \/ " counter\(pages\);[^}]*font: 9pt var\(--cp-font\);[^}]*padding-right: 11mm;/);
   assert.doesNotMatch(print, /" \| " counter/);
   assert.match(print, /@page :first \{ margin: 0;[^}]*@bottom-right \{ content: none; \}/);
   assert.match(print, /@page letter \{ size: letter; \}/);
@@ -130,7 +130,7 @@ test('列印版心：白紙 A4、學者邊、頁尾頁碼、列印字級，螢�
   assert.doesNotMatch(print, /size: letter;[^}]*margin/);
   // 列印字級與欄寬。
   const media = print.slice(print.indexOf('@media print'));
-  assert.match(media, /:root \{[^}]*--cp-print-indent: 28mm; --cp-print-gutter: 11mm;[^}]*--cp-print-body: 10\.5pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;[^}]*--cp-print-sub: 12pt; --cp-print-small: 7pt;/);
+  assert.match(media, /:root \{[^}]*--cp-print-indent: 28mm; --cp-print-gutter: 11mm;[^}]*--cp-print-body: 11pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;[^}]*--cp-print-sub: 12pt; --cp-print-small: 9pt;/);
   assert.match(media, /html \{[^}]*background: #fff;[^}]*font-size: var\(--cp-print-body\); line-height: var\(--cp-print-leading\);/);
   assert.match(media, /body \{[^}]*padding: 0 var\(--cp-print-gutter\) 0 var\(--cp-print-indent\);/);
   assert.match(media, /h2 \{ font-size: var\(--cp-print-heading\);/);
@@ -206,7 +206,7 @@ test('列印字級與邊界來自設計層 print 區塊，缺少時用預設值'
   for (const name of ['tokens.json', 'tokens.blue.json']) {
     const { print } = JSON.parse(file(`design/${name}`));
     assert.deepEqual(print, { margin: { top: 12, right: 14, bottom: 15, left: 22, indent: 28, gutter: 11 },
-      type: { body: 10.5, leading: 16, heading: 24, sub: 12, small: 7, cover: 30, summary: 16 } });
+      type: { body: 11, leading: 16, heading: 24, sub: 12, small: 9, cover: 30, summary: 16 } });
   }
   const tokens = loadTokens();
   const { print, ...bare } = tokens;

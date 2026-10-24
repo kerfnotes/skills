@@ -105,6 +105,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   :root {
     --cp-print-indent: ${pm.indent}mm; --cp-print-gutter: ${pm.gutter}mm; --cp-print-bottom: ${pm.bottom}mm;
     --cp-print-text-left: ${pm.left + pm.indent}mm; --cp-print-text-right: ${pm.right + pm.gutter}mm;
+    --cp-body: ${pt.body}pt; --cp-small: ${pt.small}pt; --cp-sub: ${pt.sub}pt; --cp-title-size: ${pt.heading}pt; --cp-display: ${pt.cover}pt;
     --cp-print-body: ${pt.body}pt; --cp-print-leading: ${pt.leading}pt; --cp-print-heading: ${pt.heading}pt;
     --cp-print-sub: ${pt.sub}pt; --cp-print-small: ${pt.small}pt; --cp-print-cover: ${pt.cover}pt; --cp-print-summary: ${pt.summary}pt;
   }
@@ -114,6 +115,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   html[data-size="letter"] body { page: letter; }
   html[data-paper="clay"][data-size="letter"] body { page: clay-letter; }
   body { max-width: none; padding: 0 var(--cp-print-gutter) 0 var(--cp-print-indent); }
+  th, td { font-size: var(--cp-print-body); }
+  thead th { font-size: var(--cp-print-body); }
   h2 { font-size: var(--cp-print-heading); }
   h3 { font-size: var(--cp-print-sub); }
   /* The summary claim sits in the narrow left column next to the metrics: section-heading size would wrap it about 9 characters a line. */
@@ -154,8 +157,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
-  /* SVG text is in viewBox units (979 wide); 19 units at 146 mm is about 8 pt. */
-  .chart-scroll svg [data-tick] { font-size: 19px; }
+  /* SVG text is in viewBox units (979 wide); 24 units at 146 mm is about 10 pt. */
+  .chart-scroll svg [data-tick] { font-size: ${tokens.screen?.type?.chart ?? 24}px; }
   .sources, .exhibit-note { break-before: avoid; }
   a { color: inherit; }
 }`;

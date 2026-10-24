@@ -46,8 +46,8 @@ test('閱讀設計層：字級、上下邊界與新字級鍵只在閱讀模式�
     console.log(JSON.stringify({ title: t.type.title.px, body: t.type.body.px, label: t.type.label.px, chart: t.type.chart?.px, source: t.type.source?.px, minimum: t.type.minimum, margin: t.margin, capacity: t.capacity }));`;
   const present = JSON.parse(readFileSync(path.join(root, 'design/tokens.json'), 'utf8'));
   const read = child(code, 'read');
-  assert.deepEqual({ ...read, margin: undefined, capacity: undefined }, { title: 44, body: 22, label: 20, chart: 18, source: 16, minimum: 16, margin: undefined, capacity: undefined });
-  assert.deepEqual(read.margin, { ...present.margin, top: 45, bottom: 40, ledeGap: 32, takeawayGap: 32 });
+  assert.deepEqual({ ...read, margin: undefined, capacity: undefined }, { title: 44, body: 24, label: 20, chart: 20, source: 18, minimum: 18, margin: undefined, capacity: undefined });
+  assert.deepEqual(read.margin, { ...present.margin, top: 45, bottom: 40, ledeGap: 35, takeawayGap: 35 });
   assert.deepEqual(read.capacity, {
     summary: [2, 6], summaryBody: 10, list: [3, 8], listBody: 3, numbers: [2, 8], numbersNote: 3,
     compare: [2, 5], compareRows: 8, process: [3, 8], columns: [2, 5], columnsBody: 6, tableRows: 14, closeRows: 14,
@@ -55,12 +55,12 @@ test('閱讀設計層：字級、上下邊界與新字級鍵只在閱讀模式�
   });
   const base = child(code);
   assert.deepEqual(base.margin, present.margin);
-  assert.equal(base.chart, undefined);
+  assert.equal(base.chart, 32);
   assert.equal(base.source, undefined);
   assert.equal(base.title, present.type.title.px);
 });
 
-test('閱讀版範例：標題 22 pt、正文 11 pt、標籤 10 pt、圖表 9 pt、來源與頁碼 8 pt 同一行，上下邊界 8／7 mm', async () => {
+test('閱讀版範例：標題 22 pt、正文 12 pt、標籤 10 pt、圖表 10 pt、來源與頁碼 9 pt 同一行，上下邊界 8／7 mm', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-read-design-'));
   try {
     const story = JSON.parse(readFileSync(path.join(root, 'examples/story-read.json'), 'utf8'));
@@ -74,19 +74,19 @@ test('閱讀版範例：標題 22 pt、正文 11 pt、標籤 10 pt、圖表 9 pt
       assert.deepEqual([...new Set(title.sizes)], [2200], `第 ${n} 頁標題`);
       assert.ok(Math.abs(title.y - (45 + 20 + 28)) < 1, `第 ${n} 頁標題 y ${title.y}`);
       const pageNo = boxes.find((s) => s.text === `${n} / ${total}`), source = boxes.find((s) => s.text === `資料來源：${page.sources.source}`);
-      assert.deepEqual([...new Set([...pageNo.sizes, ...source.sizes])], [800], `第 ${n} 頁來源與頁碼`);
+      assert.deepEqual([...new Set([...pageNo.sizes, ...source.sizes])], [900], `第 ${n} 頁來源與頁碼`);
       assert.equal(pageNo.y, source.y, `第 ${n} 頁頁碼與來源同一行`);
-      // One source row of 16 px × 1.45 above the 7 mm bottom margin.
-      assert.ok(Math.abs(pageNo.y - (1080 - 40 - 16 * 1.45)) < 1, `第 ${n} 頁頁碼 y ${pageNo.y}`);
+      // One source row of 18 px × 1.45 above the 7 mm bottom margin.
+      assert.ok(Math.abs(pageNo.y - (1080 - 40 - 18 * 1.45)) < 1, `第 ${n} 頁頁碼 y ${pageNo.y}`);
       if (page.kicker) assert.deepEqual([...new Set(boxes.find((s) => s.text === page.kicker).sizes)], [1000], `第 ${n} 頁頁首`);
     }
     const evidence = shapes(await zip.file('ppt/slides/slide3.xml').async('string'));
-    assert.ok(evidence.find((s) => s.text === story.pages[2].note.replaceAll('\n', '')).sizes.every((sz) => sz === 1100), '證據頁 note 正文 11 pt');
+    assert.ok(evidence.find((s) => s.text === story.pages[2].note.replaceAll('\n', '')).sizes.every((sz) => sz === 1200), '證據頁 note 正文 12 pt');
     const charts = Object.keys(zip.files).filter((n) => /^ppt\/charts\/chart\d+\.xml$/.test(n));
     assert.ok(charts.length > 0);
     for (const name of charts) {
       const sizes = [...(await zip.file(name).async('string')).matchAll(/\ssz="(\d+)"/g)].map((m) => Number(m[1]));
-      assert.deepEqual([...new Set(sizes)], [900], `${name} 圖表文字 9 pt`);
+      assert.deepEqual([...new Set(sizes)], [1000], `${name} 圖表文字 10 pt`);
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -143,10 +143,10 @@ test('列數上限只屬於閱讀版：簡報版比較 9 列、表格與收尾 1
 });
 
 test('閱讀版行數上限：數字格 note 與清單 body 3 行不警告、4 行警告', () => {
-  // 22 px body: a two-cell numbers note is 816 px wide (35 characters a line), a list body 1024 px (44 a line).
+  // 24 px body: a two-cell numbers note is 816 px wide (35 characters a line), a list body 1024 px (44 a line).
   const pages = (lines) => [
-    { type: 'numbers', claim: '數字', sources, visual: { items: [{ label: '甲', value: 1, note: '註'.repeat(35 * (lines - 1) + 1) }, { label: '乙', value: 2 }] } },
-    { type: 'list', claim: '清單', sources, visual: { items: [{ heading: '甲', body: '文'.repeat(44 * (lines - 1) + 1) }, { heading: '乙' }, { heading: '丙' }] } },
+    { type: 'numbers', claim: '數字', sources, visual: { items: [{ label: '甲', value: 1, note: '註'.repeat(32 * (lines - 1) + 1) }, { label: '乙', value: 2 }] } },
+    { type: 'list', claim: '清單', sources, visual: { items: [{ heading: '甲', body: '文'.repeat(40 * (lines - 1) + 1) }, { heading: '乙' }, { heading: '丙' }] } },
   ];
   const limit = (warnings) => warnings.filter((w) => /note：估算|body：估算/.test(w));
   assert.deepEqual(limit(readWarnings(pages(3))), []);
@@ -224,12 +224,12 @@ test('閱讀版用精確行距排字，與高度估算一致；標題到 lede、
     const boxes = spaced(await (await JSZip.loadAsync(readFileSync(out))).file('ppt/slides/slide1.xml').async('string'));
     const find = (text) => boxes.find((s) => s.text === text);
     const title = find(page.claim), lede = find(page.lede), body = find(page.visual.items[0].body), takeaway = find('兩個方向都要做，先做甲。');
-    // 44 px × 1.25 = 27.5 pt; 22 px × 1.45 = 15.95 pt; 20 px × 1.45 = 14.5 pt. No box keeps a multiple.
+    // 44 px × 1.25 = 27.5 pt; 24 px × 1.45 = 17.4 pt; 20 px × 1.45 = 14.5 pt. No box keeps a multiple.
     assert.deepEqual(title.pts, [2750]);
-    assert.deepEqual(body.pts, [1595]);
+    assert.deepEqual(body.pts, [1740]);
     assert.deepEqual(takeaway.pts, [1450]);
     assert.ok(boxes.every((s) => s.pct.length === 0), JSON.stringify(boxes.filter((s) => s.pct.length)));
-    const line = 22 * 1.45;
+    const line = 24 * 1.45;
     assert.ok(lede.y - (title.y + title.h) >= line, `標題到 lede ${lede.y - (title.y + title.h)} px`);
     assert.ok(takeaway.y - (body.y + body.h) >= line, `正文到 takeaway ${takeaway.y - (body.y + body.h)} px`);
     const { margin } = JSON.parse(readFileSync(path.join(root, 'design/read.json'), 'utf8'));

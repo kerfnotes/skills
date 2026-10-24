@@ -7,16 +7,16 @@
     "conclusionNumber": 64,
     "title": 44,
     "sub": 28,
-    "body": 22,
+    "body": 24,
     "chartTitle": 24,
-    "tableBody": 18,
-    "tableHeader": 18,
+    "tableBody": 20,
+    "tableHeader": 20,
     "label": 20,
-    "chart": 18,
-    "source": 16,
-    "minimum": 16
+    "chart": 20,
+    "source": 18,
+    "minimum": 18
   },
-  "margin": { "top": 45, "bottom": 40, "ledeGap": 32, "takeawayGap": 32 },
+  "margin": { "top": 45, "bottom": 40, "ledeGap": 35, "takeawayGap": 35 },
   "chartArea": {
     "evidence": { "width": 1000, "height": 669 }
   },

@@ -86,7 +86,7 @@ test('panels：圖表加表格、清單加文字兩頁可建檔，每格有標�
     const [risk, choice] = textPage.visual.items.map((it) => two.find((s) => s.text === it.title));
     near(risk.w, choice.w, '省略 split 時等分');
     const body = two.find((s) => s.text === textPage.visual.items[1].visual);
-    assert.deepEqual([...new Set(body.sizes)], [1100], '文字格正文 11 pt');
+    assert.deepEqual([...new Set(body.sizes)], [1200], '文字格正文 12 pt');
     near(body.x, choice.x, '文字在右格');
     for (const item of textPage.visual.items[0].visual.items) {
       const heading = two.find((s) => s.text === item.heading);

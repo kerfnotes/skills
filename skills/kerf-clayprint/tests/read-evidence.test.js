@@ -97,23 +97,23 @@ test('閱讀版 evidence 右欄空白時警告；簡報版不警告', async () =
 });
 
 test('閱讀版 columns 每欄正文 6 行不警告、7 行警告；takeaway 顯示在欄下方 10 pt', async () => {
-  // Two columns are 836 px wide: 36 characters a line at 22 px.
+  // Two columns are 836 px wide: 33 characters a line at 24 px.
   const columns = (body, takeaway) => ({ type: 'columns', claim: '兩個方向', sources, takeaway,
     visual: { items: [{ heading: '甲', body }, { heading: '乙', body: '短' }] } });
-  assert.ok(!readBuild([columns('文'.repeat(36 * 6))]).some((w) => /body：估算/.test(w)));
-  assert.ok(readBuild([columns('文'.repeat(36 * 6 + 1))]).some((w) => /^第 1 頁 visual\.items\[0\]\.body：估算 7 行，上限 6 行/.test(w)));
-  const page = columns('文'.repeat(36 * 3), '兩個方向都要做，先做甲。');
+  assert.ok(!readBuild([columns('文'.repeat(33 * 6))]).some((w) => /body：估算/.test(w)));
+  assert.ok(readBuild([columns('文'.repeat(33 * 6 + 1))]).some((w) => /^第 1 頁 visual\.items\[0\]\.body：估算 7 行，上限 6 行/.test(w)));
+  const page = columns('文'.repeat(33 * 3), '兩個方向都要做，先做甲。');
   const { boxes: [boxes] } = await slides([page]);
   const takeaway = boxes.find((s) => s.text === page.takeaway), body = boxes.find((s) => s.text === page.visual.items[0].body);
   assert.deepEqual([...new Set(takeaway.sizes)], [1000]);
-  assert.ok(takeaway.y > body.y + 3 * 22 * 1.45 - 1, `takeaway y ${takeaway.y} 在正文 ${body.y} 下方`);
+  assert.ok(takeaway.y > body.y + 3 * 24 * 1.45 - 1, `takeaway y ${takeaway.y} 在正文 ${body.y} 下方`);
 });
 
-test('footnotes 自動編號、8 pt，置於來源行上方', async () => {
+test('footnotes 自動編號、9 pt，置於來源行上方', async () => {
   const page = evidence({ takeaway: '甲最多(1)。', points: ['甲 12 件(2)。', '乙 8 件。'], footnotes: ['只計已結案件。', '含轉介案件。'] });
   const { boxes: [boxes] } = await slides([page]);
   const notes = ['(1) 只計已結案件。', '(2) 含轉介案件。'].map((t) => boxes.find((s) => s.text === t));
-  for (const s of notes) assert.deepEqual([...new Set(s.sizes)], [800], JSON.stringify(s));
+  for (const s of notes) assert.deepEqual([...new Set(s.sizes)], [900], JSON.stringify(s));
   const source = boxes.find((s) => s.text === `資料來源：${sources.source}`);
   assert.ok(notes[0].y < notes[1].y && notes[1].y < source.y, `${notes.map((s) => s.y)} < ${source.y}`);
   const lowest = Math.max(...boxes.filter((s) => s.text === page.points[1]).map((s) => s.y));

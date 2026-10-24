@@ -94,7 +94,7 @@ When you hand over a script, say who it is for and what judgement or decision it
 | In the video | Files | Change when |
 | --- | --- | --- |
 | Instructions for the AI | `SKILL.md`, `references/` | Purpose, content flow or scope changes |
-| Design settings | `design/tokens.json`, `design/brief.md` | Colours, fonts, sizes, spacing or line widths change |
+| Design settings | [Typography defaults for every output](design/README.md), `design/tokens.json`, `design/brief.md` | Colours, fonts, sizes, spacing or line widths change |
 | Code | `scripts/` | Chart types, layouts or outputs change |
 | Checks | `tests/`, `examples/`, `evals/` | A new problem appears or a new example is needed |
 
@@ -129,7 +129,7 @@ Turn these meeting notes into a printable HTML report
 Make this script a pre-read deck; people will read it on their own before the meeting, with no presenter
 ```
 
-A pre-read deck uses smaller type (22 pt titles, 11 pt body) with a reference density of 600–900 characters per content page, with two-panel pages, takeaways and footnotes; what a presenter would say goes on the page itself; see [read decks](references/layouts.md#閱讀型簡報) (Traditional Chinese).
+A pre-read deck uses smaller type (22 pt titles, 12 pt body) with a reference density of 600–900 characters per content page, with two-panel pages, takeaways and footnotes; what a presenter would say goes on the page itself; see [read decks](references/layouts.md#閱讀型簡報) (Traditional Chinese).
 
 
 The character range and under-70% fill warnings are diagnostics, not quotas or comprehension scores. First check whether reasons, definitions or caveats already in the source were omitted; then consider merging pages, splitting large components or rearranging content. When content is complete and whitespace helps reading, record why it remains. Add only necessary, source-supported material. PDF fill measures the last ink line within the page body; deck fill estimates natural content height by layout. Overflow, split-exhibit and empty evidence-column diagnostics still apply.

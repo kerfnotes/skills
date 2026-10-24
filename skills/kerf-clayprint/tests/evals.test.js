@@ -109,8 +109,8 @@ test('wrap warnings name the field, measured lines, and limit, and diagnose CJK 
   const summary = (body) => make('summary', { lead: '先確認需求', body, items: [{ label: '甲', value: 12 }, { label: '乙', value: 8 }] });
   const input = { pages: [
     summary('甲\r\n乙\r\n丙\r\n丁'),
-    summary('甲'.repeat(26)),
-    make('process', { steps: [{ heading: '甲'.repeat(15), body: '乙'.repeat(17) }, { heading: '交接' }, { heading: '完成' }] }),
+    summary('甲'.repeat(21)),
+    make('process', { steps: [{ heading: '甲'.repeat(15), body: '乙'.repeat(14) }, { heading: '交接' }, { heading: '完成' }] }),
     make('close', { rows: [{ task: '確認', owner: '甲'.repeat(13), due: '乙'.repeat(8) }] }),
     make('close', { rows: [{ task: '確認', due: '甲\r\n乙\r\n丙\r\n丁' }] }),
   ] };

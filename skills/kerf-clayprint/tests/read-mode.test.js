@@ -27,14 +27,14 @@ test('閱讀模式只改字級、證據圖寬與容量，保留各設計層的�
   const base = JSON.parse(readFileSync(path.join(root, 'design/tokens.blue.json'), 'utf8'));
   const child = run([], { code, mode: 'read', tokens: 'design/tokens.blue.json' });
   assert.equal(child.status, 0, child.stderr);
-  assert.deepEqual(JSON.parse(child.stdout), { title: { ...base.type.title, px: 44 }, label: 20, minimum: 16, list: [3, 8], evidence: 1000, focus: base.color.focus });
+  assert.deepEqual(JSON.parse(child.stdout), { title: { ...base.type.title, px: 44 }, label: 20, minimum: 18, list: [3, 8], evidence: 1000, focus: base.color.focus });
   const present = JSON.parse(run([], { code }).stdout);
   assert.equal(present.title.px, JSON.parse(readFileSync(path.join(root, 'design/tokens.json'), 'utf8')).type.title.px);
   assert.equal(present.list, undefined);
   assert.match(run([], { code, mode: 'dense' }).stderr, /CLAYPRINT_MODE/);
 });
 
-test('mode: read 的 story 由 CLI 自動改用閱讀字級，最小 8 pt，驗收無警告', async () => {
+test('mode: read 的 story 由 CLI 自動改用閱讀字級，最小 9 pt，驗收無警告', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-read-'));
   try {
     const out = path.join(dir, 'read.pptx');
@@ -46,7 +46,7 @@ test('mode: read 的 story 由 CLI 自動改用閱讀字級，最小 8 pt，驗�
       sizes.push(...[...(await zip.file(name).async('string')).matchAll(/\ssz="(\d+)"/g)].map((m) => Number(m[1])));
     }
     assert.ok(sizes.includes(2200), '頁標題 22 pt');
-    assert.ok(Math.min(...sizes) >= 800, `最小字級 ${Math.min(...sizes) / 100} pt`);
+    assert.ok(Math.min(...sizes) >= 900, `最小字級 ${Math.min(...sizes) / 100} pt`);
     const checked = run(['evals/check.mjs', 'examples/story-read.json', 'evals/fixtures/example-script.md']);
     assert.equal(checked.status, 0, checked.stderr);
     assert.match(checked.stdout, /0 項警告/);

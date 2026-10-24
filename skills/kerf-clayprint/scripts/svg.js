@@ -5,8 +5,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { T, C, FONT_FAMILY, prepare, formatValue, tickText, textWidth } from './core.js';
 import { isMain } from './main.js';
 
-const PX = (T.type.chart ?? T.type.label).px; // 24, the smallest text anywhere; read decks use their chart size
-const LINE = Math.round(PX * 1.45);
+// Drawing is synchronous, as is the BOXES collector below. Restore sizes after each render.
+let PX = (T.type.chart ?? T.type.label).px;
+let LINE = Math.round(PX * 1.45);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const n = (v) => Math.round(v * 100) / 100;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -364,7 +365,7 @@ DRAW.strip = (m, W, H) => {
 
 DRAW.scatter = (m, W, H, warn) => {
   const P = [];
-  const x0 = yLabelWidth(m.yAxis, m.suffix) + 8, x1 = W - 16, y0 = 16, y1 = H - LINE - 16;
+  const x0 = yLabelWidth(m.yAxis, m.suffix) + 8, x1 = W - Math.max(16, textWidth(tickText(m.xAxis, m.xAxis.hi), PX) / 2), y0 = Math.max(16, PX * 0.8), y1 = H - LINE - 16;
   const sx = scale(m.xAxis.lo, m.xAxis.hi, x0, x1), sy = scale(m.yAxis.lo, m.yAxis.hi, y1, y0);
   yAxis(m.yAxis, sy, x0, x1, P, m.suffix);
   bottomAxis(m.xAxis, sx, y1, x0, x1, P, { grid: false });
@@ -841,8 +842,16 @@ export function render(spec, opts = {}) {
   const model = prepare(spec, opts);
   const width = opts.width ?? T.chartArea.evidence.width;
   const height = opts.height ?? T.chartArea.evidence.height;
-  const body = draw(model, { width, height });
-  return { svg: doc(width, height, body, opts.font), body, model, width, height };
+  const previous = PX;
+  try {
+    PX = opts.chartPx ?? PX;
+    LINE = Math.round(PX * 1.45);
+    const body = draw(model, { width, height });
+    return { svg: doc(width, height, body, opts.font), body, model, width, height };
+  } finally {
+    PX = previous;
+    LINE = Math.round(PX * 1.45);
+  }
 }
 
 // Source row under the chart for standalone output: thin rule with 9 ticks, then source｜unit｜period｜missing.

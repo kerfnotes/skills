@@ -94,7 +94,7 @@ node scripts/pdf.js examples/showcase/ai-exports-report.html out/ai-exports
 | 片中說法 | 對應檔案 | 什麼時候改 |
 | --- | --- | --- |
 | 給 AI 的指引 | `SKILL.md`、`references/` | 用途、內容流程、支援範圍改變時 |
-| 設計設定 | `design/tokens.json`、`design/brief.md` | 改顏色、字型、字級、間距、線寬時 |
+| 設計設定 | [全交付字級索引](design/README.md)、`design/tokens.json`、`design/brief.md` | 改顏色、字型、字級、間距、線寬時 |
 | 程式 | `scripts/` | 改圖種、版型或輸出方式時 |
 | 檢查成品 | `tests/`、`examples/`、`evals/` | 發現新問題或需要新範例時 |
 
@@ -128,7 +128,7 @@ npx skills add kerfnotes/skills --list
 把這份稿子做成會前閱讀版簡報，大家先自己看，不會有人講解
 ```
 
-閱讀版簡報字級較小（標題 22 pt、正文 11 pt），每個內容頁以 600–900 字元作密度參考，可並排兩格、加結論句與註腳，要說的話直接寫在頁面上，見[閱讀型簡報](references/layouts.md#閱讀型簡報)與範例 [story-read.json](examples/story-read.json)。
+閱讀版簡報字級較小（標題 22 pt、正文 12 pt），每個內容頁以 600–900 字元作密度參考，可並排兩格、加結論句與註腳，要說的話直接寫在頁面上，見[閱讀型簡報](references/layouts.md#閱讀型簡報)與範例 [story-read.json](examples/story-read.json)。
 
 
 字元範圍與低於 70% 的填滿提示都是診斷，不是必須達成的配額，也不代表理解程度。先查原稿已有的理由、定義或限制是否漏寫，再考慮併頁、拆分大元件或重排；內容完整且留白有助閱讀時記錄理由即可，只補原稿支持的必要內容。PDF 量最後一列墨水在版心內的位置，簡報則依版型估算內容自然高度；溢出、切頁與空白證據右欄等診斷仍保留。

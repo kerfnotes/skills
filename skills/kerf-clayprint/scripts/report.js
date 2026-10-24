@@ -89,7 +89,7 @@ const label = (text) => `<span class="exhibit-label" data-label>${text}</span>`;
 function figure(block, n, where, warnings, categoryOrder) {
   const spec = block.chart;
   let out;
-  try { out = render(spec, { width: Math.round(6.8 * T.slide.pxPerIn), height: reportHeight(prepare(spec, { categoryOrder })), categoryOrder }); }
+  try { out = render(spec, { chartPx: T.screen?.type?.chart ?? 24, width: Math.round(6.8 * T.slide.pxPerIn), height: reportHeight(prepare(spec, { categoryOrder })), categoryOrder }); }
   catch (error) { throw new Error(`${where}.chart：${error.message}`); }
   const m = out.model;
   if (!m.source) throw new Error(`${where}.chart 缺少 source；請在圖表 JSON 填資料來源。`);
