@@ -18,6 +18,7 @@
   let memos = initial.memos || [];
   const checkedMemos = new Set();
   let operation = null, uploading = false, submitted = false;
+  let submissionUncertain = false;
   let rejectedSourceKey = null;
   const locked = () => Boolean(operation || uploading || submitted);
   const fatal = (message) => { $('error').textContent = message; $('error').focus(); };
@@ -55,7 +56,7 @@
   if (Array.isArray(settings.recipients)) $('recipients').value = settings.recipients.join(', ');
 
   // This tab and token only. Never serialize File objects or audio bytes.
-  let storage, draftKey, reselectKey = null, pathErrorReason = null, restoredDraft = false;
+  let storage, draftKey, submissionKey, reselectKey = null, pathErrorReason = null, restoredDraft = false;
   const draftSettings = () => ({engine: choice('engine'), summary: choice('summary'),
     merge: $('merge').checked, mail: $('mail').checked,
     summary_custom: $('summary_custom').value, roster: $('roster').value,
@@ -82,7 +83,9 @@
   try {
     if (typeof window !== 'undefined') {
       draftKey = `wordprint:draft:v1:${window.location.origin}${window.location.pathname}${window.location.search}`;
+      submissionKey = `${draftKey}:submission`;
       storage = window.sessionStorage;
+      submissionUncertain = storage.getItem(submissionKey) === 'pending';
       const raw = storage.getItem(draftKey);
       if (raw !== null) {
         if (raw.length > 1024 ** 2) throw new Error('draft');
@@ -159,7 +162,8 @@
     $('form').setAttribute('aria-busy', String(locked()));
     $('drop-zone').setAttribute('aria-disabled', String(locked()));
     document.querySelectorAll('[data-lock=source]').forEach((el) => { el.disabled = locked(); });
-    $('files').disabled = locked(); $('paths').disabled = locked(); $('submit').disabled = locked();
+    $('files').disabled = locked(); $('paths').disabled = locked();
+    $('submit').disabled = locked() || submissionUncertain || pending() || sources.some(memoUnavailable);
     document.querySelectorAll('input[name=engine], input[name=summary], #merge, #summary_custom, #roster, #recipients, #mail').forEach((el) => {
       el.disabled = operation === 'submit' || submitted;
     });
@@ -362,10 +366,15 @@
   function queueFiles(files) {
     if (locked()) return;
     const errors = [];
+    let needsNativePicker = false;
     for (const file of Array.from(files || [])) {
       if (!(file instanceof File)) { errors.push('只接受錄音檔案。'); continue; }
       if (!AUDIO.test(file.name)) { errors.push(`${file.name}：不支援此副檔名，請選擇 WAV、M4A、MP3、AAC、FLAC、OGG、OPUS、AIF、AIFF、MP4、WMA 或 QTA。`); continue; }
-      if (file.size > MAX_FILE || file.size === 0) { errors.push(`${file.name}：檔案須大於 0 且不超過 1 GiB。`); continue; }
+      if (file.size > MAX_FILE) {
+        errors.push(`${file.name}：超過 1 GiB，請改用「其他匯入方式 → 選擇本機檔案」，或填入本機路徑。`);
+        needsNativePicker = true; continue;
+      }
+      if (file.size === 0) { errors.push(`${file.name}：檔案不可為空。`); continue; }
       const source = {key: `source-${++serial}`, title: file.name, detail: bytes(file.size),
         upload: {file, status: 'queued', percent: 0, message: '等待上傳'}};
       const replace = sources.findIndex((item) => item.key === reselectKey && item.upload?.status === 'needs-selection');
@@ -373,6 +382,10 @@
     }
     reselectKey = null;
     $('upload-error').textContent = errors.join('\n'); renderSources();
+    if (needsNativePicker) {
+      $('more-sources').open = true;
+      document.querySelector('[data-browse=file]').focus();
+    }
     if (sources.some((source) => source.upload?.status === 'queued')) runUploads();
   }
   $('choose-files').addEventListener('click', () => { if (!locked()) { reselectKey = null; $('files').click(); } });
@@ -386,7 +399,7 @@
     event.preventDefault(); $('drop-zone').classList.remove('drag-over'); if (locked()) return;
     const transfer = event.dataTransfer;
     if ([...(transfer?.items || [])].some((item) => item.webkitGetAsEntry?.()?.isDirectory)) {
-      $('upload-error').textContent = '資料夾請用「更多方式 → 選擇本機資料夾」。'; return;
+      $('upload-error').textContent = '資料夾請用「其他匯入方式 → 選擇本機資料夾」。'; return;
     }
     if (!transfer?.files?.length) {
       $('upload-error').textContent = '未收到可上傳的錄音檔。請先將語音備忘錄匯出成檔案，再拖入或選取。'; return;
@@ -426,7 +439,7 @@
   document.addEventListener('change', sync);
   document.addEventListener('input', sync);
   $('form').addEventListener('submit', async (event) => {
-    event.preventDefault(); if (locked()) return;
+    event.preventDefault(); if (locked() || submissionUncertain) return;
     $('error').textContent = '';
     pathErrorReason = null; rejectedSourceKey = null;
     for (const [id, field] of [['sources-error', 'source-list'], ['custom-error', 'summary_custom'], ['recipients-error', 'recipients'], ['paths-error', 'paths']]) fieldError(id, field, '');
@@ -453,25 +466,37 @@
       roster: $('roster').value === $('roster').defaultValue ? JSON.parse($('roster').dataset.values || '[]') : $('roster').value,
       recipients: recipients(), mail: $('mail').checked,
     };
+    // Keep this guard separate from the v1 draft: a reload must not enable a duplicate task.
+    submissionUncertain = true;
+    try { storage?.setItem(submissionKey, 'pending'); } catch (_) { /* The in-page guard still applies. */ }
     operation = 'submit'; sync(); $('submit-status').textContent = '正在交付設定…';
     try {
-      await request('submit', answers);
+      const result = await request('submit', answers);
+      if (result?.ok !== true) throw new Error('服務未確認設定已儲存。');
       submitted = true; $('form').hidden = true; $('success').hidden = false; $('success').focus();
-      try { storage?.removeItem(draftKey); } catch (_) { /* Submission already succeeded. */ }
+      try { storage?.removeItem(draftKey); storage?.removeItem(submissionKey); } catch (_) { /* Submission already succeeded. */ }
     } catch (error) {
       if (error.status === 400 && error.result?.code === 'invalid_source' && error.result.saved === false) {
+        submissionUncertain = false;
+        try { storage?.removeItem(submissionKey); } catch (_) { /* Safe retry is confirmed by the server. */ }
         rejectedSourceKey = sources[error.result.source_index]?.key || null;
         $('submit-status').textContent = '設定尚未儲存，請修正來源後再送出；清單、設定與已完成上傳均已保留。';
         fieldError('sources-error', 'source-list', error.message); $('selected-heading').focus();
       } else {
-        $('submit-status').textContent = '尚未確認送出，填寫內容仍保留在此頁。';
+        $('submit-status').textContent = '尚未確認送出，內容仍保留。請先核對任務狀態，勿重複送出；需要重開表單時請回到對話。';
         fatal(`無法確認設定是否儲存，請先查看 agent 視窗。${error.message}`);
       }
-    } finally { operation = null; sync(); }
+    } finally {
+      operation = null; sync();
+      if (rejectedSourceKey) restoreSourceFocus(rejectedSourceKey, 'remove');
+    }
   });
   if (memos.length) {
     $('memo-panel').hidden = false; $('read-memos').textContent = '重新整理語音備忘錄';
     $('memo-status').textContent = `顯示最近 ${memos.length} 份。`;
+  }
+  if (submissionUncertain) {
+    $('submit-status').textContent = '尚未確認送出，內容仍保留。請先核對任務狀態，勿重複送出；需要重開表單時請回到對話。';
   }
   renderSources(); renderMemos();
   if (choice('summary') === 'custom' && !$('summary_custom').value.trim()) expandSummary(true);
