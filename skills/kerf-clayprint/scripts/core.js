@@ -85,6 +85,18 @@ export function tickText(axis, t, suffix = '') {
 
 // Color per category name. With a shared order (from the deck), a name keeps its color in every chart;
 // "其他" is gray by name; categories beyond the available palette fold into "其他".
+// Shared document order for unordered categories; ordered/focus semantics stay local.
+export function documentCategories(visuals) {
+  const seen = [];
+  for (const v of visuals) {
+    if (!v?.kind) continue;
+    const names = ['share', 'sharetrend', 'waffle', 'mekko'].includes(v.kind) ? v.categories
+      : v.kind === 'grouped' && v.seriesRole === 'categorical' || v.kind === 'line' && !v.focus && v.series.length > 1 ? v.series.map((s) => s.name) : [];
+    for (const name of names) if (!seen.includes(name)) seen.push(name);
+  }
+  return seen;
+}
+
 export function categoryLimit() {
   if (!Array.isArray(C.categorical) || C.categorical.length < 1) throw new Error('color.categorical 長度不足：至少需要 1 色');
   if (!Number.isInteger(tokens.categoryRules.maxCategorical) || tokens.categoryRules.maxCategorical < 1) throw new Error('categoryRules.maxCategorical 必須是至少 1 的整數');

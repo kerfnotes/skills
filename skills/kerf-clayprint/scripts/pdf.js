@@ -127,7 +127,7 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
   pages.forEach(({ fill }, i) => {
     if (i < pages.length - 1 && fill < 70) warnings.push(i === 0
       ? `第 1 頁只填 ${fill}%：縮短摘要或目錄，或把下一節的開頭段落放進第 1 頁前的摘要。`
-      : `第 ${i + 1} 頁只填 ${fill}%：把被推到下一頁的整塊元件前移，或在它前面加一段文字。`);
+      : `第 ${i + 1} 頁只填 ${fill}%：先查原稿是否漏了理由、定義或限制，再評估元件前移、拆分或重排；內容完整時可記錄留白理由，勿為填滿補字。`);
   });
   // Chrome shrinks the whole document, not one page: warn once, at the first page that shows it.
   const shrunk = pages.findIndex((p) => p.scale < 0.97);

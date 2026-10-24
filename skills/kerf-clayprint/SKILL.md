@@ -1,11 +1,21 @@
 ---
 name: kerf-clayprint
-description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的 HTML 報告，也把既有 PowerPoint、Word、Excel、HTML 套用 Clayprint 樣式。適用於內容視覺化；不適用於軟體或架構藍圖、只要大綱、圖片提示詞簡報。"
+description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的 HTML 報告，也為既有 PowerPoint、Word、Excel、HTML 的指定圖表或圖片換樣式。適用於內容視覺化；不適用於軟體或架構藍圖、只要大綱、圖片提示詞簡報。"
 ---
 
 # Clayprint
 
-把文字稿整理成簡報或 HTML 報告，也能將既有檔案套用設計層；以原稿和原檔為內容依據。
+把文字稿整理成簡報或 HTML 報告，也能為既有檔案的指定圖表或圖片換樣式；以原稿和原檔為內容依據。
+
+## 先分流
+
+先辨認內容可否重組，再選交付用途。沿用使用者已給的讀者背景、目的與格式；只有缺口會實質改變取捨時，才詢問一次。
+
+- **只換樣式**：沿用原文，依 [既有檔案流程](references/formats.md)在副本上修改指定圖表或圖片，保留原檔、頁序、公式與可編輯內容。Office 擷取僅是可讀內容與快取，不是整份文件的往返重建模型；讀不到與只取得快取的部分須揭露。
+- **內容可重組**：依下列用途選流程，使用者明確指定的格式優先。
+  - 有講者說明：現場簡報（`present`，預設），依下方〈簡報流程〉。
+  - 無講者、需要逐頁比較證據：閱讀型簡報（`read`），依〈簡報流程〉及[閱讀型簡報](references/layouts.md#閱讀型簡報)。
+  - 連續閱讀、轉寄或列印：直接依 [報告流程](references/report.md)製作 HTML／PDF，不必先拆成投影片。
 
 ## 原則
 
@@ -23,7 +33,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 - 決策型：封面 → 主管摘要 → 現況／需求 → 證據 → 診斷或方案 → 決議事項；無數字時，封面後以帶 `focus` 的 `statement` 開場。每張證據頁都要被摘要或決議採用，孤立頁刪去。
 - 說明型：封面 → 重點摘要 → 拆解 → 流程或時程 → 下一步。
 
-簡報要會前寄出、讀者自己看而沒有人講解時，在 `story.json` 根層填 `"mode": "read"`，做成閱讀型簡報：字級較小（標題 22 pt 可寫兩行、正文 11 pt），每個內容頁約放 600 到 900 字元；證據頁右欄寫 `takeaway` 與 `points`，可用 `panels` 並排兩格、用 `footnotes` 加註腳。要說的話寫在頁面上，不寫在 `notes`。規則見[閱讀型簡報](references/layouts.md#閱讀型簡報)。
+簡報要會前寄出、讀者自己看而沒有人講解時，在 `story.json` 根層填 `"mode": "read"`，做成閱讀型簡報：字級較小（標題 22 pt 可寫兩行、正文 11 pt），每個內容頁以 600–900 字元作密度參考，不是必須填滿的配額；證據頁右欄寫 `takeaway` 與 `points`，可用 `panels` 並排兩格、用 `footnotes` 加註腳。要說的話寫在頁面上，不寫在 `notes`。規則見[閱讀型簡報](references/layouts.md#閱讀型簡報)。
 
 ## 資料底線
 
@@ -32,9 +42,9 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 - 0 是觀察值。論證需要或讀者會預期看到的數字，若原稿未提供，在原位標「未提供」，並列入當頁來源列；若只是版面有那一格，而原稿沒提，就整格省略。缺值輸入與各圖處理方式見 [版型說明](references/layouts.md)和[圖表選單](references/charts.md)。
 - 每頁填 `sources.source`；單位、期間只填已知內容。虛構稿註明「虛構示意資料」。推導值的算法與原始數字放當頁 `notes`；需要觀眾看見時寫 `sources.more`。`sources.more` 會上投影片，`notes` 不會；格式見 [驗收說明](evals/README.md)。
 
-## 流程
+## 簡報流程
 
-以下指令從 skill 根目錄執行；需要 Node 22.7.0 以上。首次安裝、Node 版本不足或缺少套件時，先依 [agent 安裝指引](docs/install.md)完成安裝與驗證。先建立 `out/`，輸出統一放在此處；`script.md` 換成本次原稿。
+以下指令從 skill 根目錄執行；需要 Node 22.7.0 以上。首次安裝、Node 版本不足或缺少套件時，先依 [agent 安裝指引](docs/install.md)完成安裝與驗證。先建立 `out/`，輸出統一放在此處；`script.md` 換成本次原稿。此流程適用於內容可重組的簡報；只換樣式走既有檔案流程。
 
 1. 讀文字稿，確認聽眾及其先備知識、目的、可用數字、來源與資料缺口，依原則 6 決定解釋深度。使用者說明的背景優先；聽眾或目的不明且會改變取捨時，先問一次。
 2. 選合適的骨架，寫故事線和每頁一句結論。
@@ -43,6 +53,17 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 5. 執行 `node scripts/pptx.js out/story.json out/deck.pptx` 建檔。
 6. 依 [預覽與交付](references/layouts.md#預覽與交付)執行 `node scripts/preview.js out/deck.pptx out/preview`；輸出 `page-N.png`、`sheet.png`（整份概覽）、`deck.pdf`。0 項容量警告只代表未偵測到溢出，仍逐頁找孤字與不均勻換行。
 7. 依警告和預覽修正最弱的一頁，再重建、重驗。能派 subagent 時，可請不同 subagent 對照原稿與需求，分別檢查數字、版面和敘事，再整合修正。交付集中列：核心判斷、缺資料／未完成頁、最弱頁修改前後及原因、哪些圖為原生可編輯／SVG，以及「實際在 PowerPoint 改一個原生圖數值：完成／未驗」。編輯限制見 [設計差異](docs/design-diff.md)。
+
+## 交付證據
+
+簡報、報告與既有檔案都分列四層結果，寫明完成、未驗或受阻及其依據：
+
+1. **程式核對**：生成、原稿數字對照、容量與警告；通過不代表完整事實查核或實際可讀。
+2. **實際預覽**：列出軟體、觀看條件與已查看的頁面；檢查遮擋、換行、來源及同頁／同節限制。現場版記錄顯示尺寸與觀看距離，閱讀版檢查 A4 縮印，HTML 檢查窄螢幕，PDF 檢查圖說與來源小字。未實測的項目標未驗。
+3. **PowerPoint 原生圖表編輯**：實際開檔改一個原生圖數值才算完成；SVG、XML 或預覽不證明能編輯。不適用的產物註明不適用。
+4. **讀者理解**：記錄目標讀者能否說明結論、理由與重要限制；沒有目標讀者回饋時，只回報內容檢視及尚未驗證理解。
+
+外部程式不可用時保留已完成產物，列明受阻原因與未驗項目。密度警告先查原稿已有的理由、定義或限制是否漏寫，再評估併頁、元件拆分或重排；內容完整且留白有助閱讀時記錄理由，維持既有警告，不以補造或重複內容消除提示。量測差異見[簡報填滿](references/layouts.md#填滿與頁數)及 [PDF 警告](references/report.md#警告)。
 
 ## 設計層與驗證
 
@@ -54,7 +75,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 
 讀者要連續閱讀、轉寄或列印時，依 [報告流程](references/report.md)寫 `out/report.json`。
 先寫讀者要帶走的一句話與每節判斷；有資料才加圖，圖表 JSON 填單位、期間與來源，圖說會自動組成。
-執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再用 `node evals/check-report.mjs out/report.html script.md` 核對。
+執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再用 `node evals/check-report.mjs out/report.html script.md out/report.json` 核對。
 核對通過後執行 `node scripts/pdf.js out/report.html out/print` 印成 PDF，處理填滿率與切頁警告並逐頁看 `page-NN.png`；找不到瀏覽器時 PDF 標「受阻」並附原因，其餘步驟繼續。
 
 ## 套用到既有檔案

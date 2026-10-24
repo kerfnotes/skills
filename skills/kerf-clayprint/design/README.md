@@ -5,6 +5,7 @@ Clayprint 的視覺規格。預設使用 clay 配色，原本的 B′ 深藍保�
 - `tokens.json`：預設的 clay 設計層。
 - `tokens.blue.json`：原本的 B′ 深藍設計層範例。
 - `read.json`：閱讀版（`mode: "read"`）疊在設計層上的覆寫：字級、上下邊界（含標題到 `lede` 的 `ledeGap`、columns 正文到 `takeaway` 的 `takeawayGap`，各至少一個正文行高）、證據圖寬與容量（含填滿門檻 `minFill`、points 點數、panels 註行數）。閱讀版以精確行距（pt）排字，PowerPoint 的行高與版型估算一致。
+- 設計層可選的 `screen.type` 區塊：HTML 的 CSS px 字級，`body`、`small`、`sub`、`title`、`display` 分別控制正文、小字、小標題、節標題與封面標題。內建 clay／blue 明填現行的 16／12／18／28／52 px，與簡報 `type`、閱讀版 `read.json`、列印 `print.type` 分開。舊自訂設計層未填的欄位，維持原本對應簡報字級除以 2 的換算（`small` 對應 `type.label.px`）；填齊即可獨立控制。圖表 SVG 的 viewBox 字級仍沿用既有圖表設計規則。
 - 設計層的 `print` 區塊：報告列印的邊界（mm；`indent`、`gutter` 是 22／14 mm 線內側的正文內距）與字級（pt），由 `scripts/theme-css.js` 輸出成 `--cp-print-*` 變數；缺少時用預設值。
 - `spec.md`：頁面格線、字級、線寬、刻度、來源列、標註規則、資料顯示、版型與 PowerPoint 輸出對應；色碼保留原始設計紀錄。
 - `claude-design/`：第一版在 Claude Design 製作的 8 頁版型與 13 種圖表樣張，保留原始名稱與檔名。要在 Claude Design 裡打開才看得到畫面；匯出時附帶的執行檔沒有放進來。

@@ -5,7 +5,9 @@ import { isMain } from './main.js';
 export function themeCss(tokens = loadTokens()) {
   const c = tokens.color;
   const font = [...tokens.font.latin, ...tokens.font.cjk].map((name) => `"${name}"`).join(', ');
-  const body = tokens.type.body.px / 2;
+  // Explicit screen sizes are CSS px; legacy layers keep the original slide-size calculation.
+  const screen = tokens.screen?.type;
+  const body = screen?.body ?? tokens.type.body.px / 2;
   const { margin: pm, type: pt } = tokens.print;
   // ponytail: print front matter (.report-front) longer than one page keeps the 50 mm padding on top of page 2's margin;
   // shorten the summary if it spills.
@@ -20,10 +22,10 @@ export function themeCss(tokens = loadTokens()) {
   --cp-soft: ${c.onDark[1]};
   --cp-font: ${font}, sans-serif;
   --cp-body: ${body}px;
-  --cp-small: ${tokens.type.label.px / 2}px;
-  --cp-sub: ${tokens.type.sub.px / 2}px;
-  --cp-title-size: ${tokens.type.title.px / 2}px;
-  --cp-display: ${tokens.type.display.px / 2}px;
+  --cp-small: ${screen?.small ?? tokens.type.label.px / 2}px;
+  --cp-sub: ${screen?.sub ?? tokens.type.sub.px / 2}px;
+  --cp-title-size: ${screen?.title ?? tokens.type.title.px / 2}px;
+  --cp-display: ${screen?.display ?? tokens.type.display.px / 2}px;
 }
 * { box-sizing: border-box; }
 html { color: var(--cp-ink); background: var(--cp-paper); font-family: var(--cp-font); font-size: var(--cp-body); line-height: 1.65; }

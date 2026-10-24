@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
-import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, prepare, decimalsOf, shownDigits, textOn } from './core.js';
+import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, documentCategories, prepare, decimalsOf, shownDigits, textOn } from './core.js';
 import { render } from './svg.js';
 import { svgToPng } from './png.js';
 import { isMain, rerunForMode } from './main.js';
@@ -72,10 +72,7 @@ function checkWrap(ctx, field, str, px, width, limit, orphan = false) {
 // A read deck has no presenter to carry a near-empty page. Only layouts whose height comes from the content call this.
 function sparse(ctx, used, avail) {
   if (MODE !== 'read' || avail <= 0 || used / avail >= CAP.minFill) return;
-  // list, compare, close and summary take no takeaway or points.
-  // Only evidence and columns take takeaway／points; every other layout grows by adding items or body text.
-  const fix = ['evidence', 'columns'].includes(ctx.page.type) ? '加 takeaway 或 points' : '加項目或正文';
-  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 ${Math.round(CAP.minFill * 100)}%：${fix}，或併入相鄰頁。`);
+  ctx.warn(`第 ${ctx.n} 頁填滿 ${Math.round((used / avail) * 100)}%，低於 ${Math.round(CAP.minFill * 100)}%：先查原稿是否漏了理由、定義或限制，再評估併頁、元件拆分或重排；內容完整時可記錄留白理由，勿為填滿補字。`);
 }
 
 function sourceItems(sources = {}, missing = []) {
@@ -1082,14 +1079,7 @@ LAYOUT.close = (slide, ctx) => {
 
 // Every category in every chart, in order of first appearance: one category keeps one color across the deck.
 export function deckCategories(story) {
-  const seen = [];
-  for (const v of story.pages.flatMap((p) => p.type === 'panels' ? p.visual.items.map((cell) => cell.visual) : [p.visual])) {
-    if (!v?.kind) continue;
-    const names = ['share', 'sharetrend', 'waffle', 'mekko'].includes(v.kind) ? v.categories
-      : v.kind === 'grouped' && v.seriesRole === 'categorical' || v.kind === 'line' && !v.focus && v.series.length > 1 ? v.series.map((s) => s.name) : [];
-    for (const name of names) if (!seen.includes(name)) seen.push(name);
-  }
-  return seen;
+  return documentCategories(story.pages.flatMap((p) => p.type === 'panels' ? p.visual.items.map((cell) => cell.visual) : [p.visual]));
 }
 
 export async function build(story) {

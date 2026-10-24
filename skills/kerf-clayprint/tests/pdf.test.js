@@ -94,7 +94,7 @@ test('pdf.js prints with the browser, rasterizes pages, and warns about fill, ov
 
     const fill = (last, from) => Math.round((last - from) / (bottom - from) * 100);
     assert.match(result.stdout, new RegExp(`印出 3 頁（A4）；填滿率 ${fill(bottom - 10, 0)}／${fill(300, top)}／${fill(150, top)}%。`));
-    assert.match(result.stderr, new RegExp(`第 2 頁只填 ${fill(300, top)}%：把被推到下一頁的整塊元件前移，或在它前面加一段文字。`));
+    assert.match(result.stderr, new RegExp(`第 2 頁只填 ${fill(300, top)}%：先查原稿是否漏了理由、定義或限制，再評估元件前移、拆分或重排；內容完整時可記錄留白理由，勿為填滿補字。`));
     assert.doesNotMatch(result.stderr, /第 [13] 頁只填/);
     assert.match(result.stderr, /第 2 頁內容超出右邊界約 \d+ mm：減少表格欄數或設 wide: true。/);
     assert.doesNotMatch(result.stderr, /第 [13] 頁內容超出右邊界/);

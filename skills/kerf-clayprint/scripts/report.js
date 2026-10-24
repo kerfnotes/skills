@@ -3,7 +3,7 @@
 // Markup and classes follow assets/report.html; charts come from scripts/svg.js, tables from the same model as the deck.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { T, formatValue, prepare, shownDigits } from './core.js';
+import { T, formatValue, prepare, shownDigits, documentCategories, categoryColors, categoryLimit } from './core.js';
 import { render, reportHeight } from './svg.js';
 import { themeCss } from './theme-css.js';
 import { isMain } from './main.js';
@@ -65,16 +65,32 @@ function validate(report) {
   });
 }
 
+// Resolve once relative to the owning report, before document category collection.
+export function resolveReport(report, { baseDir = '.' } = {}) {
+  validate(report);
+  return { ...report, sections: report.sections.map((section, i) => ({ ...section,
+    blocks: section.blocks.map((block, j) => {
+      if (block.type !== 'chart') return block;
+      const path = `sections[${i}].blocks[${j}].chart`;
+      let spec = block.chart;
+      if (typeof spec === 'string') {
+        try { spec = JSON.parse(readFileSync(resolve(baseDir, spec), 'utf8')); }
+        catch { throw new Error(`${path}：無法讀取 ${block.chart} 為圖表 JSON；路徑相對於 report.json。`); }
+      }
+      if (!isObject(spec)) throw new Error(`${path}：圖表 JSON 必須是物件。`);
+      return { ...block, chart: spec };
+    }),
+  })) };
+}
+
 // The generated 「圖 N」「表 N」 label; data-label tells evals/check-report.mjs not to check its number.
 const label = (text) => `<span class="exhibit-label" data-label>${text}</span>`;
 
-function figure(block, n, where, baseDir, warnings) {
-  let spec = block.chart;
-  if (typeof spec === 'string') {
-    try { spec = JSON.parse(readFileSync(resolve(baseDir, spec), 'utf8')); }
-    catch { throw new Error(`${where}.chart：無法讀取 ${block.chart} 為圖表 JSON；路徑相對於 report.json。`); }
-  }
-  const out = render(spec, { width: Math.round(6.8 * T.slide.pxPerIn), height: reportHeight(prepare(spec)) });
+function figure(block, n, where, warnings, categoryOrder) {
+  const spec = block.chart;
+  let out;
+  try { out = render(spec, { width: Math.round(6.8 * T.slide.pxPerIn), height: reportHeight(prepare(spec, { categoryOrder })), categoryOrder }); }
+  catch (error) { throw new Error(`${where}.chart：${error.message}`); }
   const m = out.model;
   if (!m.source) throw new Error(`${where}.chart 缺少 source；請在圖表 JSON 填資料來源。`);
   for (const w of m.warnings) warnings.push(`${where}「${block.title}」：${w}`);
@@ -132,12 +148,12 @@ ${block.rows.map((r) => `<tr>${cols.map(([key], i) => (i ? `<td>${esc(r[key] ?? 
 
 const item = (it) => `<li${it.current ? ' aria-current="step"' : ''}><strong>${esc(it.heading)}</strong>${it.body ? `<span>${esc(it.body)}</span>` : ''}</li>`;
 
-function block(b, n, where, baseDir, warnings) {
+function block(b, n, where, warnings, categoryOrder) {
   switch (b.type) {
     case 'text': return `<p>${esc(b.text)}</p>`;
     case 'callout': return `<aside class="callout"><p>${esc(b.text)}</p></aside>`;
     case 'missing': return `<p class="missing">未提供：${esc(b.text)}</p>`;
-    case 'chart': return figure(b, n, where, baseDir, warnings);
+    case 'chart': return figure(b, n, where, warnings, categoryOrder);
     case 'table': return table(b, n, where, warnings);
     case 'compare': return compare(b);
     case 'close': return close(b);
@@ -147,8 +163,17 @@ function block(b, n, where, baseDir, warnings) {
 }
 
 export function buildReport(report, { baseDir = '.' } = {}) {
-  validate(report);
+  report = resolveReport(report, { baseDir });
   const warnings = [];
+  // Validate chart shapes before collecting names; errors retain editable paths.
+  report.sections.forEach((s, i) => s.blocks.forEach((b, j) => {
+    if (b.type !== 'chart') return;
+    try { prepare(b.chart); }
+    catch (error) { throw new Error(`sections[${i}].blocks[${j}].chart：${error.message}`); }
+  }));
+  const categoryOrder = documentCategories(report.sections.flatMap((s) => s.blocks.filter((b) => b.type === 'chart').map((b) => b.chart)));
+  const folded = categoryColors(categoryOrder, { order: categoryOrder }).folded;
+  if (folded.length) warnings.push(`整份報告超過 ${categoryLimit()} 個類別，「${folded.join('、')}」在每張圖都併入「其他」`);
   const ids = report.sections.map((s, i) => s.id ?? `section-${i + 1}`);
   if (report.meta?.length > 3) warnings.push(`封面資訊是 ${report.meta.length} 項，建議最多 3 項`);
   const items = report.summary?.items ?? [];
@@ -186,7 +211,7 @@ ${items.map((it) => `<div><dt>${esc(it.label)}</dt><dd>${shown(it.value, it)}</d
   report.sections.forEach((s, i) => {
     const body = s.blocks.map((b, j) => {
       const n = b.type === 'chart' ? ++figures : b.type === 'table' ? ++tables : 0;
-      return block(b, n, `第 ${i + 1} 節第 ${j + 1} 個元件`, baseDir, warnings);
+      return block(b, n, `第 ${i + 1} 節第 ${j + 1} 個元件`, warnings, categoryOrder);
     });
     const sources = s.sources ? `\n<footer class="sources">\n<h3>來源與附註</h3>\n${s.sources.map((t) => `<p>${esc(t)}</p>`).join('\n')}\n</footer>` : '';
     parts.push(`<section aria-labelledby="${ids[i]}">

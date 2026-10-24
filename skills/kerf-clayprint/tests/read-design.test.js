@@ -166,17 +166,17 @@ test('閱讀版驗收：缺來源行的頁面失敗並指出頁碼', async () =>
 });
 
 test('閱讀版填滿率低於 70% 的內容頁以固定文案警告，簡報版不警告', async () => {
-  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：(加項目或正文|加 takeaway 或 points)，或併入相鄰頁。$/;
+  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：先查原稿是否漏了理由、定義或限制，再評估併頁、元件拆分或重排；內容完整時可記錄留白理由，勿為填滿補字。$/;
   const statement = [{ type: 'statement', claim: '先記住這件事', sources }];
-  // Only evidence and columns take takeaway／points; other layouts are told to add items or body text.
-  assert.ok(readWarnings(statement).some((w) => w.match(fill)?.[2] === '加項目或正文'), readWarnings(statement).join('\n'));
+  // Sparse layouts diagnose source omissions and reflow without requiring added text.
+  assert.ok(readWarnings(statement).some((w) => fill.test(w)), readWarnings(statement).join('\n'));
   assert.ok(!(await presentWarnings(statement)).some((w) => /填滿|內容區/.test(w)));
   // A page between half and 70% full warned under neither old rule; it warns now.
   const columns = (lines) => [{ type: 'columns', claim: '並列', sources, visual: { items: [
     { heading: '甲', body: '欄內正文'.repeat(9 * lines) }, { heading: '乙' }] } }];
   const percents = [8, 9, 10, 11, 12].map((lines) => readWarnings(columns(lines)).map((w) => w.match(fill)?.[1]).find(Boolean));
   assert.ok(percents.some((p) => p >= 50 && p < 70), percents.join(','));
-  assert.ok(readWarnings(columns(8)).some((w) => w.match(fill)?.[2] === '加 takeaway 或 points'));
+  assert.ok(readWarnings(columns(8)).some((w) => fill.test(w)));
   assert.ok(!readWarnings(columns(16)).some((w) => fill.test(w) || /內容區/.test(w)));
 });
 
@@ -190,8 +190,8 @@ test('閱讀版的填滿門檻、points 點數與 panels 註行數放在設計�
 });
 
 test('閱讀版 list、compare、close、summary 以內容自然高度算填滿率：3 項清單警告、8 項不警告', () => {
-  // These layouts take no takeaway or points, so the advice asks for items or body text instead.
-  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：加項目或正文，或併入相鄰頁。$/;
+  // The same source-first diagnosis applies to each naturally sized layout.
+  const fill = /^第 1 頁填滿 (\d+)%，低於 70%：先查原稿是否漏了理由、定義或限制，再評估併頁、元件拆分或重排；內容完整時可記錄留白理由，勿為填滿補字。$/;
   const list = (n) => [{ type: 'list', claim: '清單', sources, visual: { items: Array.from({ length: n }, (_, i) => ({ heading: `問題${i + 1}`, body: '一行說明' })) } }];
   assert.ok(readWarnings(list(3)).some((w) => fill.test(w)), readWarnings(list(3)).join('\n'));
   assert.ok(!readWarnings(list(8)).some((w) => fill.test(w)), readWarnings(list(8)).join('\n'));

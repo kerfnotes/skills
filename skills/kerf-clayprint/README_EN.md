@@ -15,6 +15,13 @@
   <img src="docs/images/overview.svg" width="960" alt="One Clayprint run: script, claims, layouts, charts, build, check numbers, preview, deliver" />
 </div>
 
+## Choose the work, then the format
+
+First decide whether content may be restructured or only its styling should change. Reuse the audience background, purpose and format already supplied; ask once only when a missing detail changes the choice.
+
+- **Style only:** keep the original wording and edit specified charts or images in a copy of the existing PowerPoint, Word, Excel or HTML file. Preserve originals, page order, formulas and editable content. Extraction supplies readable content and chart caches, not a complete round-trip reconstruction model; disclose unreadable or cache-only parts. See [existing files](references/formats.md) (Traditional Chinese).
+- **Content may be restructured:** use a live deck with a presenter, a pre-read deck for independent page-by-page evidence comparison, or an HTML/PDF report for continuous reading, forwarding or printing. An explicitly requested format takes priority.
+
 ## Why
 
 Getting AI to make slides is easy. Getting slides you can take into a meeting is not: every title should be a claim, not "Background" or "Findings"; every number on a chart should trace back to the script; every page should state its source, unit and period. Clayprint builds those rules into a workflow and checking scripts that Codex or Claude Code runs for you. You give it a script and its purpose; it delivers PowerPoint (native charts whose numbers you can edit in PowerPoint), an HTML report or SVG charts, and looks at every page preview before handing them over.
@@ -78,7 +85,7 @@ node scripts/pdf.js examples/showcase/ai-exports-report.html out/ai-exports
 | Preview | Renders each page and a contact sheet through PowerPoint or LibreOffice, then reviews claim, emphasis and reading order page by page | `scripts/preview.js` |
 | Print | Prints the report to PDF with Chrome, Edge or another Chromium browser and warns about underfilled pages, split figures or tables, and right-edge overflow | `scripts/pdf.js` |
 
-Passing the checks only means numbers and fit are fine; meaning, overlaps and whether the story holds still need a look at the pages.
+Delivery separates four evidence layers: programmatic checks, actual previews, editing a native chart in PowerPoint, and target-reader comprehension. Checks cover supported structure, source-number matching and fit diagnostics, not full fact checking. Record the software and viewing conditions for previews; native editing requires actually changing a value in PowerPoint. Without target-reader feedback, report content review and leave comprehension unverified. Mark unavailable tools or viewing conditions as blocked or unverified and retain completed artifacts. See [delivery evidence](SKILL.md#交付證據) (Traditional Chinese).
 
 ## Working with it
 
@@ -122,7 +129,12 @@ Turn these meeting notes into a printable HTML report
 Make this script a pre-read deck; people will read it on their own before the meeting, with no presenter
 ```
 
-A pre-read deck uses smaller type (22 pt titles, 11 pt body) and holds about 600–900 characters per content page, with two-panel pages, takeaways and footnotes; what a presenter would say goes on the page itself; see [read decks](references/layouts.md#閱讀型簡報) (Traditional Chinese).
+A pre-read deck uses smaller type (22 pt titles, 11 pt body) with a reference density of 600–900 characters per content page, with two-panel pages, takeaways and footnotes; what a presenter would say goes on the page itself; see [read decks](references/layouts.md#閱讀型簡報) (Traditional Chinese).
+
+
+The character range and under-70% fill warnings are diagnostics, not quotas or comprehension scores. First check whether reasons, definitions or caveats already in the source were omitted; then consider merging pages, splitting large components or rearranging content. When content is complete and whitespace helps reading, record why it remains. Add only necessary, source-supported material. PDF fill measures the last ink line within the page body; deck fill estimates natural content height by layout. Overflow, split-exhibit and empty evidence-column diagnostics still apply.
+
+Adapt explanations to known reader knowledge: explain necessary terms where first needed for novices; focus on evidence and trade-offs for experts. Keep limitations that affect judgement beside the claim on the same page or in the same section. Style-only work preserves the original wording.
 
 Or invoke `$kerf-clayprint` in Codex and `/kerf-clayprint` in Claude Code.
 

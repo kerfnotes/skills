@@ -35,6 +35,22 @@ node evals/check-report.mjs out/mine-report.html evals/fixtures/explain-script.m
 
 用瀏覽器看報告。手工組成的 HTML 報告用 `CLAYPRINT_TOKENS=out/mine.json node scripts/theme-css.js 報告.html` 只換樣式；其中由 `scripts/svg.js` 產生的 SVG，要用同一份圖表 JSON 重產。
 
+### 依媒介調整字級
+
+現場簡報由設計層 `type` 控制（設計 px，2 px = 1 pt）；閱讀版由 `design/read.json` 覆寫；HTML 螢幕由可選的 `screen.type` 控制（CSS px）；PDF 列印由 `print.type` 控制（pt）。色彩與字型家族繼續共用。內建 clay／blue 的螢幕設定如下：
+
+```json
+"screen": { "type": { "body": 16, "small": 12, "sub": 18, "title": 28, "display": 52 } }
+```
+
+把這個區塊放進舊自訂設計層後，調整簡報字級就不會連帶改變 HTML 正文與標題。沒有填的螢幕欄位仍用舊換算法：對應 `type` 的 `px / 2`，其中 `small` 對應 `label`。圖表 SVG 的 viewBox 字級仍按既有圖表規則處理，須另看圖表標籤與來源是否清楚。
+
+正式預設維持現場正文 16 pt、閱讀正文 11 pt、列印小字 7 pt。第一輪候選是 20／12／8.5 pt，只建立試排副本；PDF 正文維持 10.5 pt，HTML 正文／小字維持 16／12 px，其餘內容與設定不變。
+
+試排沿用現有設定機制，不加命令列參數或環境變數：複製設計層，用既有 `CLAYPRINT_TOKENS` 選取副本，把副本的 `type.body.px` 改成 40、`print.type.small` 改成 8.5。閱讀版的 12 pt 需在**獨立試排用的 skill 副本**將 `design/read.json` 的 `type.body` 改成 24；閱讀覆寫優先於設計層的 `type.body`，單改 token 不會改變閱讀版。保留正式 skill 與基準設定。
+
+使用相同原稿與文件規格分別重產基準和候選稿，沿用既有行距與容量計算，記下警告、溢出、換行與分頁差異。先保留內容完全相同的比較稿；需拆頁或重排時另存版本。實看現場觀看距離、閱讀版縮印 A4、HTML 窄螢幕、PDF 原尺寸的小字與來源，再由使用者確認是否採用；XML／CSS 核對只能確認設定，不能證明實際可讀性。
+
 ### 故意做壞，再修好
 
 [測試案例](../tests/fixtures/tokens.focus-gray.json)的配色只把預設 `color.focus` 改成與 `color.gray` 相同。複製它，執行 `node scripts/check-design.js out/focus-gray.json`：
