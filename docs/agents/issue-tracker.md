@@ -2,6 +2,8 @@
 
 Specs and tickets live in GitHub Issues for `kerfnotes/skills`. Use `gh` with the explicit `--repo kerfnotes/skills` option, or the matching repository API path.
 
+If the current CLI identity lacks write/triage permission, use the connected GitHub account matching the repository owner for authorized issue writes. Do not change credentials or claim a label was applied without readback. If the available authorized tool does not expose native dependencies, use the explicit blocking references in each issue body.
+
 ## Operations
 
 - Read issues with `gh issue view NUMBER --repo kerfnotes/skills --comments` and request JSON fields when structured state is needed.
