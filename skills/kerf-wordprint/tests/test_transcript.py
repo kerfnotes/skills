@@ -174,7 +174,7 @@ class TranscriptTests(unittest.TestCase):
         self.assertEqual((out / 'playback.wav').read_bytes(), (self.root / 'canonical.wav').read_bytes())
         page = (out / 'transcript.html').read_text(encoding='utf-8')
         self.assertIn('src="playback.wav"', page)
-        self.assertIn('需與 playback.wav 同資料夾', page)
+        self.assertNotIn('點任一段可跳到該處播放', page)
         self.assertIn('data-start="1.000"', page)
         self.assertIn('週會 &lt;草稿&gt;', page)
         self.assertIn('陳&lt;先生&gt;', page)
@@ -296,7 +296,7 @@ class TranscriptTests(unittest.TestCase):
         self.assertFalse(result['playback_written'])
         self.assertNotIn('<audio', page)
         self.assertNotIn('跳到該處播放', page)
-        self.assertIn('此份沒有音訊，無法跳播', page)
+        self.assertNotIn('此份沒有音訊', page)
         self.assertFalse((self.root / 'out' / 'playback.wav').exists())
 
     def test_opencc_absence_leaves_no_output_and_name_edit_reuses_text(self):

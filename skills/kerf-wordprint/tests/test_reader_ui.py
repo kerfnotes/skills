@@ -74,6 +74,56 @@ class ReaderTests(unittest.TestCase):
             m.render(run, {'duration': 36}, out, original_script=True, title='合成 <script>')
             return {p.name: p.read_bytes() for p in out.iterdir()}
 
+    def test_reader_starts_with_content_and_discloses_metadata_on_request(self):
+        value = self.render(fixture())['transcript.html'].decode()
+        parsed = ReaderParser(value)
+        details = [attrs for tag, attrs in parsed.tags if tag == 'details']
+        self.assertTrue(details, 'Reader needs an on-demand details disclosure')
+        self.assertTrue(all('open' not in attrs for attrs in details))
+        self.assertIn('詳細資料', value)
+        self.assertNotIn('report-cover', value)
+        self.assertNotIn('此份沒有音訊', value)
+        self.assertNotIn('需與 playback.wav 同資料夾', value)
+
+    def test_portable_exports_match_formal_files_and_escape_script_content(self):
+        run = fixture()
+        run['sources'][0]['path'] = '/private/source/recording.wav'
+        run['chunks'][0]['text'] += '</script><script>unsafe()</script>\u2028'
+        run['chunks'][0]['words'][-1]['text'] += '</script><script>unsafe()</script>\u2028'
+        result = self.render(run)
+        value = result['transcript.html'].decode()
+        payload = re.search(r'<script type="application/json" id="exports">(.*?)</script>', value, re.S)
+        self.assertIsNotNone(payload, 'Standalone reader must carry formal text exports')
+        exports = json.loads(payload.group(1))
+        for kind, filename in [('txt', 'transcript.txt'), ('md', 'transcript.md'), ('srt', 'transcript.srt')]:
+            self.assertEqual(exports[kind]['text'].encode(), result[filename])
+            self.assertEqual(exports[kind]['filename'], filename)
+        self.assertNotIn('</script><script>unsafe()', value)
+        self.assertNotIn('/private/source', value)
+        self.assertNotIn('schema_version', value)
+        self.assertEqual(value.count('<summary>匯出</summary>'), 1)
+
+    def test_failed_subtitle_generation_offers_only_existing_formats(self):
+        run = fixture()
+        for chunk in run['chunks']:
+            for word in chunk['words']:
+                word.update(start=chunk['start'] + 1, end=chunk['start'] + 1)
+        result = self.render(run)
+        value = result['transcript.html'].decode()
+        exports = json.loads(re.search(r'id="exports">(.*?)</script>', value, re.S).group(1))
+        self.assertNotIn('transcript.srt', result)
+        self.assertEqual(set(exports), {'txt', 'md'})
+        self.assertNotIn('data-download="srt"', value)
+
+    def test_playback_repair_is_hidden_until_a_media_error(self):
+        value = m.page('synthetic', '<p>正文</p>', 'text', [], True)
+        parsed = ReaderParser(value)
+        repair = [attrs for tag, attrs in parsed.tags if attrs.get('id') == 'playback-error']
+        self.assertEqual(len(repair), 1)
+        self.assertIn('hidden', repair[0])
+        self.assertIn('HTML 與 playback.wav', value)
+        self.assertNotIn('autoplay', value)
+
     def test_zero_duration_fragmentation_exact_text_and_chunk_membership(self):
         run = fixture()
         before = copy.deepcopy(run)
@@ -99,7 +149,7 @@ class ReaderTests(unittest.TestCase):
         parsed = ReaderParser(value)
         self.assertTrue(all('tabindex' not in a and 'role' not in a for a in parsed.spans))
         self.assertNotIn('<audio ', value)
-        self.assertIn('無法跳播', value)
+        self.assertNotIn('此份沒有音訊', value)
         self.assertIn('複製 Markdown', value)
         self.assertIn('mailto:', value)
 
@@ -139,9 +189,9 @@ class El {
 const player = new El(); player.currentTime=0; let plays=0;
 player.play=()=>{plays++;return Promise.resolve()};
 const row=new El({start:'1.000123',end:'2.123456'});
-const copy=new El(), markdown={textContent:'"copy text"'};
-global.document={querySelector:s=>s==='audio'?player:null,querySelectorAll:()=>[row],
-  getElementById:id=>({copy,markdown})[id]};
+const copy=new El(), mockCopyText=new El(), mockStatus=new El(), markdown={textContent:'\"copy text\"'}, exportPayload={textContent:JSON.stringify({md:{text:'copy text'}})};
+global.document={querySelector:s=>s==='audio'?player:null,querySelectorAll:s=>s==='[data-start]'?[row]:[],
+  getElementById:id=>({copy,markdown,exports:exportPayload,'copy-text':mockCopyText,'export-status':mockStatus})[id]};
 let copied='';Object.defineProperty(global,'navigator',{value:{clipboard:{writeText:async t=>{copied=t}}}});
 """
         assertions = r"""
@@ -152,7 +202,7 @@ for (const key of ['Enter',' ']) {
 }
 row.events.click();assert.equal(player.currentTime,1.000123);
 assert.equal(plays,3);
-await copy.events.click({target:copy});assert.equal(copied,'copy text');assert.equal(copy.textContent,'已複製');
+await copy.events.click({target:copy});assert.equal(copied,'copy text');assert.equal(mockStatus.textContent,'已複製');
 console.log('handler assertions passed; mocked media, not audio device');
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
