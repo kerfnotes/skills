@@ -130,6 +130,21 @@ class FormTests(unittest.TestCase):
         answers = json.loads(self.out.read_text(encoding='utf-8'))
         self.assertEqual((answers['merge'], answers['engine'], answers['summary']), (False, 'qwen-0.6b', 'meeting'))
 
+    def test_collect_default_saves_settings_without_processing(self):
+        process, url = self.start()
+        with urllib.request.urlopen(url, timeout=10) as response:
+            page = response.read().decode()
+        self.assertEqual(Controls(page).state['mode'], 'collect')
+        self.assertIn('>送出設定</button>', page)
+        self.assertEqual(self.post(url + 'submit', {'memos': [0]})[0], 200)
+        stdout, _ = process.communicate(timeout=10)
+        self.assertEqual(process.returncode, 0)
+        answers = json.loads(stdout)
+        self.assertNotIn('mode', answers)
+        self.assertEqual(json.loads(self.out.read_text()), answers)
+        self.assertEqual((answers['engine'], answers['summary']), ('qwen-0.6b', 'meeting'))
+        self.assertFalse(list(self.root.glob('run-*')))
+
     def test_timeout_prints_questions(self):
         process, _ = self.start(timeout='0.5')
         stdout, _ = process.communicate(timeout=10)
