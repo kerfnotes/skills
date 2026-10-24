@@ -148,6 +148,9 @@ class RunTests(unittest.TestCase):
         self.assertEqual((code, result['status']), (0, 'complete'))
         self.assertTrue(any('未辨識到可用文字' in w for w in result['runs'][0]['warnings']))
         self.assertEqual(result['pending_agent_steps'][0]['template'], 'meeting')
+        self.assertTrue(result['runs'][0]['empty_transcript'])
+        self.assertEqual(result['pending_agent_steps'][0]['status'], 'unavailable')
+        self.assertIn('未辨識到可用文字', result['pending_agent_steps'][0]['reason'])
         self.assertFalse((self.args.task_directory / 'output-1/transcript.srt').exists())
 
     def test_existing_task_is_never_overwritten(self):

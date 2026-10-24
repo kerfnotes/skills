@@ -97,6 +97,12 @@ python3 scripts/run.py --request /absolute/task/request.json --task-directory /a
 
 續跑一次對應一份舊 run，使用相同音檔、順序與模型。只有進度數字、尚未保存完整辨識結果時，仍需重做該階段。分說話者失敗會保留純文字；半成品不會被輸出成完整閱讀頁。完整選項與 Colab 匯入流程見 [workflow.md](references/workflow.md)。
 
+表單先讓你加入錄音，再展開產出與設定；預設本機 0.6B、逐字稿＋會議摘要、不建立 Mail 草稿。獨立表單的「送出設定」只保存選項；由入口開啟的「開始整理」會接續處理。「設定已送出」代表設定保存，實際階段回到對話查看。
+
+`complete` 只代表逐字稿與閱讀頁完成，摘要和 Mail 草稿另有交接狀態。摘要由 agent 核對逐字稿後撰寫，再透過 `summary_report.py` 排成 HTML、用 Clayprint 正式工具產生並逐頁檢查 PDF；`run.py` 不會自動寫摘要。未辨識到文字時不填空摘要，部分完成或取消則交出已保存的文字與恢復方法；Colab waiting 代表等你操作筆記本。
+
+最後先提供可用的摘要與逐字稿，再集中列出實際存在的 PDF、文字與字幕。單獨帶走 `transcript.html` 仍可閱讀、下載文字；要回聽，請保留同資料夾的 `playback.wav`。未產生的 PDF／字幕不會列成下載項目；Mail 未確認建立前仍是待處理。
+
 ## 驗證狀態
 
 | 項目 | 狀態 |
