@@ -116,11 +116,16 @@
   function fieldError(id, field, message) {
     $(id).textContent = message; $(field).setAttribute('aria-invalid', String(Boolean(message)));
   }
+  function expandSummary(expanded) {
+    if (!expanded && document.activeElement?.closest('#summary-settings')) $('change-summary').focus();
+    $('summary-settings').hidden = !expanded;
+    $('change-summary').setAttribute('aria-expanded', String(expanded));
+  }
   function clearResolvedErrors() {
     if (rejectedSourceKey && !sources.some((source) => source.key === rejectedSourceKey)) rejectedSourceKey = null;
     if (!rejectedSourceKey && sources.length && !pending() && !sources.some(memoUnavailable)) fieldError('sources-error', 'source-list', '');
     if (choice('summary') !== 'custom' || $('summary_custom').value.trim()) fieldError('custom-error', 'summary_custom', '');
-    if (validRecipients()) fieldError('recipients-error', 'recipients', '');
+    if (!$('mail').checked || validRecipients()) fieldError('recipients-error', 'recipients', '');
     if ((pathErrorReason === 'empty' && $('paths').value.trim()) ||
         (pathErrorReason !== 'empty' && !$('paths').value.trim())) {
       fieldError('paths-error', 'paths', ''); pathErrorReason = null;
@@ -138,6 +143,18 @@
     $('output-settings').hidden = sources.length === 0;
     const summaryLabels = {meeting: '會議摘要', interview: '訪談摘要', lecture: '演講／課程摘要', custom: '自訂摘要'};
     $('current-output').textContent = choice('summary') === 'none' ? '逐字稿' : `逐字稿＋${summaryLabels[choice('summary')] || '會議摘要'}`;
+    const engineLabels = {'qwen-0.6b': '本機 · 0.6B', 'qwen-1.7b': '本機 · 1.7B',
+      'gemini-3.5-transcribe': 'Gemini 3.5 Transcribe', colab: 'Google Colab · Qwen'};
+    $('current-engine').textContent = engineLabels[choice('engine')];
+    const remoteNotes = {
+      'gemini-3.5-transcribe': '錄音會上傳 Google，並依 API 用量計費。',
+      colab: '錄音會上傳 Google Colab；需前往筆記本登入 Google 並操作。',
+    };
+    $('remote-notice').textContent = remoteNotes[choice('engine')] || '';
+    $('remote-notice').hidden = !remoteNotes[choice('engine')];
+    $('current-delivery').textContent = ($('roster').value.trim() ? '已填參與者 · ' : '') +
+      ($('mail').checked ? 'Mail 草稿' : 'Mail 關閉');
+    $('recipient-fields').hidden = !$('mail').checked;
     $('submit').textContent = initial.mode === 'run' ? (choice('engine') === 'colab' ? '準備 Colab' : '開始整理') : '送出設定';
     if (restoredDraft) $('draft-status').textContent = sources.some((source) => source.upload?.status === 'needs-selection') ?
       '已恢復此分頁的設定與順序；未完成上傳的檔案須重新選取。' : '已恢復此分頁的錄音來源、順序與設定。';
@@ -418,8 +435,9 @@
     renderSources(); renderMemos();
     restoreSourceFocus(action === 'remove' ? sources[Math.min(index, sources.length - 1)]?.key : source.key, action);
   });
+  $('change-summary').addEventListener('click', () => expandSummary($('summary-settings').hidden));
   document.addEventListener('change', sync);
-  document.addEventListener('input', () => { clearResolvedErrors(); saveDraft(); });
+  document.addEventListener('input', sync);
   $('form').addEventListener('submit', async (event) => {
     event.preventDefault(); if (locked() || submissionUncertain) return;
     $('error').textContent = '';
@@ -436,14 +454,15 @@
     const summary = choice('summary'), engine = choice('engine');
     if (!engine || !summary) { fatal('請選擇轉錄方式與摘要。'); return; }
     if (summary === 'custom' && !$('summary_custom').value.trim()) {
+      expandSummary(true);
       fieldError('custom-error', 'summary_custom', '請填寫自訂摘要需求。'); $('summary_custom').focus(); return;
     }
-    if (!validRecipients()) {
+    if ($('mail').checked && !validRecipients()) {
       $('optional-settings').open = true; fieldError('recipients-error', 'recipients', '請確認 email 地址，並以逗號分隔。'); $('recipients').focus(); return;
     }
     const answers = {
       sources: sources.map((source) => source.payload), merge: !$('merge-row').hidden && $('merge').checked,
-      engine, summary, summary_custom: $('summary_custom').value,
+      engine, summary, summary_custom: summary === 'custom' ? $('summary_custom').value : '',
       roster: $('roster').value === $('roster').defaultValue ? JSON.parse($('roster').dataset.values || '[]') : $('roster').value,
       recipients: recipients(), mail: $('mail').checked,
     };
@@ -480,4 +499,5 @@
     $('submit-status').textContent = '尚未確認送出，內容仍保留。請先核對任務狀態，勿重複送出；需要重開表單時請回到對話。';
   }
   renderSources(); renderMemos();
+  if (choice('summary') === 'custom' && !$('summary_custom').value.trim()) expandSummary(true);
 })();
