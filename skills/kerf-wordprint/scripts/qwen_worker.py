@@ -15,13 +15,20 @@ import subprocess
 import sys
 import wave
 
+_runtime_spec = importlib.util.spec_from_file_location("wordprint_runtime", Path(__file__).with_name("worker_runtime.py"))
+runtime = importlib.util.module_from_spec(_runtime_spec)
+_runtime_spec.loader.exec_module(runtime)
+
+
 def interrupt(_signum, _frame):
     raise KeyboardInterrupt  # SIGTERM cleans up like Ctrl-C; subprocess.run kills the running child.
 
 
-def save(path, value):
+def save(path, value, *, allow_nan=False):
+    if path.name == "state.json":
+        return runtime.state(path.parent, value)
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=allow_nan) + "\n", encoding="utf-8")
     temporary.replace(path)
 
 
@@ -78,6 +85,7 @@ def read_helper():
 
 BRIDGE = Path(__file__).with_name("community1-bridge") / "build/community1-bridge"
 SANDBOX = "/usr/bin/sandbox-exec"
+BOUNDARY_WARNING = "逐詞時間格邊界處理：已將包含音訊終點的最後模型時間格與實際 PCM 範圍取交集；這不代表對齊準確度已修復。原始預測與調整記錄已保留。"
 
 
 def diarize(pcm_bytes, directory, home, duration, state):
@@ -186,7 +194,7 @@ def claim(directory):
     if any(directory.iterdir()):
         raise FileExistsError(f"請使用新的或空的轉錄目錄；既有目錄未改動：{directory}")
     with (directory / "state.json").open("x", encoding="utf-8") as file:  # Exclusive create: a racing worker loses here.
-        file.write('{"stage": "start"}\n')
+        file.write('{"stage": "start", "status": "running", "warnings": [], "available_outputs": [], "retry_stage": null}\n')
 
 
 def prepare(sources, directory, ffmpeg, ffprobe):
@@ -209,6 +217,56 @@ def prepare(sources, directory, ffmpeg, ffprobe):
     return source_records, pcm_bytes
 
 
+def transcribe_sources(transcriber, samples, source_records, model_path, directory, state):
+    """Recognize canonical PCM source slices; only validated local chunks enter the global clock."""
+    counts = [source["sample_count"] for source in source_records]
+    if any(type(count) is not int or count <= 0 for count in counts) or sum(counts) != len(samples):
+        raise ValueError("ASR 來源樣本邊界與 canonical PCM 不符。")
+    chunks, texts, languages = [], [], []
+    cursor = 0
+    for index, count in enumerate(counts):
+        progress(f"Qwen 正在辨識來源 {index + 1}/{len(counts)}；每個來源完成後會保留原始 ASR。")
+        source_progress = []
+
+        def on_progress(item):
+            if item.get("event") == "chunk_completed":
+                save(directory / "asr-progress.json", {**item, "source_index": index})
+                if isinstance(item.get("text"), str):
+                    source_progress.append(item["text"])
+                    runtime.raw_text(directory, texts + source_progress)
+                    save(directory / "state.json", state)
+
+        result = transcriber(audio=(samples[cursor:cursor + count], 16000), model=str(model_path),
+                             return_chunks=True, return_timestamps=False, on_progress=on_progress)
+        raw = dataclasses.asdict(result)
+        # Preserve the untouched result and text before validation or the next model call.
+        save(directory / f"raw-source-{index:03}.json", raw)
+        local_chunks = raw.get("chunks") or []
+        texts.append(raw.get("text") or "".join(chunk.get("text", "") for chunk in local_chunks))
+        runtime.raw_text(directory, texts)
+        save(directory / "state.json", state)
+        length, offset = count / 16000, cursor / 16000
+        check_chunks(local_chunks, length)
+        for chunk in local_chunks:
+            end = chunk["end"]
+            # The backend adds two sample-derived durations. Restore only the same
+            # PCM endpoint within their division/addition roundoff, not an audio tolerance.
+            if (end > length and end - length <= 2 * math.ulp(length)
+                    and round(end * 16000) == count):
+                end = length
+            if chunk["start"] < 0 or end > length:
+                raise ValueError("ASR chunk 超出來源 PCM 範圍。")
+            chunks.append({**chunk, "start": offset + chunk["start"], "end": offset + end,
+                           "chunk_index": len(chunks)})
+        languages.append(raw.get("language"))
+        cursor += count
+    return {"text": "\n".join(text for text in texts if text), "chunks": chunks,
+            "language": languages[0] if all(language == languages[0] for language in languages) else None,
+            "segments": None, "speaker_segments": None,
+            "finish_reason": "repetition" if any(chunk["finish_reason"] == "repetition" for chunk in chunks) else "eos",
+            "truncated": False}
+
+
 def transcribe(arguments):
     directory, home = Path(arguments.run_directory).resolve(), Path.home()
     sources = [Path(path).resolve() for path in arguments.audio]
@@ -216,55 +274,144 @@ def transcribe(arguments):
     if missing:
         raise RuntimeError("找不到本機音檔：" + "、".join(missing))
     model_id = "Qwen/Qwen3-ASR-" + arguments.model
-    model_path = snapshot(model_id)
-    ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
-    if not ffmpeg or not ffprobe:
-        raise RuntimeError("缺少已安裝 ffmpeg／ffprobe。")
-    state = {"stage": "decode", "model": model_id, "modelRevision": model_path.name,
-             "backend": "mlx-qwen3-asr", "backendVersion": importlib.metadata.version("mlx-qwen3-asr"),
+    config = {"backend": "mlx-qwen3-asr", "model": model_id, "aligner": "Qwen/Qwen3-ForcedAligner-0.6B",
+              "sample_rate": 16000, "diarization_window_seconds": 1200, "return_chunks": True}
+    if len(sources) > 1:
+        config["asr_partition"] = "source-v1"
+    state = {"stage": "decode", "status": "running", "model": model_id, "backend": "mlx-qwen3-asr",
              "network": "Hugging Face offline (HF_HUB_OFFLINE=1)", "warnings": []}
     save(directory / "state.json", state)
-    source_records, pcm_bytes = prepare(sources, directory, ffmpeg, ffprobe)
-    count = len(pcm_bytes) // 2
-    duration = count / 16000
-    state["stage"] = "asr"
-    save(directory / "state.json", state)
-    import numpy as np
-    from mlx_qwen3_asr import transcribe as qwen_transcribe, ForcedAligner
-    samples = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-    progress("Qwen 正在辨識；全部處理完成後會先保留原始 ASR。")
-    def on_progress(item):
-        if item.get("event") == "chunk_completed":
-            progress(f"ASR {item.get('chunk_index')}/{item.get('total_chunks')}")
-            save(directory / "asr-progress.json", item)
-    result = qwen_transcribe(audio=(samples, 16000), model=str(model_path), return_chunks=True,
-                             return_timestamps=False, on_progress=on_progress)
-    raw = dataclasses.asdict(result)
-    save(directory / "raw.json", raw)
+    prior, stages = {}, []
+    if getattr(arguments, "resume_from", None):
+        source_records, pcm_bytes, prior, old_state = runtime.resume(arguments.resume_from, directory, sources, config)
+        stages = prior["stages"]
+        state.update(resumed_from=str(Path(arguments.resume_from).resolve()),
+                     modelRevision=old_state.get("modelRevision"), backendVersion=old_state.get("backendVersion"))
+        if BOUNDARY_WARNING in old_state.get("warnings", []):
+            state["warnings"].append(BOUNDARY_WARNING)
+    else:
+        ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
+        if not ffmpeg or not ffprobe:
+            raise RuntimeError("缺少已安裝 ffmpeg／ffprobe。")
+        source_records, pcm_bytes = prepare(sources, directory, ffmpeg, ffprobe)
+        runtime.checkpoint(directory, config, source_records, "decode", ["canonical.wav", "sources.json"])
+    duration = len(pcm_bytes) / 32000
+    if "asr" in stages:
+        raw = json.loads((directory / "raw.json").read_text(encoding="utf-8"))
+        progress("重用已驗證的原始 ASR，不重新辨識。")
+    else:
+        state["stage"] = "asr"
+        save(directory / "state.json", state)
+        model_path = snapshot(model_id)
+        state.update(modelRevision=model_path.name, backendVersion=importlib.metadata.version("mlx-qwen3-asr"))
+        save(directory / "state.json", state)
+        import numpy as np
+        from mlx_qwen3_asr import transcribe as qwen_transcribe
+        samples = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        if len(sources) > 1:
+            raw = transcribe_sources(qwen_transcribe, samples, source_records, model_path, directory, state)
+        else:
+            progress("Qwen 正在辨識；全部處理完成後會先保留原始 ASR。")
+            def on_progress(item):
+                if item.get("event") == "chunk_completed":
+                    progress(f"ASR {item.get('chunk_index')}/{item.get('total_chunks')}")
+                    save(directory / "asr-progress.json", item)
+                    # A progress event is not a complete/resumable ASR checkpoint.
+                    if isinstance(item.get("text"), str):
+                        progress_text.append(item["text"])
+                        runtime.raw_text(directory, progress_text)
+                        save(directory / "state.json", state)
+            progress_text = []
+            result = qwen_transcribe(audio=(samples, 16000), model=str(model_path), return_chunks=True,
+                                     return_timestamps=False, on_progress=on_progress)
+            raw = dataclasses.asdict(result)
+        save(directory / "raw.json", raw)
+        runtime.raw_text(directory, [raw.get("text") or "".join(c.get("text", "") for c in raw.get("chunks", []))])
     chunks, warnings = raw.get("chunks") or [], state["warnings"]
+    runtime.raw_text(directory, [raw.get("text") or "".join(c.get("text", "") for c in chunks)])
     normalized = {"schema_version": 1, "sources": source_records, "pcm": "canonical.wav",
-                  "model": {"id": model_id, "size": arguments.model, "revision": model_path.name},
-                  "chunks": [], "turns": [], "diarization_complete": False, "speakers": {}}
+                  "model": {"id": model_id, "size": arguments.model, "revision": state.get("modelRevision")},
+                  "chunks": [{**chunk, "words": [], "complete": False} for chunk in chunks],
+                  "turns": [], "diarization_complete": False, "speakers": {}}
+    save(directory / "normalized-run.json", normalized)
     alignment_complete = False
+    retry_stage = "asr"
     try:
         check_chunks(chunks, duration)
+        raw_files = ["raw.json"]
+        if len(sources) > 1:
+            raw_files.extend(f"raw-source-{index:03}.json" for index in range(len(source_records)))
+        runtime.checkpoint(directory, config, source_records, "asr", raw_files)
         if any(chunk.get("finish_reason") == "repetition" for chunk in chunks):
             warnings.append("ASR 曾以重複偵測停止；請人工檢查該段文字。")
-        aligner_path = snapshot("Qwen/Qwen3-ForcedAligner-0.6B")
-        normalized["alignment_model"] = {"id": "Qwen/Qwen3-ForcedAligner-0.6B", "revision": aligner_path.name}
-        aligner = ForcedAligner(model_path=str(aligner_path), backend="mlx")
-        state["stage"] = "alignment"
+        state["stage"] = retry_stage = "alignment"
         save(directory / "state.json", state)
-        for index, chunk in enumerate(chunks):
-            progress(f"逐詞對齊 {index + 1}/{len(chunks)}")
-            start, end = round(chunk["start"] * 16000), round(chunk["end"] * 16000)
-            aligned = aligner.align(samples[start:end], chunk["text"], chunk.get("language") or raw.get("language") or "Chinese") if chunk["text"].strip() else []
-            words = [{"text": word.text, "start": word.start_time + chunk["start"],
-                      "end": word.end_time + chunk["start"]} for word in aligned]
-            normalized["chunks"].append({**chunk, "words": words, "complete": True})
-            save(directory / "alignment.json", normalized["chunks"])
+        alignment_files = ["alignment.json", "alignment-model.json"]
+        if "alignment" in stages:
+            normalized["chunks"] = json.loads((directory / "alignment.json").read_text(encoding="utf-8"))
+            normalized["alignment_model"] = json.loads((directory / "alignment-model.json").read_text(encoding="utf-8"))
+            alignment_files.extend(name for name in prior["artifacts"]
+                                   if name.startswith("alignment-raw-") or name == "alignment-boundary-report.json")
+            if "alignment-boundary-report.json" in alignment_files:
+                report = json.loads((directory / "alignment-boundary-report.json").read_text(encoding="utf-8"))
+                if any(item["adjustments"] for item in report["chunks"]):
+                    # Earlier adapter output may have passed the canonical
+                    # rounding tolerance despite an inversion created by clipping.
+                    if any(right["end"] < left["end"] for chunk in normalized["chunks"]
+                           for left, right in zip(chunk["words"], chunk["words"][1:])):
+                        raise ValueError("已保存的時間格調整含詞尾逆序，不能重用此對齊結果。")
+                    if BOUNDARY_WARNING not in warnings:
+                        warnings.append(BOUNDARY_WARNING)
+        else:
+            import numpy as np
+            from mlx_qwen3_asr import ForcedAligner
+            samples = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+            aligner_path = snapshot(config["aligner"])
+            normalized["alignment_model"] = {"id": config["aligner"], "revision": aligner_path.name}
+            aligner = ForcedAligner(model_path=str(aligner_path), backend="mlx")
+            normalized["chunks"] = []
+            boundary_report = {"version": 1, "policy": "terminal-model-bin-v1", "chunks": []}
+            alignment_files.append("alignment-boundary-report.json")
+            for index, chunk in enumerate(chunks):
+                progress(f"逐詞對齊 {index + 1}/{len(chunks)}")
+                start, end = round(chunk["start"] * 16000), round(chunk["end"] * 16000)
+                aligned = aligner.align(samples[start:end], chunk["text"], chunk.get("language") or raw.get("language") or "Chinese") if chunk["text"].strip() else []
+                # The selected MLX backend reads this millisecond value from its model config.
+                model_config = getattr(getattr(aligner, "_backend", None), "config", None)
+                quantum_ms = getattr(model_config, "timestamp_segment_time", None)
+                quantum = (quantum_ms / 1000 if type(quantum_ms) in (int, float)
+                           and math.isfinite(quantum_ms) and quantum_ms > 0 else None)
+                evidence = {"chunk_index": index, "sample_start": start, "sample_count": len(samples[start:end]),
+                            "sample_rate": 16000, "chunk_start": chunk["start"], "chunk_end": chunk["end"],
+                            "quantum_seconds": quantum}
+                raw_name = f"alignment-raw-{index:04}.json"
+                # Raw-only JSON permits NaN/Infinity to retain invalid provider evidence;
+                # normalized output still rejects them, and never seals an alignment checkpoint.
+                save(directory / raw_name, {**evidence, "words": [dataclasses.asdict(word)
+                     if dataclasses.is_dataclass(word) else vars(word) for word in aligned]}, allow_nan=True)
+                alignment_files.append(raw_name)
+                local_words, adjustments = runtime.bound_alignment_terminal_bin(
+                    [{"text": word.text, "start": word.start_time, "end": word.end_time} for word in aligned],
+                    sample_count=evidence["sample_count"], sample_rate=16000, quantum_seconds=quantum)
+                boundary_report["chunks"].append({**evidence, "adjustments": adjustments})
+                save(directory / "alignment-boundary-report.json", boundary_report)
+                if adjustments and BOUNDARY_WARNING not in warnings:
+                    warnings.append(BOUNDARY_WARNING)
+                save(directory / "state.json", state)
+                words = [{**word, "start": word["start"] + chunk["start"],
+                          "end": word["end"] + chunk["start"]} for word in local_words]
+                # Validate JSON numeric representability before publishing this chunk.
+                json.dumps(words, allow_nan=False)
+                normalized["chunks"].append({**chunk, "words": words, "complete": True})
+                save(directory / "alignment.json", normalized["chunks"])
+            save(directory / "alignment-model.json", normalized["alignment_model"])
+        save(directory / "normalized-run.json", normalized)
+        read_helper().validate(directory / "normalized-run.json", require_speakers=False)
+        runtime.checkpoint(directory, config, source_records, "alignment", alignment_files)
         alignment_complete = True
-        state["stage"] = "diarization"
+        save(directory / "normalized-run.json", normalized)
+        state["stage"] = retry_stage = "diarization"
+        save(directory / "state.json", state)
         normalized["turns"], normalized["diarization_model"] = diarize(pcm_bytes, directory, home, duration, state)
         normalized["speakers"] = {item["speaker"]: {} for item in normalized["turns"]}
         normalized["diarization_complete"] = True
@@ -280,9 +427,13 @@ def transcribe(arguments):
             _, report = read_helper().validate(directory / "normalized-run.json", require_speakers=normalized["diarization_complete"])
             save(directory / "validation.json", report)
             is_complete = normalized["diarization_complete"] and not any(chunk.get("finish_reason") == "repetition" for chunk in chunks)
+            if normalized["diarization_complete"] and not is_complete:
+                retry_stage = None  # Repetition requires human review, not an automatic ASR retry.
         except Exception as error:
             warnings.append(f"時間／文字驗證未通過：{error}")
-    state.update(stage="complete" if is_complete else "partial", warnings=warnings)
+            retry_stage = "validation"
+    state.update(stage="complete" if is_complete else "partial", status="complete" if is_complete else "partial",
+                 retry_stage=None if is_complete else retry_stage, warnings=warnings)
     save(directory / "state.json", state)
     progress("轉錄完成。" if is_complete else "原始文字已保存；部分階段待補完，請查看 state.json 警示。")
 
@@ -292,14 +443,16 @@ def main():
     parser.add_argument("--audio", required=True, action="append", help="repeat to merge recordings in this order")
     parser.add_argument("--run-directory", required=True)
     parser.add_argument("--model", required=True, choices=["0.6B", "1.7B"])
+    parser.add_argument("--resume-from", help="validated checkpoint in a previous run; output must be new")
     args = parser.parse_args()
     for key in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_HUB_DISABLE_TELEMETRY"):
         os.environ[key] = "1"
     signal.signal(signal.SIGTERM, interrupt)
     directory = Path(args.run_directory).resolve()
     try:
+        runtime.check_location(args.resume_from, directory)
         claim(directory)
-    except OSError as error:
+    except (OSError, ValueError) as error:
         print(str(error) if isinstance(error, FileExistsError) else f"無法建立轉錄目錄：{error}", file=sys.stderr, flush=True)
         return 1
     try:
@@ -310,8 +463,7 @@ def main():
         state = json.loads(state_path.read_text()) if state_path.is_file() else {}
         cancelled = isinstance(error, KeyboardInterrupt)
         message = "使用者已取消；已完成的原始輸出仍保留。" if cancelled else str(error)
-        state.update(stage="cancelled" if cancelled else "failed", error=message)
-        save(state_path, state)
+        runtime.finish_error(directory, state, error)
         print(message, file=sys.stderr, flush=True)
         return 130 if cancelled else 1
 

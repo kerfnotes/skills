@@ -126,6 +126,28 @@ class TranscriptTests(unittest.TestCase):
         self.assertNotEqual(m.normalized('a+b'), m.normalized('ab'))
         self.assertEqual(m.stamp(59.9999), '00:01:00.000')
 
+    def test_no_recognized_text_has_recovery_message_without_invented_content(self):
+        self.run['chunks'][0].update(text='', words=[])
+        self.run.update(turns=[], speakers={})
+        run, report = self.validate()
+        result = m.render(run, report, self.root / 'empty', original_script=True)
+        output = self.root / 'empty'
+        self.assertIn('未辨識到可用文字', (output / 'transcript.html').read_text())
+        self.assertTrue(result['empty_transcript'])
+        self.assertIn('未辨識到可用文字', result['content_warning'])
+        for name in ('transcript.html', 'transcript.md'):
+            self.assertIn(result['content_warning'], (output / name).read_text())
+        self.assertEqual((output / 'raw.txt').read_text(), '\n')
+        self.assertEqual((output / 'transcript.txt').read_text(), '')
+        self.assertFalse(result['srt_written'])
+        self.assertEqual(list(m.rows(run)), [])
+        self.run['chunks'][0].update(text='你好', words=[{'text': '你好', 'start': 0, 'end': 1}])
+        run, report = self.validate()
+        normal = m.render(run, report, self.root / 'nonempty', original_script=True)
+        self.assertFalse(normal['empty_transcript'])
+        self.assertNotIn('content_warning', normal)
+        self.assertNotIn(result['content_warning'], (self.root / 'nonempty/transcript.html').read_text())
+
     def test_cli_failure_never_creates_success_artifacts(self):
         self.run['chunks'][0].pop('words')
         self.path.write_text(json.dumps(self.run), encoding='utf-8')
@@ -152,7 +174,7 @@ class TranscriptTests(unittest.TestCase):
         self.assertEqual((out / 'playback.wav').read_bytes(), (self.root / 'canonical.wav').read_bytes())
         page = (out / 'transcript.html').read_text(encoding='utf-8')
         self.assertIn('src="playback.wav"', page)
-        self.assertIn('需與 playback.wav 同資料夾', page)
+        self.assertNotIn('點任一段可跳到該處播放', page)
         self.assertIn('data-start="1.000"', page)
         self.assertIn('週會 &lt;草稿&gt;', page)
         self.assertIn('陳&lt;先生&gt;', page)
@@ -167,8 +189,8 @@ class TranscriptTests(unittest.TestCase):
         self.run['chunks'][0]['words'][1].update(start=1.2, end=1.2)
         run, report = self.validate()
         result = m.render(run, report, self.root / 'zero', original_script=True)
-        self.assertFalse(result['srt_written'])
-        self.assertFalse((self.root / 'zero' / 'transcript.srt').exists())
+        self.assertTrue(result['srt_written'])
+        self.assertTrue((self.root / 'zero' / 'transcript.srt').exists())
         self.run['sources'][0]['duration'] = 2
         self.run['chunks'][0]['end'] = 2
         with self.assertRaisesRegex(m.Invalid, 'pcm: sample count'):
@@ -188,14 +210,84 @@ class TranscriptTests(unittest.TestCase):
         with self.assertRaisesRegex(m.Invalid, 'declares 16000 frames but data holds 8000'):
             self.validate()
 
-    def test_srt_skipped_when_millisecond_rounding_collapses_a_row(self):
-        self.run['chunks'][0]['words'][0].update(start=0.0001, end=0.0002)
+    def test_srt_collapsed_first_middle_last_and_submillisecond_preserve_rows(self):
+        for index, start, end in [(0, 0, 0), (1, 1.2, 1.2), (2, 2, 2),
+                                  (0, 0.0001, 0.0002)]:
+            with self.subTest(index=index, start=start):
+                original = json.loads(json.dumps(self.run))
+                self.run['chunks'][0]['words'][index].update(start=start, end=end)
+                run, report = self.validate()
+                before = json.dumps(run, ensure_ascii=False, sort_keys=True)
+                reader_rows = list(m.rows(run))
+                out = self.root / f'out-{index}-{start}'
+                result = m.render(run, report, out, original_script=True)
+                self.assertTrue(result['srt_written'])
+                self.assertEqual(result['srt_grouped_rows'], 2)
+                self.assertIn('逐詞時間未修改', result['srt_grouping_note'])
+                self.assertEqual(json.dumps(run, ensure_ascii=False, sort_keys=True), before)
+                self.assertEqual(list(m.rows(run)), reader_rows)
+                self.assertEqual(json.loads((out / 'run.json').read_text()), run)
+                self.assertTrue(m.validate(out / 'run.json')[1]['ok'])
+                srt = (out / 'transcript.srt').read_text()
+                actual_lines = [line for line in srt.splitlines() if line.startswith('[')]
+                self.assertEqual(actual_lines, [f'[{m.label(row, run["speakers"])}] {row["text"].strip()}'
+                                                for row in reader_rows])
+                self.assertEqual(''.join(line.split('] ', 1)[1] for line in actual_lines),
+                                 run['chunks'][0]['text'])
+                for cue in srt.strip().split('\n\n'):
+                    start_text, end_text = cue.splitlines()[1].split(' --> ')
+                    self.assertLess(start_text, end_text)
+                self.assertEqual((out / 'raw.txt').read_text(), run['chunks'][0]['text'] + '\n')
+                self.run = original
+
+    def test_srt_grouping_keeps_distinct_speakers_and_uncertainty(self):
+        self.run['chunks'][0]['words'][1].update(start=1.1, end=1.1)
+        run, report = self.validate()
+        result = m.render(run, report, self.root / 'out', original_script=True)
+        self.assertTrue(result['srt_written'])
+        srt = (self.root / 'out' / 'transcript.srt').read_text()
+        self.assertIn('[S1] 你好，\n[說話者不確定：S2｜可能是 陳先生] 嗯？', srt)
+        self.assertIn('[S1] 好。', srt)
+
+    def test_srt_all_collapsed_still_omitted(self):
+        for word in self.run['chunks'][0]['words']:
+            word.update(start=1.1, end=1.1)
         run, report = self.validate()
         result = m.render(run, report, self.root / 'out', original_script=True)
         self.assertFalse(result['srt_written'])
-        self.assertIn('millisecond rounding', result['srt_reason'])
+        self.assertEqual(result['srt_grouped_rows'], 0)
+        self.assertIn('no adjacent positive cue', result['srt_reason'])
         self.assertFalse((self.root / 'out' / 'transcript.srt').exists())
-        self.assertEqual(json.loads((self.root / 'out' / 'validation.json').read_text(encoding='utf-8'))['srt_written'], False)
+
+    def test_srt_source_boundaries_and_consecutive_collapsed_rows(self):
+        sources = [{'offset': 0, 'duration': 1}, {'offset': 1, 'duration': 1}]
+        def row(start, end):
+            return {'start': start, 'end': end}
+        # Neither an exact seam, an unrelated next source, nor a cross-source
+        # positive row provides unambiguous context for a collapsed row.
+        for rows in ([row(0, .5), row(1, 1), row(1.1, 2)],
+                     [row(.8, .8), row(1.1, 2)],
+                     [row(.1, 1.2), row(1.3, 1.3)]):
+            with self.subTest(rows=rows):
+                groups, reason = m.srt_groups(rows, sources)
+                self.assertEqual(groups, [])
+                self.assertIn('source', reason)
+        groups, reason = m.srt_groups([row(.1, .1), row(.2, .2), row(.3, .5),
+                                       row(.6, .6), row(1.1, 1.1), row(1.2, 1.8)], sources)
+        self.assertIsNone(reason)
+        self.assertEqual(groups, [[0, 1, 2, 3], [4, 5]])
+        self.assertEqual(m.srt_groups([row(.1, .5), row(1.1, 1.8)], sources), ([[0], [1]], None))
+
+    def test_ordinary_srt_unchanged(self):
+        run, report = self.validate()
+        out = self.root / 'out'
+        result = m.render(run, report, out, original_script=True)
+        self.assertEqual(result['srt_grouped_rows'], 0)
+        self.assertNotIn('srt_grouping_note', result)
+        self.assertEqual((out / 'transcript.srt').read_text(),
+                         '1\n00:00:00,000 --> 00:00:01,000\n[S1] 你好，\n\n'
+                         '2\n00:00:01,000 --> 00:00:01,200\n[S2｜可能是 陳先生] 嗯？\n\n'
+                         '3\n00:00:01,200 --> 00:00:02,000\n[S1] 好。\n')
 
     def test_page_without_pcm_promises_no_playback(self):
         run, report = self.validate()
@@ -204,7 +296,7 @@ class TranscriptTests(unittest.TestCase):
         self.assertFalse(result['playback_written'])
         self.assertNotIn('<audio', page)
         self.assertNotIn('跳到該處播放', page)
-        self.assertIn('此份沒有音訊，無法跳播', page)
+        self.assertNotIn('此份沒有音訊', page)
         self.assertFalse((self.root / 'out' / 'playback.wav').exists())
 
     def test_opencc_absence_leaves_no_output_and_name_edit_reuses_text(self):

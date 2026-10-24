@@ -1,0 +1,33 @@
+/* Wordprint presentation only; typography, paper and color come from Clayprint. */
+.wordprint-cover { padding: 28px 0 16px; border-bottom: 2px solid var(--cp-accent); }
+.wordprint-cover h1 { font-size: clamp(28px, 5vw, 38px); margin-bottom: 16px; }
+.wp-export > div { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0; }
+summary, button { cursor: pointer; min-height: 44px; padding: 10px 4px; }
+button { color: var(--cp-ink); background: var(--cp-paper); border: 1px solid var(--cp-line); border-radius: 4px; padding: 8px 12px; font: inherit; }
+:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 3px; }
+.wp-source { margin: 0 0 12px; font-size: var(--cp-small); color: var(--cp-muted); }
+.wp-source > summary { width: fit-content; color: var(--cp-accent); }
+.wp-source p { margin: 0; }
+.wp-note { display: none; }
+.wp-toc { margin: 28px 0; border-block: 1px solid var(--cp-line); }
+.wp-toc ol { margin-top: 0; }
+blockquote { margin-inline: 0; border-left: 2px solid var(--cp-accent); padding-left: 18px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+code { overflow-wrap: anywhere; }
+@media screen { .sources { display: none; } }
+@media print {
+  .wordprint-cover { padding: 0 0 4mm; margin-left: calc(-1 * var(--cp-print-indent)); }
+  .wordprint-cover h1 { font-size: var(--cp-print-heading); }
+  .wp-export, .wp-toc, .wp-source { display: none !important; }
+  .wp-note { display: inline; margin-left: .25em; color: var(--cp-accent); }
+  .sources { display: block !important; margin-top: 2mm; }
+  .sources h3 { font-size: inherit; margin: 0 0 1mm; }
+  .sources p { margin: 0 0 1mm; }
+  section { margin-top: 3mm; }
+  .section-heading { padding-top: 2mm; margin-bottom: 1mm; }
+  .section-heading h2 { margin-bottom: 1mm; }
+  .wp-claim, li, blockquote { break-inside: auto; }
+  ul, ol { margin-block: 2mm; }
+  p { orphans: 2; widows: 2; }
+  blockquote { padding-left: 3mm; }
+}

@@ -17,20 +17,22 @@
 
 ## Why
 
-Typing out a meeting recording is not the hard part. The hard part comes after: who said it, at which second, whether you can click back to hear it, and whether the summary invents decisions nobody made. Wordprint turns that whole stretch into one pipeline that Codex or Claude Code runs for you. You tick a one-page form; it finishes the rest and hands back a reading page where every line plays from its spot.
+Typing out a meeting recording is not the hard part. The hard part comes after: who said it, at which second, whether you can click back to hear it, and whether the summary invents decisions nobody made. Wordprint turns that whole stretch into one pipeline that Codex or Claude Code runs for you. When sources and choices are already supplied, it starts directly. Otherwise a kerf-branded form fills in known choices and asks for the missing information. It then delivers a reading page where each line can play from its spot.
 
-Everything runs on your machine by default. Audio goes to Google only if you pick Gemini in the form (billed; you are told before upload, and Google's copies are deleted afterwards). Picking Colab means you open the notebook with your own Google account and run on Google's GPU, with no local models and no Hugging Face account.
+The input form, transcript reader, summary HTML and PDF share Clayprint's light design; the recording-list interactions follow Kerfwave. Read Voice Memos on this Mac, select files, or drop audio from Finder into one ordered list with remove and merge controls. Browser-selected files are saved in the local task directory, with a 1 GiB limit per file; larger files can use the native picker. Missing and unreadable memos are labeled separately. See [import and preservation](references/workflow.md#adding-recordings).
+
+Everything runs on your machine by default. Audio goes to Google only if you explicitly pick Gemini (billed; you are told before upload, and Google's copies are deleted afterwards). Picking Colab means you open the notebook with your own Google account and run on Google's GPU, with no local models and no Hugging Face account.
 
 ## What it does
 
 | Step | What happens | Handled by |
 | :--- | :--- | :--- |
-| Form | One local page: pick Voice Memos or files, engine, participants, summary type, and whether to open a Mail draft. It preselects the engine this machine can run now | `form.py`, `voice_memos.py` |
+| Start | Run directly from supplied choices, or fill missing information in a prefilled kerf form | `run.py`, `form.py` |
 | Check-up | Checks tools and models; `--fix` runs the routine installs and leaves only passwords, accounts and permissions to you, one at a time | `doctor.py` |
-| Transcribe and align | Qwen3-ASR (0.6B by default, 1.7B on request) plus Qwen ForcedAligner for per-word timing | `qwen_worker.py`, `torch_worker.py` |
+| Transcribe and align | Qwen3-ASR (0.6B by default locally, 1.7B optional) plus Qwen ForcedAligner for per-word timing | `qwen_worker.py`, `torch_worker.py` |
 | Speakers | Community-1 on Apple Silicon; NVIDIA Nemotron on other machines and Colab (up to 8 speakers, no token). Speakers start as Speaker 1, 2 | same |
 | Validate | Checks file hashes, unchanged text and completion flags; a run missing speakers cannot pass as complete | `transcript.py validate` |
-| Reader | Traditional Chinese `transcript.html` (via OpenCC); click any line to play from there, plus `transcript.srt` when timing is complete | `transcript.py render` |
+| Reader | Traditional Chinese `transcript.html` (via OpenCC), with continuous reading; click text to seek, plus `transcript.srt` when timing is complete | `transcript.py render` |
 | Summary | `notes.md` from meeting, interview or talk templates; decisions only when explicitly agreed. With [Clayprint](../kerf-clayprint/) installed, also `notes.html` and PDF | agent |
 | Mail draft | Opens a draft for you to review, never sends; attaches the reader and summary, not the audio | `mail_draft.py` |
 
@@ -40,8 +42,8 @@ It can also merge recordings, add speakers to an existing transcript, or rename 
 
 | Engine | Runs on | Speed and quality | Cost |
 | :--- | :--- | :--- | :--- |
-| `qwen-0.6b` | Your machine | Fastest local option, usable | About 3.5 GB download the first time |
-| `qwen-1.7b` | Your machine | About 2–3× slower, more accurate | Downloaded only when you ask |
+| `qwen-0.6b` | Your machine | Default, speed first | Selected model must be cached |
+| `qwen-1.7b` | Your machine | Optional, accuracy first | Selected model must be cached |
 | `gemini-3.5-transcribe` | Google cloud | Fastest, most accurate | Audio uploaded and billed, deleted afterwards |
 | `colab` | Google Colab GPU | Same as Qwen (1.7B by default) | Google sign-in and a browser |
 
@@ -85,6 +87,10 @@ Merge this morning's two voice memos, label the speakers, and write meeting note
 
 Or invoke `$kerf-wordprint` in Codex and `/kerf-wordprint` in Claude Code.
 
+## Entrypoint and recovery
+
+`scripts/run.py --request /absolute/task/request.json --task-directory /absolute/task/job-1 --no-open` dispatches the selected worker, validates outputs and renders complete transcripts. `delivery.json` lists artifacts, warnings and pending summary/Mail draft handoffs. Add `--resume-from /absolute/task/job-1/run-1` with a new job directory to reuse compatible stage checkpoints without modifying the previous run. Resume checks source identity, order and model; incomplete stages without a usable checkpoint must run again. Raw text remains available when speaker labeling fails. See [workflow.md](references/workflow.md) for choices and Colab import.
+
 ## Verification status
 
 | Item | Status |
@@ -94,12 +100,12 @@ Or invoke `$kerf-wordprint` in Codex and `/kerf-wordprint` in Claude Code.
 | Colab T4 GPU: 1.7B, Nemotron with two speakers | Verified once (short synthetic clip) |
 | PyTorch route (for Windows, Linux, Intel Mac) | Same code verified on macOS; untested on real Windows and Linux |
 | Speed and accuracy on long, multi-speaker recordings | Untested |
-| Creating a real Mail draft | Dry-run only, pending your macOS Automation permission |
+| Creating a real Mail draft | Verified once: three synthetic text/PDF attachments, blank recipients, not sent |
 
 ## Known limits
 
 - Reading Voice Memos needs Full Disk Access for your terminal; otherwise drag the memos into a folder and pick that path.
-- The first Mail draft makes macOS ask whether to allow control of Mail; you click Allow yourself.
+- If macOS asks whether to allow control of Mail, you grant permission yourself; another host may need its own authorization.
 - Store the Gemini key yourself with `security add-generic-password -s kerf-wordprint-gemini -a wordprint -w` (on Windows, set the `GEMINI_API_KEY` environment variable).
 - Without a GPU, the PyTorch route is slow on long recordings.
 - Validation confirms timing coverage, unchanged text and consistent labels, not recognition accuracy; listen again for anything important. Speaker clusters are model guesses, not proof of identity.

@@ -190,7 +190,11 @@ public final class Community1DiarizationPipeline {
             speakerCount: count,
             clusterCount: clustered.centroids.count
         )
-        let rawSegments = Self.toSegments(binary)
+        // Reconstruction covers complete, zero-padded model windows. Restrict
+        // frame transitions to the real sample clock before compacting speakers.
+        let rawSegments = try Self.toSegments(
+            binary, sourceDuration: Float(Double(samples.count) / Double(Community1Config.sampleRate))
+        )
         let compacted = DiarizationHelpers.compactSpeakerIdsAndEmbeddings(
             rawSegments,
             speakerEmbeddings: clustered.centroids,
@@ -302,7 +306,12 @@ public final class Community1DiarizationPipeline {
     }
 
     /// Convert frame-center state transitions with pyannote's strict 0.5 rules.
-    static func toSegments(_ binary: [[Float]]) -> [DiarizedSegment] {
+    // Local Wordprint change: padded model support is not source audio. This
+    // is a domain intersection, not a tolerance for arbitrary bad timestamps.
+    static func toSegments(_ binary: [[Float]], sourceDuration: Float) throws -> [DiarizedSegment] {
+        guard sourceDuration.isFinite, sourceDuration > 0 else {
+            throw Community1Error.inference(stage: "timeline", reason: "invalid source duration")
+        }
         guard let speakerCount = binary.first?.count,
               speakerCount > 0,
               !binary.isEmpty else { return [] }
@@ -317,6 +326,18 @@ public final class Community1DiarizationPipeline {
             var active = binary[0][speaker] > 0.5
             for frame in 1..<binary.count {
                 let time = timestamp(frame)
+                // A transition on/after the source boundary cannot describe
+                // source audio. Preserve a crossing turn up to that boundary;
+                // never emit a turn wholly inside the model's zero padding.
+                if time >= sourceDuration {
+                    if active, sourceDuration > start {
+                        segments.append(DiarizedSegment(
+                            startTime: start, endTime: sourceDuration, speakerId: speaker
+                        ))
+                    }
+                    active = false
+                    break
+                }
                 if active, binary[frame][speaker] < 0.5 {
                     if time > start {
                         segments.append(DiarizedSegment(
@@ -331,7 +352,7 @@ public final class Community1DiarizationPipeline {
                 }
             }
             if active {
-                let end = timestamp(binary.count - 1)
+                let end = min(timestamp(binary.count - 1), sourceDuration)
                 if end > start {
                     segments.append(DiarizedSegment(
                         startTime: start, endTime: end, speakerId: speaker

@@ -9,5 +9,5 @@ xcrun swiftc -target arm64-apple-macosx14.0 -O -module-name SpeechVAD -emit-libr
   -I build -L build -lAudioCommon -emit-module-path build/SpeechVAD.swiftmodule \
   -o build/libSpeechVAD.a Sources/SpeechVAD/*.swift
 xcrun swiftc -target arm64-apple-macosx14.0 -O -parse-as-library -I build -L build \
-  -lSpeechVAD -lAudioCommon Sources/Community1Bridge/Main.swift -o build/community1-bridge
+  -lSpeechVAD -lAudioCommon Sources/Community1Bridge/*.swift -o build/community1-bridge
 build/community1-bridge --self-test
