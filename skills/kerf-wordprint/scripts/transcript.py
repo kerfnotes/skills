@@ -365,12 +365,16 @@ def reader_html(run, rendered, segments, reader_chunks):
     return ''.join(paragraphs)
 
 
-def page(title, rows_html, markdown_text, meta, playback):
-    """Single-file reading page: click a row to seek; copy Markdown; mail with subject."""
+def page(title, rows_html, markdown_text, meta, playback, exports=None):
+    """Portable reader; optional formal exports preserve the five-argument caller."""
+    exports = exports if exports is not None else {'md': {'filename': 'transcript.md', 'type': 'text/markdown', 'text': markdown_text}}
+    export_payload = json.dumps(exports, ensure_ascii=False).replace('<', '\\u003c')
+    downloads = ''.join(f'<a data-download="{kind}" download="{item["filename"]}">下載{title}</a>'
+                        for kind, title in [('txt', '純文字'), ('md', ' Markdown'), ('srt', ' SRT')]
+                        if (item := exports.get(kind)))
     payload = json.dumps(markdown_text, ensure_ascii=False).replace('<', '\\u003c')
     subject = urllib.parse.quote(f'逐字稿：{title}')
     audio = '<audio controls preload="metadata" src="playback.wav"></audio>' if playback else ''
-    hint = '點任一段可跳到該處播放（需與 playback.wav 同資料夾）。' if playback else '此份沒有音訊，無法跳播。'
     meta_html = ''.join(f'<div><dt>{html.escape(k)}</dt><dd>{html.escape(v)}</dd></div>' for k, v in meta)
     return f"""<!doctype html>
 <html lang="zh-Hant">
@@ -382,12 +386,31 @@ def page(title, rows_html, markdown_text, meta, playback):
 {clayprint_css()}
 </style>
 <style>
+/* Local layout only; colors and typography come from Clayprint when installed. */
+html {{ color: var(--cp-ink, #141413); background: var(--cp-paper, #FAF9F5);
+  font: var(--cp-body, 16px)/1.65 var(--cp-font, "Helvetica Neue", "Segoe UI", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif); }}
+body {{ margin: 0 auto; max-width: 940px; padding: 0 24px 72px; overflow-wrap: anywhere; }}
+* {{ box-sizing: border-box; }}
+.reader-header {{ padding: 24px 0 12px; }}
+.reader-header h1 {{ margin: 0; font-size: clamp(24px, 4vw, 32px); line-height: 1.3; }}
+.eyebrow {{ margin: 0 0 8px; color: var(--cp-accent, #C2553A); font-size: var(--cp-small, 14px); }}
+.reader-tools {{ display: flex; flex-wrap: wrap; gap: 8px 24px; border-bottom: 1px solid var(--cp-line, #E8E6DC); }}
+.reader-tools details {{ min-width: 0; max-width: 100%; }}
+summary {{ cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--cp-accent, #C2553A); }}
+.reader-meta {{ margin: 0 0 12px; font-size: var(--cp-small, 14px); }}
+.reader-meta dt {{ font-weight: 600; }}
+.reader-meta dd {{ margin: 0 0 8px; overflow-wrap: anywhere; }}
+#transcript {{ margin-top: 20px; }}
 .player {{ position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
   padding: 12px 0; background: var(--cp-paper, #fff); border-bottom: 1px solid var(--cp-line, #ddd); }}
-.player audio {{ flex: 1 1 320px; }}
-.player button, .player a {{ font: inherit; font-size: var(--cp-small); padding: 6px 12px; border: 1px solid var(--cp-accent, #C2553A);
+.player audio {{ width: 100%; min-width: 0; }}
+@media (max-width: 640px), (max-height: 500px) {{ .player {{ position: static; }} }}
+@media (max-width: 640px) {{ body {{ padding-inline: 18px; }} }}
+@media print {{ .reader-tools, .player {{ display: none; }} }}
+.export-actions {{ display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }}
+.export-actions button, .export-actions a {{ font: inherit; font-size: var(--cp-small, 14px); display: inline-flex; align-items: center; min-height: 44px; padding: 6px 12px; border: 1px solid var(--cp-accent, #C2553A);
   border-radius: 4px; background: none; color: var(--cp-accent, #C2553A); cursor: pointer; text-decoration: none; }}
-button:focus-visible, a:focus-visible, .seg:focus-visible {{ outline: 2px solid var(--cp-accent, #C2553A); outline-offset: 3px; }}
+button:focus-visible, a:focus-visible, summary:focus-visible, .seg:focus-visible {{ outline: 2px solid var(--cp-accent, #C2553A); outline-offset: 3px; }}
 .chunk {{ margin: 24px 0; }}
 .chunk-meta {{ margin: 0 0 8px; color: var(--cp-muted, #666); font-size: var(--cp-small, 14px); }}
 .chunk-text {{ margin: 0; max-width: none; line-height: 1.9; overflow-wrap: anywhere; }}
@@ -400,18 +423,23 @@ button:focus-visible, a:focus-visible, .seg:focus-visible {{ outline: 2px solid 
 </head>
 <body>
 <main>
-<header class="report-cover">
+<header class="reader-header">
 <p class="eyebrow">Wordprint 逐字稿</p>
 <h1>{html.escape(title)}</h1>
-<p>{hint}</p>
-<dl class="cover-meta">{meta_html}</dl>
 </header>
-<div class="player">{audio}<button type="button" id="copy">複製 Markdown</button><a href="mailto:?subject={subject}">寄信</a></div>
+<div class="reader-tools">
+<details><summary>匯出</summary><div class="export-actions">
+<button type="button" id="copy-text">複製文字</button><button type="button" id="copy">複製 Markdown</button>
+{downloads}<a href="mailto:?subject={subject}">寄信</a></div><p id="export-status" role="status"></p></details>
+<details><summary>詳細資料</summary><dl class="reader-meta">{meta_html}</dl></details>
+</div>
+{f'<div class="player">{audio}<p id="playback-error" role="status" hidden>播放音檔無法載入。請保留 HTML 與 playback.wav 在同一資料夾，或回到對話重新提供播放資產。</p></div>' if playback else ''}
 <section id="transcript" aria-label="逐字稿">
 {rows_html}
 </section>
 </main>
 <script type="application/json" id="markdown">{payload}</script>
+<script type="application/json" id="exports">{export_payload}</script>
 <script>
 const audio = document.querySelector('audio');
 const segs = [...document.querySelectorAll('[data-start]')];
@@ -420,13 +448,28 @@ segs.filter(() => audio).forEach((el) => {{
   el.addEventListener('click', () => seek(el));
   el.addEventListener('keydown', (e) => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); seek(el); }} }});
 }});
+if (audio) {{
+  const showPlaybackError = () => {{ document.getElementById('playback-error').hidden = false; }};
+  audio.addEventListener('error', showPlaybackError);
+  if (audio.error) showPlaybackError();
+}}
 if (audio) audio.addEventListener('timeupdate', () => {{
   segs.forEach((el) => el.classList.toggle('now', audio.currentTime >= Number(el.dataset.start) && audio.currentTime < Number(el.dataset.end)));
 }});
-document.getElementById('copy').addEventListener('click', async (e) => {{
-  try {{ await navigator.clipboard.writeText(JSON.parse(document.getElementById('markdown').textContent)); e.target.textContent = '已複製'; }}
-  catch {{ e.target.textContent = '瀏覽器不允許複製'; }}
+const exportData = JSON.parse(document.getElementById('exports').textContent);
+const status = document.getElementById('export-status');
+document.querySelectorAll('[data-download]').forEach((link) => {{
+  const item = exportData[link.dataset.download];
+  link.href = URL.createObjectURL(new Blob([item.text], {{type: item.type + ';charset=utf-8'}}));
 }});
+const copyExport = async (kind) => {{
+  try {{ await navigator.clipboard.writeText(exportData[kind].text); status.textContent = '已複製'; }}
+  catch {{ status.textContent = '瀏覽器不允許複製，請改用下載。'; }}
+}};
+document.getElementById('copy').addEventListener('click', () => copyExport('md'));
+const copyText = document.getElementById('copy-text');
+copyText.hidden = !exportData.txt;
+copyText.addEventListener('click', () => copyExport('txt'));
 </script>
 </body>
 </html>
@@ -505,10 +548,16 @@ def render(run, report, output, original_script=False, opencc='opencc', title=No
     meta = [('模型', run['model']['id']), ('長度', stamp(report['duration'])), ('來源', f'{len(run["sources"])} 個檔案')]
     files = {'raw.txt': raw, 'raw.md': '# 模型原始逐字稿\n\n' + markdown(raw),
              'transcript.txt': '\n'.join(transcript), 'transcript.md': '\n'.join(md),
-             'transcript.html': page(title, reader_html(run, rendered, segments, reader_chunks), '\n'.join(md), meta, playback),
              'run.json': json.dumps(saved, ensure_ascii=False, indent=2) + '\n'}
     if srt_ok:
         files['transcript.srt'] = '\n'.join(cues)
+    exports = {kind: {'filename': name, 'type': mime, 'text': files[name]}
+               for kind, name, mime in [('txt', 'transcript.txt', 'text/plain'),
+                                        ('md', 'transcript.md', 'text/markdown'),
+                                        ('srt', 'transcript.srt', 'application/x-subrip')]
+               if name in files}
+    files['transcript.html'] = page(title, reader_html(run, rendered, segments, reader_chunks),
+                                    files['transcript.md'], meta, playback, exports)
     final_report = dict(report, reading_script='original' if original_script else 'OpenCC s2twp.json',
                         empty_transcript=not rendered,
                         **({'content_warning': EMPTY_TRANSCRIPT_NOTICE} if not rendered else {}),
