@@ -146,7 +146,7 @@ assert.equal(e.get('submit').disabled,true);assert.equal(e.get('read-memos').dis
 e.uploads[0].upload.onprogress({lengthComputable:true,loaded:32,total:64});assert.equal(e.doc.querySelector('progress').value,50);
 await e.get('form').fire('submit');assert.equal(e.requests.length,0);
 e.uploads[0].respond(200,done('up-a'));await e.tick();assert.equal(e.uploads.length,2);
-e.uploads[1].respond(500,{error:'合成失敗'});await e.tick();assert.equal(e.get('submit').disabled,false);
+e.uploads[1].respond(500,{error:'合成失敗'});await e.tick();assert.equal(e.get('submit').disabled,true);
 const retry=e.get('source-list').children[1].querySelectorAll('[data-source-action]').find(x=>x.dataset.sourceAction==='retry');assert.equal(retry.disabled,false);
 await e.get('form').fire('submit');assert.equal(e.requests.length,0);assert.match(e.get('sources-error').textContent,/重試/);
 await e.sourceAction(1,'retry');assert.equal(e.uploads.length,3);assert.equal(e.uploads[2].file,second);
@@ -261,14 +261,14 @@ e.get('recipients').value='bad';await e.get('form').fire('submit');assert.equal(
 e.get('recipients').value='ok@example.com';await e.doc.fire('input');assert.equal(e.get('recipients-error').textContent,'');assert.equal(e.get('recipients').attrs['aria-invalid'],'false');
 ''')
 
-    def test_submit_failure_keeps_draft_retry_and_beforeunload_guard(self):
+    def test_submit_failure_keeps_draft_and_prevents_blind_retry(self):
         self.run_js(r'''
 const e=boot({sources:[{kind:'path',path:'/synthetic/a.wav',title:'A'}]});
 let finish;e.responses.push(()=>new Promise(resolve=>{finish=resolve;}));const first=e.get('form').fire('submit');await e.tick();
 let warned=false;await e.win.fire('beforeunload',{preventDefault(){warned=true;}});assert.equal(warned,true);
-finish({ok:false,json:async()=>({error:'合成失敗'})});await first;assert.equal(e.get('submit').disabled,false);assert.equal(e.storage.size,1);
-assert.match(e.get('error').textContent,/合成失敗/);await e.get('form').fire('submit');assert.equal(e.requests.length,2);
-assert.deepEqual(e.requests[1].body,e.requests[0].body);assert.equal(e.get('error').textContent,'');assert.equal(e.storage.size,0);
+finish({ok:false,json:async()=>({error:'合成失敗'})});await first;assert.equal(e.get('submit').disabled,true);assert.equal(e.storage.size,2);
+assert.match(e.get('error').textContent,/合成失敗/);await e.get('form').fire('submit');assert.equal(e.requests.length,1);
+assert.match(e.get('submit-status').textContent,/核對任務/);
 warned=false;await e.win.fire('beforeunload',{preventDefault(){warned=true;}});assert.equal(warned,false);
 ''')
 
@@ -286,7 +286,7 @@ e.responses.push(()=>({ok:false,status:400,json:async()=>({error:'第 2 個來�
 await e.get('form').fire('submit');
 assert.equal(e.get('form').hidden,false);assert.equal(e.get('success').hidden,true);
 assert.match(e.get('sources-error').textContent,/第 2 個來源/);assert.match(e.get('submit-status').textContent,/尚未儲存/);
-assert.equal(e.doc.activeElement,e.get('selected-heading'));assert.equal(e.get('source-list').attrs['aria-invalid'],'true');
+assert.equal(e.doc.activeElement.dataset.sourceAction,'remove');assert.equal(e.doc.activeElement.dataset.key,'source-1');assert.equal(e.get('source-list').attrs['aria-invalid'],'true');
 assert.equal(e.get('error').textContent,'');assert.equal(e.get('submit').disabled,false);
 assert.deepEqual(JSON.parse([...e.storage.values()][0]),before);assert.equal(e.uploads.length,1);
 await e.doc.fire('change');assert.match(e.get('sources-error').textContent,/無法讀取/);
@@ -305,7 +305,7 @@ for(const response of [new Error('network'),()=>({ok:false,status:500,json:async
  const e=boot({sources:[{kind:'path',path:'/synthetic/a.wav',title:'A'}]});
  e.responses.push(response);await e.get('form').fire('submit');
  assert.match(e.get('error').textContent,/先查看 agent/);assert.match(e.get('submit-status').textContent,/尚未確認/);
- assert.equal(e.get('sources-error').textContent,'');assert.equal(e.storage.size,1);assert.equal(e.requests.length,1);
+ assert.equal(e.get('sources-error').textContent,'');assert.equal(e.storage.size,2);assert.equal(e.requests.length,1);
  assert.equal(e.get('form').hidden,false);assert.equal(e.get('success').hidden,true);
 }
 ''')
