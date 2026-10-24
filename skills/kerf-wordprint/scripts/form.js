@@ -131,6 +131,11 @@
   });
 
   function sync() {
+    $('selected-sources').hidden = sources.length === 0;
+    $('output-settings').hidden = sources.length === 0;
+    const summaryLabels = {meeting: '會議摘要', interview: '訪談摘要', lecture: '演講／課程摘要', custom: '自訂摘要'};
+    $('current-output').textContent = choice('summary') === 'none' ? '逐字稿' : `逐字稿＋${summaryLabels[choice('summary')] || '會議摘要'}`;
+    $('submit').textContent = initial.mode === 'run' ? (choice('engine') === 'colab' ? '準備 Colab' : '開始整理') : '送出設定';
     if (restoredDraft) $('draft-status').textContent = sources.some((source) => source.upload?.status === 'needs-selection') ?
       '已恢復此分頁的設定與順序；未完成上傳的檔案須重新選取。' : '已恢復此分頁的錄音來源、順序與設定。';
     clearResolvedErrors(); saveDraft();
@@ -167,7 +172,7 @@
   function restoreSourceFocus(key, action) {
     const target = [...document.querySelectorAll('[data-source-action]')].find((el) =>
       el.dataset.key === key && el.dataset.sourceAction === action && !el.disabled);
-    (target || $('selected-heading')).focus();
+    (target || (sources.length ? $('selected-heading') : $('choose-files'))).focus();
   }
   function renderSources() {
     const list = $('source-list'), active = document.activeElement;
@@ -194,7 +199,7 @@
       if (source.upload?.status === 'needs-selection') actions.append(actionButton('重新選取', 'reselect', source));
       actions.append(actionButton('移除', 'remove', source)); row.append(content, actions); list.append(row);
     });
-    $('sources-empty').hidden = sources.length > 0; $('source-count').textContent = String(sources.length);
+    $('source-count').textContent = sources.length ? String(sources.length) : '';
     sync(); if (focusedKey) restoreSourceFocus(focusedKey, focusedAction);
   }
   function renderMemos() {

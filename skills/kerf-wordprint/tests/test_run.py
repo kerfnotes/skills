@@ -1,8 +1,10 @@
 """Exercise orchestration with synthetic worker outputs, without models or network."""
 import argparse
+import contextlib
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -178,6 +180,52 @@ class RunTests(unittest.TestCase):
             self.assertEqual(m.collect({}, self.root, True, 1), answer)
         self.assertEqual(serve.call_args.args[0], [])
         external.assert_not_called()
+
+    def test_localhost_run_form_continues_to_colab_waiting_without_worker(self):
+        # Browser opening is the OS boundary; all collection and HTTP are real.
+        import io
+        pages = []
+        visitors = []
+        def browser_open(url):
+            with urllib.request.urlopen(url, timeout=5) as response:
+                pages.append(response.read().decode())
+            payload = {'sources': [{'kind': 'path', 'path': str(self.audio)}], 'engine': 'colab',
+                       'summary': 'meeting', 'mail': False}
+            request = urllib.request.Request(url + 'submit', data=json.dumps(payload).encode(), method='POST')
+            with urllib.request.urlopen(request, timeout=5) as response:
+                self.assertEqual(response.status, 200)
+            return True
+        # serve() starts handling HTTP after the opener returns.
+        import threading
+        errors = []
+        def open_async(url):
+            def visit():
+                try:
+                    browser_open(url)
+                except Exception as error:
+                    errors.append(error)
+            thread = threading.Thread(target=visit)
+            visitors.append(thread)
+            thread.start()
+            return True
+        self.args.request = None
+        self.args.no_open = False
+        self.args.timeout = 5
+        with patch('webbrowser.open', side_effect=open_async), contextlib.redirect_stderr(io.StringIO()):
+            result, code = m.run(self.args)
+        for thread in visitors:
+            thread.join(timeout=5)
+            self.assertFalse(thread.is_alive())
+        self.assertFalse(errors, errors)
+        self.assertEqual((code, result['status'], result['stage']), (2, 'waiting', 'colab'))
+        state = json.loads(re.search(r'<script id="initial-state"[^>]*>(.*?)</script>', pages[0], re.S)[1])
+        self.assertEqual(state['mode'], 'run')
+        self.assertIn('>開始整理</button>', pages[0])
+        saved = json.loads((self.args.task_directory / 'answers.json').read_text())
+        self.assertNotIn('mode', saved)
+        self.assertEqual(saved['summary'], 'meeting')
+        self.assertEqual(json.loads((self.args.task_directory / 'delivery.json').read_text())['status'], 'waiting')
+        self.assertFalse(list(self.args.task_directory.glob('run-*')))
 
     def test_uploaded_files_keep_display_order_through_form_and_runner(self):
         answers_path = self.root / 'import-answers.json'
@@ -415,7 +463,7 @@ class RunTests(unittest.TestCase):
     def test_missing_brief_preserves_local_default_and_normalizes_path_for_form(self):
         form = m.load('form')
         observed = {}
-        def serve(memos, out, timeout, open_browser, prefill):
+        def serve(memos, out, timeout, open_browser, prefill, mode='collect'):
             observed.update(prefill)
             # A recommendation based on credentials must not replace the resolved default.
             page = form.page([], None, 'gemini-3.5-transcribe', prefill)
@@ -439,7 +487,7 @@ class RunTests(unittest.TestCase):
         self.request.write_text(json.dumps(request))
         form = m.load('form')
         original_load = m.load
-        def serve(memos, out, timeout, open_browser, prefill):
+        def serve(memos, out, timeout, open_browser, prefill, mode='collect'):
             return form.normalize_answers({**prefill, 'summary_custom': '重點'})
         with patch.object(form, 'serve', side_effect=serve), \
                 patch.object(m, 'load', side_effect=lambda name: form if name == 'form' else original_load(name)), \

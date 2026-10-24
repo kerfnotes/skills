@@ -91,6 +91,38 @@ class FormUITests(unittest.TestCase):
         result = subprocess.run(['node'], input=program, text=True, capture_output=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_add_remove_readd_progressively_shows_output_without_resetting_choices(self):
+        self.run_js(r'''
+const e=boot();
+assert.equal(e.get('selected-sources').hidden,true);
+assert.equal(e.get('output-settings').hidden,true);
+e.get('paths').value='/synthetic/one.wav';await e.get('add-paths').click();
+assert.equal(e.get('selected-sources').hidden,false);
+assert.equal(e.get('output-settings').hidden,false);
+assert.equal(e.get('current-output').textContent,'逐字稿＋會議摘要');
+for(const input of e.doc.querySelectorAll('input[name=summary]'))input.checked=input.value==='none';
+for(const input of e.doc.querySelectorAll('input[name=engine]'))input.checked=input.value==='qwen-1.7b';
+await e.doc.fire('change');await e.sourceAction(0,'remove');
+assert.equal(e.get('output-settings').hidden,true);assert.equal(e.doc.activeElement,e.get('choose-files'));
+e.get('paths').value='/synthetic/two.wav';await e.get('add-paths').click();
+assert.equal(e.get('current-output').textContent,'逐字稿');
+await e.get('form').fire('submit');
+assert.equal(e.requests[0].body.engine,'qwen-1.7b');assert.equal(e.requests[0].body.summary,'none');
+assert.equal('mode' in e.requests[0].body,false);assert.equal(e.storage.size,0);
+assert.equal(e.get('form').hidden,true);assert.equal(e.get('success').hidden,false);
+''')
+
+    def test_mode_names_the_action_and_colab_remains_a_handoff(self):
+        self.run_js(r'''
+const collect=boot();assert.equal(collect.get('submit').textContent,'送出設定');
+const run=boot({mode:'run',sources:[{kind:'path',path:'/synthetic/a.wav',title:'A'}]});
+assert.equal(run.get('submit').textContent,'開始整理');
+for(const input of run.doc.querySelectorAll('input[name=engine]'))input.checked=input.value==='colab';
+await run.doc.fire('change');assert.equal(run.get('submit').textContent,'準備 Colab');
+await run.get('form').fire('submit');assert.equal(run.requests[0].body.engine,'colab');
+assert.equal('mode' in run.requests[0].body,false);
+''')
+
     def test_memo_refresh_selection_unavailable_and_mixed_order(self):
         self.run_js(r'''
 const e=boot({sources:[{kind:'path',path:'/synthetic/folder',title:'合成資料夾'}],memos:[memo('a'),memo('b','missing'),memo('c','unreadable')]});
@@ -202,10 +234,10 @@ assert.equal(r.requests[0].body.sources[0].path,'/synthetic/custom.wav');
     def test_draft_scope_invalid_structures_and_storage_failures(self):
         self.run_js(r'''
 const e=boot();e.get('paths').value='/synthetic/a.wav';await e.get('add-paths').click();
-const other=boot({}, {storage:e.storage,path:'/token-two/'});assert.equal(other.get('source-count').textContent,'0');
+const other=boot({}, {storage:e.storage,path:'/token-two/'});assert.equal(other.get('source-count').textContent,'');
 const key=[...e.storage.keys()].find(key=>key.endsWith('/token-one/')), valid=JSON.parse(e.storage.get(key));
 for(const corrupt of ['{',JSON.stringify({...valid,version:2}),JSON.stringify({...valid,settings:{...valid.settings,engine:'unrequested-cloud'}}),JSON.stringify({...valid,sources:[{title:'fake',detail:'',payload:{upload_id:'x',memo_id:'y'}}]}),JSON.stringify({...valid,sources:[{title:'fake',detail:'',needs_selection:'yes',payload:{upload_id:'x'}}]})]){
- const storage=new Map([[key,corrupt]]),r=boot({}, {storage});assert.equal(r.get('source-count').textContent,'0');assert.match(r.get('draft-status').textContent,/無法恢復/);
+ const storage=new Map([[key,corrupt]]),r=boot({}, {storage});assert.equal(r.get('source-count').textContent,'');assert.match(r.get('draft-status').textContent,/無法恢復/);
  assert.equal(r.doc.querySelector('input[name=engine]:checked').value,'qwen-0.6b');
 }
 for(const options of [{blockStorage:true},{fullStorage:true},{noWindow:true}]){

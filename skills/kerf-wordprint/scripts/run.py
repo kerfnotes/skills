@@ -263,7 +263,7 @@ def collect(request, task, no_open, timeout):
         return answers
     # Preserve the resolved local default as well as explicit choices. Setup availability
     # must not turn a missing summary brief into implicit permission for cloud upload.
-    result = load('form').serve([], task / 'answers.json', timeout, not no_open, prefill=answers)
+    result = load('form').serve([], task / 'answers.json', timeout, not no_open, prefill=answers, mode='run')
     if result is None:
         raise TimeoutError('表單逾時；已知選項保留於 request.json，只補問缺少欄位：' + ', '.join(missing(answers)))
     answers = choices(result)
