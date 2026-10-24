@@ -328,19 +328,22 @@ def browse(kind, timeout):
     raise ValueError('系統選擇器未能完成，請重試或改用「加入錄音」')
 
 
-def page(memos, css, engine=DEFAULT_ENGINE, prefill=None):
+def page(memos, css, engine=DEFAULT_ENGINE, prefill=None, mode='collect'):
     """Render partial canonical answers without choosing an extra memo.
 
     css is retained for caller compatibility; the form uses the active Clayprint tokens.
     Only explicit prefilled sources are selected; available memos are separate state.
+    mode changes presentation only and never enters canonical answers.
     """
+    if mode not in ('collect', 'run'):
+        raise ValueError('表單模式必須是 collect 或 run')
     supplied = {} if prefill is None else prefill
     if not isinstance(supplied, dict):
         raise ValueError('預填內容必須是 JSON 物件')
     values = _answers({'engine': engine, **supplied}, complete=False)
     esc = lambda value: html.escape(str(value), quote=True)
     checked = lambda value: ' checked' if value else ''
-    state = {'sources': values['sources'], 'memos': memo_records(memos[:20]),
+    state = {'mode': mode, 'sources': values['sources'], 'memos': memo_records(memos[:20]),
              'settings': {key: value for key, value in values.items() if key != 'sources'}}
     engines = ''.join(f'<label class="choice"><input type="radio" name="engine" value="{key}"{checked(key == values["engine"])}>'
                       f'<span><strong>{esc(label)}</strong><span class="hint">{esc(ENGINE_NOTES[key])}</span></span></label>'
@@ -352,6 +355,7 @@ def page(memos, css, engine=DEFAULT_ENGINE, prefill=None):
         'PREFILL_NOTE': '<p class="prefill-note">已帶入你提供的設定，只需補齊或調整下方內容。</p>' if supplied else '',
         'SOURCES': '', 'MEMOS': '', 'STATE': json.dumps(state, ensure_ascii=False).replace('<', '\\u003c'),
         'ENGINES': engines, 'SUMMARIES': summaries,
+        'SUBMIT': '送出設定' if mode == 'collect' else '準備 Colab' if values['engine'] == 'colab' else '開始整理',
         'MERGE': checked(values['merge']), 'MAIL': checked(values['mail']),
         'CUSTOM_HIDDEN': ' hidden' if values['summary'] != 'custom' else '',
         'CUSTOM': esc(values['summary_custom']), 'ROSTER': esc('、'.join(values['roster'])),
@@ -363,12 +367,12 @@ def page(memos, css, engine=DEFAULT_ENGINE, prefill=None):
     return re.sub(r'@@([A-Z_]+)@@', lambda match: fields[match[1]], template)
 
 
-def serve(memos, out, timeout, open_browser=True, prefill=None):
+def serve(memos, out, timeout, open_browser=True, prefill=None, mode='collect'):
     deadline = time.monotonic() + timeout
     remaining = lambda: max(0.001, deadline - time.monotonic())
     token = secrets.token_urlsafe(16)
     engine = prefill['engine'] if isinstance(prefill, dict) and 'engine' in prefill else recommended_engine()
-    form_page = page(memos, None, engine, prefill).encode('utf-8')
+    form_page = page(memos, None, engine, prefill, mode).encode('utf-8')
     # Retain the original index snapshot for legacy callers; refresh only adds stable IDs.
     registry = {memo['id']: memo for memo in memo_records(memos)}
     uploads = {}  # Only atomically published, complete uploads enter this registry.
@@ -590,10 +594,11 @@ def main():
     parser.add_argument('--out', type=Path, required=True, help='answers.json to write')
     parser.add_argument('--timeout', type=float, default=600, help='seconds to wait for submit')
     parser.add_argument('--no-open', action='store_true', help='print the URL (with its token) to stderr instead of opening a browser')
+    parser.add_argument('--mode', choices=('collect', 'run'), default='collect', help='presentation only; standalone forms collect settings')
     args = parser.parse_args()
     memos = json.loads(args.memos.read_text(encoding='utf-8')) if args.memos else []
     prefill = json.loads(args.prefill.read_text(encoding='utf-8')) if args.prefill else None
-    answers = serve(memos, args.out, args.timeout, not args.no_open, prefill)
+    answers = serve(memos, args.out, args.timeout, not args.no_open, prefill, args.mode)
     if answers is None:
         print(QUESTIONS)
         return 2

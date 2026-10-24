@@ -35,7 +35,7 @@ button, input, textarea, a, summary, [tabindex] { scroll-margin-block: 24px; }
 :focus-visible { outline: 2px solid var(--wp-accent); outline-offset: 3px; }
 .skip-link { position: absolute; left: 16px; top: 8px; padding: 8px 16px; background: var(--wp-paper); transform: translateY(-180%); z-index: 5; }
 .skip-link:focus { transform: none; }
-.masthead { padding: 24px 0 18px; border-bottom: 3px solid var(--wp-accent); }
+.masthead { padding: 24px 0 18px; border-bottom: 1px solid var(--wp-line); }
 h1 { margin: 0; color: var(--wp-title); font-size: min(32px, var(--wp-display)); font-weight: 600; line-height: 1.25; letter-spacing: -.035em; }
 h2, legend { color: var(--wp-title); font-size: var(--wp-title-size); font-weight: 600; line-height: 1.25; letter-spacing: -.02em; }
 h3 { color: var(--wp-title); font-size: var(--wp-body); font-weight: 600; margin: 0; }
@@ -48,7 +48,7 @@ legend + * { clear: both; }
 label { display: block; cursor: pointer; }
 input[type=checkbox], input[type=radio] { width: 18px; height: 18px; accent-color: var(--wp-accent); margin: 4px 0 0; flex: 0 0 auto; }
 .choice { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 10px 12px; border-radius: var(--wp-radius); }
-.choice:has(input:checked) { background: var(--wp-tint); }
+.choice:has(input:checked) { font-weight: 600; }
 .choice > span, .item-content { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .field-label { padding: 14px 0 6px; }
 textarea, input[type=text] { display: block; width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--wp-muted); border-radius: var(--wp-radius); background: var(--wp-paper); color: var(--wp-ink); }

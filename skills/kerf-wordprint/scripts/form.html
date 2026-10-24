@@ -12,14 +12,15 @@
 <header class="masthead"><h1 lang="en">Wordprint</h1></header>
 <form id="form" tabindex="-1" novalidate>
 <p id="draft-status" class="hint" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert" tabindex="-1"></p>
 <fieldset><legend>錄音來源</legend>
 <div class="source-actions">
+<button id="choose-files" class="primary" type="button" data-lock="source">加入錄音</button>
 <button id="read-memos" type="button" data-lock="source" aria-controls="memo-panel">讀取語音備忘錄</button>
-<button id="choose-files" type="button" data-lock="source">加入錄音</button>
 <input id="files" type="file" accept=".wav,.m4a,.mp3,.aac,.flac,.ogg,.opus,.aif,.aiff,.mp4,.wma,.qta" multiple hidden>
 </div>
-<div id="drop-zone" class="drop-zone" aria-describedby="upload-hint"><p>將錄音檔拖到這裡，或按「加入錄音」多選。</p>
-<p id="upload-hint" class="hint">每個檔案上限 1 GiB，保存在本機。資料夾請用「更多方式」選取；語音備忘錄請先匯出成檔案再拖入。</p></div>
+<div id="drop-zone" class="drop-zone"><p>將錄音檔拖到這裡，或按「加入錄音」多選。</p></div>
+<details><summary>檔案與拖放說明</summary><p id="upload-hint" class="hint">每個檔案上限 1 GiB，保存在本機。資料夾請用「其他匯入方式」選取；語音備忘錄請先匯出成檔案再拖入。</p></details>
 <p id="upload-error" class="error" role="alert"></p>
 <p id="upload-status" class="hint" role="status" aria-live="polite"></p>
 <section id="memo-panel" class="memo-panel" aria-labelledby="memo-heading" hidden>
@@ -29,7 +30,7 @@
 <p id="memo-hint" class="hint" hidden>無法加入的錄音，可先在語音備忘錄開啟後重新整理，或匯出後用「加入錄音」。</p>
 </section>
 <p id="memo-error" class="error" role="alert"></p>
-<details id="more-sources"><summary>更多方式</summary>
+<details id="more-sources"><summary>其他匯入方式</summary>
 <div class="row"><button type="button" data-lock="source" data-browse="file">選擇本機檔案</button><button type="button" data-lock="source" data-browse="folder">選擇本機資料夾</button></div>
 <p id="browse-status" class="hint" role="status"></p><p id="browse-error" class="error" role="alert"></p>
 <label for="paths" class="field-label">本機檔案或資料夾路徑</label>
@@ -38,14 +39,18 @@
 <button id="add-paths" type="button" data-lock="source">加入路徑</button>
 <p id="paths-error" class="error" role="alert"></p>
 </details>
-<div class="section-heading selected-heading"><h3 id="selected-heading" tabindex="-1">已選錄音 <span id="source-count" class="count">0</span></h3></div>
-<p id="sources-empty" class="hint">尚未加入錄音。</p>
+<div id="selected-sources" hidden>
+<div class="section-heading selected-heading"><h3 id="selected-heading" tabindex="-1">已選錄音 <span id="source-count" class="count"></span></h3></div>
 <ol id="source-list" class="source-list" aria-labelledby="selected-heading" aria-describedby="sources-error"></ol>
-<p id="source-status" class="hint" role="status" aria-live="polite"></p>
 <label id="merge-row" class="choice" hidden><input type="checkbox" id="merge"@@MERGE@@> 合併成一段（依清單順序）</label>
+</div>
+<p id="source-status" class="hint" role="status" aria-live="polite"></p>
 <p id="sources-error" class="error" role="alert"></p>
 </fieldset>
-<fieldset><legend>轉錄設定</legend>
+<section id="output-settings" aria-label="產出與設定" hidden>
+<fieldset><legend>產出</legend>
+<p id="current-output">逐字稿＋會議摘要</p>
+<h3 class="field-label">轉錄設定</h3>
 <div class="engine-options">@@ENGINES@@</div>
 <h3 class="field-label">摘要</h3><div class="summary-options">@@SUMMARIES@@</div>
 <div id="custom-row"@@CUSTOM_HIDDEN@@>
@@ -64,10 +69,10 @@
 <p class="hint">只建立草稿，不會寄出。</p>
 </details>
 <div class="submit-area">
-<p id="error" class="error" role="alert" tabindex="-1"></p>
-<button id="submit" type="submit" class="primary">確認並繼續</button>
+<button id="submit" type="submit" class="primary">@@SUBMIT@@</button>
 <p id="submit-status" class="hint" role="status">送出後，回到對話查看進度。</p>
 </div>
+</section>
 </form>
 <section id="success" tabindex="-1" hidden><h2>設定已送出</h2><p>請回到對話查看處理進度。</p></section>
 </main>
