@@ -61,6 +61,63 @@ class Document(HTMLParser):
 
 
 class SummaryReportTests(unittest.TestCase):
+    def test_inline_time_markers_stay_in_claim_and_only_external_time_is_source(self):
+        markdown = '# 合成剪輯摘要\n\n## 待辦\n\n- 將標記 `[00:05:00]` 改成 `[00:04:00]`，尚未核准。[00:08:00]\n'
+        result = summary.build_summary(markdown, template='custom')
+        self.assertEqual(result['claims'], [{
+            'text': '將標記 `[00:05:00]` 改成 `[00:04:00]`，尚未核准。',
+            'citations': ['00:08:00'], 'note': 'a', 'section': '待辦',
+        }])
+        self.assertEqual(Document(result['html']).claim_sources(), [
+            ('將標記 [00:05:00] 改成 [00:04:00]，尚未核准。', ['00:08:00']),
+        ])
+        self.assertIn('<code>[00:05:00]</code>', result['html'])
+        self.assertIn('<code>[00:04:00]</code>', result['html'])
+
+    def test_table_time_markers_stay_in_cells_and_only_external_time_is_source(self):
+        markdown = '# 合成剪輯摘要\n\n## 待辦\n\n| 項目 | 原句 |\n| --- | --- |\n| 剪輯 | 將標記 `[00:05:00]` 改成 `[00:04:00]`，尚未核准。[00:08:00] |\n'
+        result = summary.build_summary(markdown, template='custom')
+        self.assertEqual(Document(result['html']).claim_sources(), [
+            ('剪輯 | 將標記 [00:05:00] 改成 [00:04:00]，尚未核准。', ['00:08:00']),
+        ])
+        self.assertEqual(result['claims'][0]['citations'], ['00:08:00'])
+        self.assertIn('<td>將標記 <code>[00:05:00]</code> 改成 <code>[00:04:00]</code>，尚未核准。', result['html'])
+
+    def test_literal_time_semantics_are_shared_by_paragraph_list_quote_and_table(self):
+        cases = [
+            ('保留 ``[00:05:00] `片段` [00:04:00]``，尚未核准。',
+             '保留 [00:05:00] `片段` [00:04:00]，尚未核准。'),
+            ('保留 `[00:05:00] ``片段`` [00:04:00]`，尚未核准。',
+             '保留 [00:05:00] ``片段`` [00:04:00]，尚未核准。'),
+            (r'保留 \[00:05:00\] 與 \[00:04:00]，尚未核准。',
+             '保留 [00:05:00] 與 [00:04:00]，尚未核准。'),
+        ]
+        for original, visible in cases:
+            for block in ('{}', '- {}', '> {}', '| 原句 |\n| --- |\n| {} |'):
+                with self.subTest(original=original, block=block):
+                    markdown = '# 合成摘要\n\n## 待辦\n\n' + block.format(original + '[00:08:00]') + '\n'
+                    result = summary.build_summary(markdown, template='custom')
+                    self.assertEqual(result['claims'], [{
+                        'text': original, 'citations': ['00:08:00'], 'note': 'a', 'section': '待辦',
+                    }])
+                    self.assertEqual(Document(result['html']).claim_sources(), [(visible, ['00:08:00'])])
+
+    def test_escaped_backtick_and_backslash_do_not_hide_real_sources(self):
+        for original, visible in [(r'保留 \`[00:05:00]。', '保留 `。'),
+                                  (r'保留 \\[00:05:00]。', '保留 \\。')]:
+            with self.subTest(original=original):
+                result = summary.build_summary('# 合成摘要\n\n## 待辦\n\n' + original + '[00:08:00]\n', template='custom')
+                self.assertEqual(Document(result['html']).claim_sources(), [(visible, ['00:05:00', '00:08:00'])])
+
+    def test_fenced_time_markers_remain_literal_and_do_not_consume_note_letters(self):
+        for fence in ('```', '~~~'):
+            with self.subTest(fence=fence):
+                result = summary.build_summary('# 合成摘要\n\n## 原話\n\n' + fence + 'text\n[00:05:00] `[00:04:00]`\n' + fence + '\n\n尚未核准。[00:08:00]\n', template='custom')
+                self.assertIn('<pre><code>[00:05:00] `[00:04:00]`</code></pre>', result['html'])
+                self.assertEqual(result['claims'], [{
+                    'text': '尚未核准。', 'citations': ['00:08:00'], 'note': 'a', 'section': '原話',
+                }])
+
     def test_meeting_reads_decisions_and_actions_before_background(self):
         markdown = (FIXTURES / 'meeting.md').read_text()
         result = summary.build_summary(markdown, template='meeting')

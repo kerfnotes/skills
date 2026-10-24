@@ -69,28 +69,44 @@ def _sections(markdown, template):
 
 
 CITATION = re.compile(r'\[(\d{2,}:\d{2}:\d{2})\]')
+# Exact backtick runs delimit code; escaped punctuation is literal Markdown too.
+LITERAL = re.compile(r'(?<!`)(`+)(?!`)([\s\S]*?)(?<!`)\1(?!`)|\\([\\`*{}\[\]()#+.!_>|-])')
+
+
+def _extract_citations(text):
+    """Remove source times only outside the literals supported by _inline."""
+    citations, parts, end = [], [], 0
+    def remove(match):
+        citations.append(match[1])
+        return ''
+    for match in LITERAL.finditer(text):
+        parts.append(CITATION.sub(remove, text[end:match.start()]))
+        parts.append(match[0])
+        end = match.end()
+    parts.append(CITATION.sub(remove, text[end:]))
+    return ''.join(parts).strip(), citations
 
 
 def _inline(text):
     """Small, escaped Markdown subset; unsupported syntax stays visible as text."""
-    pattern = re.compile(r'(`+)(.+?)\1|\*\*(.+?)\*\*|__(.+?)__|\*([^*]+)\*|\[([^\]]+)\]\(([^\s)]+)\)|\\([\\`*{}\[\]()#+.!_>|-])')
+    pattern = re.compile(LITERAL.pattern + r'|\*\*(.+?)\*\*|__(.+?)__|\*([^*]+)\*|\[([^\]]+)\]\(([^\s)]+)\)')
     out, end = [], 0
     for m in pattern.finditer(text):
         out.append(escape(text[end:m.start()]))
         if m[1]:
             out.append('<code>' + escape(m[2]) + '</code>')
-        elif m[3] is not None or m[4] is not None:
-            out.append('<strong>' + _inline(m[3] if m[3] is not None else m[4]) + '</strong>')
-        elif m[5] is not None:
-            out.append('<em>' + _inline(m[5]) + '</em>')
+        elif m[3] is not None:
+            out.append(escape(m[3]))
+        elif m[4] is not None or m[5] is not None:
+            out.append('<strong>' + _inline(m[4] if m[4] is not None else m[5]) + '</strong>')
         elif m[6] is not None:
-            url = m[7]
+            out.append('<em>' + _inline(m[6]) + '</em>')
+        elif m[7] is not None:
+            url = m[8]
             if re.match(r'^(?:https?://|mailto:|#|\.?\.?/)', url, re.I) or not re.match(r'^[\w+.-]+:', url):
-                out.append('<a href="' + escape(url, quote=True) + '">' + _inline(m[6]) + '</a>')
+                out.append('<a href="' + escape(url, quote=True) + '">' + _inline(m[7]) + '</a>')
             else:
                 out.append(escape(m[0]))
-        else:
-            out.append(escape(m[8]))
         end = m.end()
     return ''.join(out) + escape(text[end:])
 
@@ -137,8 +153,7 @@ class _Markdown:
         self.claims = []
 
     def unit(self, text, section, render=None):
-        citations = CITATION.findall(text)
-        clean = CITATION.sub('', text).strip()
+        clean, citations = _extract_citations(text)
         note = _letter(1 + sum(bool(c['citations']) for c in self.claims)) if citations else None
         self.claims.append({'text': clean, 'citations': citations, 'note': note, 'section': section})
         body = render(clean) if render else _inline(clean)
@@ -177,7 +192,7 @@ class _Markdown:
                     # One table row is one claim. Render all cells, then attach its sources in its last cell.
                     def row(clean):
                         values = _cells(lines[i])
-                        return ''.join('<td>' + _inline(CITATION.sub('', c).strip()) + '</td>' for c in values)
+                        return ''.join('<td>' + _inline(_extract_citations(c)[0]) + '</td>' for c in values)
                     rendered = self.unit(' | '.join(cells), section, row)
                     if '</td><sup' in rendered:
                         rendered = rendered.replace('</td><sup', '<sup', 1) + '</td>'
