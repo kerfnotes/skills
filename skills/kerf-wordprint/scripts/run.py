@@ -241,6 +241,7 @@ def deliver(directory, output, python, answers, original_script=False, title=Non
     item['retry_stage'] = None
     item['outputs'] += [str(p) for p in sorted(output.iterdir()) if p.is_file()]
     report = json.loads((output / 'validation.json').read_text(encoding='utf-8'))
+    item['empty_transcript'] = bool(report.get('empty_transcript'))
     if report.get('content_warning'):
         item['warnings'].append(report['content_warning'])
     if not report.get('srt_written'):
@@ -250,10 +251,14 @@ def deliver(directory, output, python, answers, original_script=False, title=Non
     if not report.get('playback_written'):
         item['warnings'].append('此份沒有音訊播放器。')
     if answers['summary'] != 'none':
-        item['next_steps'].append({'stage': 'summary', 'template': answers['summary'],
-                                   'custom': answers['summary_custom'], 'input': str(output / 'transcript.md')})
+        step = {'stage': 'summary', 'template': answers['summary'],
+                'custom': answers['summary_custom'], 'input': str(output / 'transcript.md'),
+                'status': 'unavailable' if item['empty_transcript'] else 'pending'}
+        if item['empty_transcript']:
+            step['reason'] = '未辨識到可用文字；保留摘要選項，核對來源或模型後再試。'
+        item['next_steps'].append(step)
     if answers['mail']:
-        item['next_steps'].append({'stage': 'mail_draft', 'recipients': answers['recipients']})
+        item['next_steps'].append({'stage': 'mail_draft', 'recipients': answers['recipients'], 'status': 'pending'})
     return item
 
 

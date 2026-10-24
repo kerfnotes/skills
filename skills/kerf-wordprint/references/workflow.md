@@ -23,7 +23,7 @@ Missing sources or an empty custom-summary brief triggers the form. Existing sou
 python3 SCRIPTS/form.py --prefill TASK/request.json --out TASK/answers.json --no-open
 ```
 
-Then run the entrypoint using that `answers.json` as `--request`. Open the private loopback URL with the built-in browser; the server waits in the background. Never save a real private URL in screenshots meant for sharing. Form timeouts preserve known choices; ask only the remaining questions.
+Then run the entrypoint using that `answers.json` as `--request`. This standalone form collects choices only (collect mode, “送出設定”). The runner explicitly opens run mode (“開始整理”; Colab: “準備 Colab”) and continues after submission. Both success pages mean only “設定已送出，請回到對話查看進度”; the form server then exits. Report actual worker stages in the conversation, without estimated percentages. Open the private loopback URL with the built-in browser; the server waits in the background. Never save a real private URL in screenshots meant for sharing. Form timeouts preserve known choices; ask only the remaining questions. If submission is uncertain, inspect the saved task state before retrying; keep its draft and completed uploads.
 
 ## Adding recordings
 
@@ -50,6 +50,32 @@ Each invocation claims a new job directory. It contains the resolved `answers.js
 For a Qwen merge, MLX and PyTorch transcribe each source separately, then shift its chunks and words onto the combined PCM timeline. Repeated text in different recordings is retained; silence does not require invented words. Playback and speaker analysis still use the continuous combined audio. This preserves source boundaries but cannot guarantee recognition accuracy within an individual recording; listen back when exact wording matters.
 
 Exit 0 means complete transcription/rendering; exit 1 means failure or partial completion; exit 2 means Colab handoff; exit 130 means cancellation. Always read the manifest and worker states. The command never installs dependencies, sends mail, chooses a cloud route because a key exists, or creates an LLM summary itself.
+
+### Finish the agent handoff
+
+Read `delivery.json` together with saved `answers.json` before offering links:
+
+| State | Delivery and recovery |
+| --- | --- |
+| `complete`, nonempty | Deliver the reader. Requested summary and Mail steps remain `pending`; transcription completion does not complete them. |
+| `complete`, `empty_transcript: true` | Deliver existing text/reader with the specific no-text explanation. The summary step is `unavailable` with a reason; retain its template for source/model retry. Do not write a summary from an empty transcript. |
+| `partial` / `failed` | Offer only existing outputs, such as raw text, and name `retry_stage` or the reported error. Summary/Mail requests stay in `answers.json`; missing handoff entries are not proof that they finished. |
+| `cancelled` | Keep saved text, state and resource records; no complete reader is implied. Inspect checkpoints before choosing stage resume. |
+| `waiting`, `stage: colab` | Deliver the notebook handoff and local source/recovery instructions. No local transcript or remote execution has completed. |
+
+The runner's `pending_agent_steps` is a handoff manifest, not a live downstream completion tracker. Keep it as evidence of what the runner requested. Record later verified artifacts separately in the final delivery; do not change worker completion flags to represent summary or Mail work.
+
+For a nonempty requested summary, follow SKILL.md step 5: the agent writes and checks `notes.md` against the cited transcript. Only then present it with the P5 adapter and the unchanged Clayprint tools:
+
+```text
+python3 SCRIPTS/summary_report.py OUTPUT/notes.md OUTPUT/notes.html --template meeting --clayprint CLAYPRINT_DIR
+node CLAYPRINT_DIR/evals/check-report.mjs OUTPUT/notes.html OUTPUT/notes.md
+node CLAYPRINT_DIR/scripts/pdf.js OUTPUT/notes.html OUTPUT/print
+```
+
+Choose the actual requested template (`meeting`, `interview`, `lecture`, `custom`). The adapter does not summarize or create a PDF. Inspect every generated PDF page and compare its complete text and source notes with the verified Markdown; a checker exit code alone does not establish claim fidelity. Without Node/Clayprint, deliver the checked Markdown and mark HTML/PDF pending. Preserve the P5 adapter rather than sending Wordprint notes through an unrelated report layout.
+
+Lead the final reply with available summary and reader links, then group existing PDF, text and subtitle links. Check each file exists; do not link an omitted SRT or uncreated PDF. Explain any requested output still unavailable or pending. A standalone reader HTML retains text and its embedded text downloads; playback requires the matching `playback.wav` beside it. Deliver the full output folder when playback is needed. Mail remains pending until draft creation is confirmed, and only an explicit `mail=true` authorizes that step; it never means sent mail.
 
 ## Stage resume
 
