@@ -178,7 +178,7 @@ await e.get('form').fire('submit');assert.deepEqual(e.requests.at(-1).body.sourc
     def test_validation_focus_and_duplicate_submit(self):
         self.run_js(r'''
 const e=boot({sources:[{kind:'path',path:'/synthetic/a.wav',title:'A'}]});
-e.get('recipients').value='bad';await e.get('form').fire('submit');assert.equal(e.get('optional-settings').open,true);assert.equal(e.doc.activeElement,e.get('recipients'));
+e.get('mail').checked=true;e.get('recipients').value='bad';await e.get('form').fire('submit');assert.equal(e.get('optional-settings').open,true);assert.equal(e.doc.activeElement,e.get('recipients'));
 e.get('recipients').value='';e.get('paths').value='/synthetic/unadded.wav';await e.get('form').fire('submit');assert.equal(e.get('more-sources').open,true);assert.equal(e.requests.length,0);
 e.get('paths').value='';let finish;e.responses.push(()=>new Promise(resolve=>{finish=resolve;}));
 const submitting=e.get('form').fire('submit');await e.tick();await e.get('form').fire('submit');assert.equal(e.requests.length,1);
@@ -257,7 +257,7 @@ e.uploads[0].respond(200,done('ok'));await e.tick();assert.equal(e.get('sources-
 for(const input of e.doc.querySelectorAll('input[name=summary]'))input.checked=input.value==='custom';
 await e.get('form').fire('submit');assert.equal(e.get('summary_custom').attrs['aria-invalid'],'true');
 e.get('summary_custom').value='待辦';await e.doc.fire('input');assert.equal(e.get('custom-error').textContent,'');assert.equal(e.get('summary_custom').attrs['aria-invalid'],'false');
-e.get('recipients').value='bad';await e.get('form').fire('submit');assert.equal(e.get('recipients').attrs['aria-invalid'],'true');
+e.get('mail').checked=true;e.get('recipients').value='bad';await e.get('form').fire('submit');assert.equal(e.get('recipients').attrs['aria-invalid'],'true');
 e.get('recipients').value='ok@example.com';await e.doc.fire('input');assert.equal(e.get('recipients-error').textContent,'');assert.equal(e.get('recipients').attrs['aria-invalid'],'false');
 ''')
 

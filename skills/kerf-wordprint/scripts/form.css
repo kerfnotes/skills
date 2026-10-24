@@ -75,6 +75,7 @@ summary { cursor: pointer; min-height: 44px; padding: 8px 0; }
 summary .hint { margin-left: 8px; }
 .optional-settings { margin-top: 0; padding: 12px 0; border-bottom: 1px solid var(--wp-line); }
 .optional-settings[open] { padding-bottom: 24px; }
+.remote-notice { margin-block: 12px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .selected-heading { margin-top: 24px; }
 .count { margin-left: 6px; font-variant-numeric: tabular-nums; }

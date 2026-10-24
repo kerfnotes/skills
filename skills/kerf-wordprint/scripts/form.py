@@ -34,7 +34,7 @@ ENGINES = {'qwen-0.6b': 'Qwen 0.6B',
            'gemini-3.5-transcribe': 'Gemini 3.5 Transcribe',
            'colab': 'Google Colab · Qwen'}
 ENGINE_NOTES = {'qwen-0.6b': '預設本機模型，速度優先。',
-                'qwen-1.7b': '可選本機模型，準確度優先。',
+                'qwen-1.7b': '可選用的較大本機模型。',
                 'gemini-3.5-transcribe': '錄音會上傳 Google，並依 API 用量計費。',
                 'colab': '錄音會上傳 Google Colab。需登入 Google 並操作筆記本。'}
 SUMMARIES = {'meeting': '會議', 'interview': '訪談', 'lecture': '演講／課程', 'none': '不要摘要', 'custom': '自訂'}
