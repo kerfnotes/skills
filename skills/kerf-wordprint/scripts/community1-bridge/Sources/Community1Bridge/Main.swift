@@ -4,12 +4,6 @@ import CoreML
 import Foundation
 import SpeechVAD
 
-struct BridgeSegment: Encodable {
-    let start: Double
-    let end: Double
-    let duration: Double
-    let speaker: Int
-}
 struct BridgeResult: Encodable {
     let segments: [BridgeSegment]
     let num_speakers: Int
@@ -59,13 +53,8 @@ struct Community1Bridge {
                                               speakerBounds: .init(minimum: 1, maximum: 8))
             let duration = Double(samples.count) / Double(sampleRate)
             let segments = try result.segments.map { item -> BridgeSegment in
-                let start = Double(item.startTime), end = Double(item.endTime)
-                guard start.isFinite, end.isFinite, start >= 0, end > start,
-                      end <= duration + 0.02, item.speakerId >= 0 else {
-                    throw NSError(domain: "Bridge", code: 5, userInfo: [NSLocalizedDescriptionKey: "Invalid diarization result bounds"])
-                }
-                return BridgeSegment(start: start, end: min(end, duration),
-                                     duration: min(end, duration) - start, speaker: item.speakerId)
+                try validatedSegment(start: item.startTime, end: item.endTime,
+                                     speaker: item.speakerId, sourceDuration: duration)
             }
             let data = try JSONEncoder().encode(BridgeResult(segments: segments, num_speakers: result.numSpeakers,
                                                             sample_count: samples.count, sample_rate: sampleRate))

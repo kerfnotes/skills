@@ -20,6 +20,7 @@ import wave
 from pathlib import Path
 
 EPS = 0.02  # Accommodate rounding to centiseconds, never invent missing audio.
+EMPTY_TRANSCRIPT_NOTICE = '未辨識到可用文字。請先回聽原錄音確認語音是否清楚，再重新選擇來源或嘗試其他模型。'
 
 
 class Invalid(ValueError):
@@ -291,6 +292,79 @@ def srt_stamp(seconds):
     return stamp(seconds).replace('.', ',')
 
 
+def srt_groups(rendered, sources):
+    """Group display cues only; preserve reader rows and all source timestamps.
+
+    A collapsed row needs an adjacent positive cue in the same unambiguous source.
+    Inclusive containment deliberately rejects zero-length rows on source seams.
+    """
+    if not rendered:
+        return [], 'no rows'
+    owners, positive = [], []
+    for i, row in enumerate(rendered):
+        start, end = row['start'], row['end']
+        if not (math.isfinite(start) and math.isfinite(end) and 0 <= start <= end):
+            return [], f'row {i + 1}: invalid display interval'
+        matches = [j for j, source in enumerate(sources)
+                   if source['offset'] <= start <= end <= source['offset'] + source['duration']]
+        owners.append(matches[0] if len(matches) == 1 else None)
+        positive.append(millis(end) > millis(start))
+    groups, i = [], 0
+    while i < len(rendered):
+        if positive[i]:
+            groups.append([i])
+            i += 1
+            continue
+        first, owner = i, owners[i]
+        if owner is None:
+            return [], f'row {i + 1}: collapsed after millisecond rounding; source boundary or source ownership ambiguous'
+        while i < len(rendered) and not positive[i] and owners[i] == owner:
+            i += 1
+        block = list(range(first, i))
+        if groups and owners[groups[-1][-1]] == owner:
+            groups[-1].extend(block)
+        elif i < len(rendered) and positive[i] and owners[i] == owner:
+            groups.append(block + [i])
+            i += 1
+        else:
+            return [], f'row {first + 1}: collapsed after millisecond rounding; no adjacent positive cue in the same source'
+    return groups, None
+
+
+def reader_time(seconds):
+    """Keep the legacy millisecond spelling only when it loses no precision."""
+    short = f'{seconds:.3f}'
+    return short if float(short) == seconds else str(seconds)
+
+
+def reader_html(run, rendered, segments, reader_chunks):
+    """Display-only grouping. One text span per row, bounded by ASR chunk/source."""
+    if not rendered:
+        return ''.join(segments)
+    paragraphs = []
+    for chunk_index, (chunk, first, last) in enumerate(reader_chunks):
+        groups = []
+        # A chunk can straddle a source seam. Never join rows across that seam;
+        # ambiguous or spanning rows stand alone without guessing ownership.
+        for i in range(first, last):
+            row = rendered[i]
+            owners = [j for j, source in enumerate(run['sources'])
+                      if source['offset'] <= row['start'] <= row['end'] <= source['offset'] + source['duration']]
+            owner = owners[0] if len(owners) == 1 else None
+            if groups and owner is not None and groups[-1][0] == owner:
+                groups[-1][1].append(i)
+            else:
+                groups.append((owner, [i]))
+        for _, indices in groups:
+            group = [rendered[i] for i in indices]
+            start, end = min(row['start'] for row in group), max(row['end'] for row in group)
+            brief = f'{stamp(start).split(".")[0]}–{stamp(end).split(".")[0]}'
+            paragraphs.append(f'<div class="chunk" data-chunk="{chunk_index}">'
+                              f'<p class="chunk-meta">{brief}</p>'
+                              f'<p class="chunk-text">{"".join(segments[i] for i in indices)}</p></div>')
+    return ''.join(paragraphs)
+
+
 def page(title, rows_html, markdown_text, meta, playback):
     """Single-file reading page: click a row to seek; copy Markdown; mail with subject."""
     payload = json.dumps(markdown_text, ensure_ascii=False).replace('<', '\\u003c')
@@ -313,9 +387,15 @@ def page(title, rows_html, markdown_text, meta, playback):
 .player audio {{ flex: 1 1 320px; }}
 .player button, .player a {{ font: inherit; font-size: var(--cp-small); padding: 6px 12px; border: 1px solid var(--cp-accent, #C2553A);
   border-radius: 4px; background: none; color: var(--cp-accent, #C2553A); cursor: pointer; text-decoration: none; }}
-.seg {{ max-width: none; margin: 0; padding: 10px 8px; border-bottom: 1px solid var(--cp-line, #ddd); cursor: pointer; }}
-.seg:hover, .seg:focus, .seg.now {{ background: var(--cp-tint, #eee); outline: none; }}
-.who {{ display: block; color: var(--cp-muted); font-size: var(--cp-small); }}
+button:focus-visible, a:focus-visible, .seg:focus-visible {{ outline: 2px solid var(--cp-accent, #C2553A); outline-offset: 3px; }}
+.chunk {{ margin: 24px 0; }}
+.chunk-meta {{ margin: 0 0 8px; color: var(--cp-muted, #666); font-size: var(--cp-small, 14px); }}
+.chunk-text {{ margin: 0; max-width: none; line-height: 1.9; overflow-wrap: anywhere; }}
+.seg {{ display: inline; white-space: pre-wrap; }}
+.seg[role="button"] {{ cursor: pointer; }}
+.seg[role="button"]:hover, .seg:focus-visible, .seg.now {{ background: var(--cp-tint, #eee); }}
+.sr-only {{ position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }}
 </style>
 </head>
 <body>
@@ -323,11 +403,11 @@ def page(title, rows_html, markdown_text, meta, playback):
 <header class="report-cover">
 <p class="eyebrow">Wordprint 逐字稿</p>
 <h1>{html.escape(title)}</h1>
-<p>模型推定說話者；可能身分與不確定／重疊發言均保留標記。{hint}</p>
+<p>{hint}</p>
 <dl class="cover-meta">{meta_html}</dl>
 </header>
 <div class="player">{audio}<button type="button" id="copy">複製 Markdown</button><a href="mailto:?subject={subject}">寄信</a></div>
-<section aria-label="逐字稿">
+<section id="transcript" aria-label="逐字稿">
 {rows_html}
 </section>
 </main>
@@ -335,8 +415,8 @@ def page(title, rows_html, markdown_text, meta, playback):
 <script>
 const audio = document.querySelector('audio');
 const segs = [...document.querySelectorAll('[data-start]')];
-const seek = (el) => {{ if (audio) {{ audio.currentTime = Number(el.dataset.start); audio.play(); }} }};
-segs.forEach((el) => {{
+const seek = (el) => {{ if (audio) {{ audio.currentTime = Number(el.dataset.start); audio.play().catch(() => {{}}); }} }};
+segs.filter(() => audio).forEach((el) => {{
   el.addEventListener('click', () => seek(el));
   el.addEventListener('keydown', (e) => {{ if (e.key === 'Enter' || e.key === ' ') {{ e.preventDefault(); seek(el); }} }});
 }});
@@ -357,7 +437,12 @@ def render(run, report, output, original_script=False, opencc='opencc', title=No
     output = Path(output).resolve()
     require(not output.exists(), f'output already exists; choose a new directory: {output}')
     require(output.parent.is_dir(), 'output parent directory does not exist')
-    rendered = list(rows(run))
+    # Record chunk membership while generating rows; no time-based reconstruction.
+    rendered, reader_chunks = [], []
+    for chunk in run['chunks']:
+        chunk_rows = list(rows(dict(run, chunks=[chunk])))
+        reader_chunks.append((chunk, len(rendered), len(rendered) + len(chunk_rows)))
+        rendered.extend(chunk_rows)
     texts = [row['text'] for row in rendered]
     if not original_script:
         binary = shutil.which(opencc)
@@ -367,43 +452,69 @@ def render(run, report, output, original_script=False, opencc='opencc', title=No
             module = None
         require(binary or module, 'OpenCC not found; install it or explicitly pass --original-script')
         # Convert only transcript text; identity labels and source evidence remain untouched.
-        # ponytail: one OpenCC process per row; batch conversion if measured startup cost dominates.
-        for i, text in enumerate(texts):
-            if module:
-                texts[i] = module.convert(text)
-                continue
-            result = subprocess.run([binary, '-c', 's2twp.json'], input=text, text=True, encoding='utf-8',
+        if module:
+            texts = [module.convert(text) for text in texts]
+        elif texts:
+            # Newlines isolate OpenCC's line context; choose framing absent from every row.
+            index = 0
+            token = f'__WORDPRINT_OPENCC_{index}__'
+            while any(token in text for text in texts):
+                index += 1
+                token = f'__WORDPRINT_OPENCC_{index}__'
+            separator = f'\n{token}\n'
+            payload = separator + separator.join(texts) + separator
+            # Split bytes before universal-newline decoding: a row ending in CR must
+            # not consume the framing LF. Match the old text=True result per row.
+            result = subprocess.run([binary, '-c', 's2twp.json'], input=payload.encode('utf-8'),
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-            require(result.returncode == 0 and (not text or bool(result.stdout)), f'OpenCC failed: {result.stderr.strip()}')
-            texts[i] = result.stdout
+            require(result.returncode == 0, f'OpenCC failed: {result.stderr.decode("utf-8").strip()}')
+            parts = result.stdout.split(separator.encode('ascii'))
+            require(len(parts) == len(texts) + 2 and parts[0] == parts[-1] == b'',
+                    'OpenCC failed: invalid batch boundaries or row count')
+            converted = [part.decode('utf-8').replace('\r\n', '\n').replace('\r', '\n')
+                         for part in parts[1:-1]]
+            require(all(not source or target for source, target in zip(texts, converted)),
+                    'OpenCC failed: empty converted row')
+            texts = converted
     raw = '\n'.join(chunk['text'] for chunk in run['chunks']) + '\n'
-    transcript, md = [], ['# 含時間與說話者逐字稿', '', '模型推定說話者；可能身分與不確定／重疊發言均保留標記。', '']
+    transcript, md = [], ['# 含時間與說話者逐字稿', '']
     segments, cues = [], []
-    # SRT carries whole milliseconds, so check the cue times it would actually write; never nudge a time.
-    srt_reason = 'no rows' if not rendered else next(
-        (f'row {i}: end does not exceed start after millisecond rounding' for i, r in enumerate(rendered, 1)
-         if not (math.isfinite(r['start']) and math.isfinite(r['end']) and millis(r['end']) > millis(r['start']))), None)
+    if not rendered:
+        md.extend([EMPTY_TRANSCRIPT_NOTICE, ''])
+        segments.append(f'<p role="status">{EMPTY_TRANSCRIPT_NOTICE}</p>')
+    groups, srt_reason = srt_groups(rendered, run['sources'])
     srt_ok = srt_reason is None
     for i, (row, text) in enumerate(zip(rendered, texts), 1):
         who = label(row, run['speakers'])
         header = f'[{stamp(row["start"])}–{stamp(row["end"])}] {who}'
         transcript.append(f'{header}\n{text}\n')
         md.extend([f'**{markdown(header)}**', '', markdown(text), ''])
-        segments.append(f'<p class="seg" tabindex="0" data-start="{row["start"]:.3f}" data-end="{row["end"]:.3f}">'
-                        f'<span class="who">{html.escape(header)}</span>{html.escape(text.strip())}</p>')
-        cues.append(f'{i}\n{srt_stamp(row["start"])} --> {srt_stamp(row["end"])}\n[{who}] {text.strip()}\n')
+        action = ' role="button" tabindex="0"' if run.get('pcm') else ''
+        segments.append(f'<span class="seg"{action} data-start="{reader_time(row["start"])}" data-end="{reader_time(row["end"])}">'
+                        f'<span class="who sr-only">{html.escape(header)}</span>'
+                        f'<span class="text">{html.escape(text).replace(chr(13), "&#13;")}</span></span>')
+    for i, group in enumerate(groups, 1):
+        start = min(rendered[j]['start'] for j in group)
+        end = max(rendered[j]['end'] for j in group)
+        lines = '\n'.join(f'[{label(rendered[j], run["speakers"])}] {texts[j].strip()}' for j in group)
+        cues.append(f'{i}\n{srt_stamp(start)} --> {srt_stamp(end)}\n{lines}\n')
+    grouped_rows = sum(len(group) for group in groups if len(group) > 1)
     title = title or '＋'.join(Path(s['path']).stem for s in run['sources'])
     playback = run.get('pcm')
     saved = dict(run, pcm=str(output / 'playback.wav')) if playback else run
     meta = [('模型', run['model']['id']), ('長度', stamp(report['duration'])), ('來源', f'{len(run["sources"])} 個檔案')]
     files = {'raw.txt': raw, 'raw.md': '# 模型原始逐字稿\n\n' + markdown(raw),
              'transcript.txt': '\n'.join(transcript), 'transcript.md': '\n'.join(md),
-             'transcript.html': page(title, '\n'.join(segments), '\n'.join(md), meta, playback),
+             'transcript.html': page(title, reader_html(run, rendered, segments, reader_chunks), '\n'.join(md), meta, playback),
              'run.json': json.dumps(saved, ensure_ascii=False, indent=2) + '\n'}
     if srt_ok:
         files['transcript.srt'] = '\n'.join(cues)
     final_report = dict(report, reading_script='original' if original_script else 'OpenCC s2twp.json',
+                        empty_transcript=not rendered,
+                        **({'content_warning': EMPTY_TRANSCRIPT_NOTICE} if not rendered else {}),
                         srt_written=srt_ok, **({} if srt_ok else {'srt_reason': srt_reason}),
+                        srt_grouped_rows=grouped_rows,
+                        **({'srt_grouping_note': '字幕將相鄰同來源列合併為顯示區間，逐列保留文字與說話者標記；原始逐詞時間未修改，並非已修復逐詞對齊。'} if grouped_rows else {}),
                         playback_written=bool(playback),
                         unknown_rows=sum(r['kind'] == 'unknown' for r in rendered),
                         uncertain_rows=sum(r['kind'] == 'uncertain' for r in rendered),

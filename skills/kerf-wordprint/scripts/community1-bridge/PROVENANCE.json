@@ -25,8 +25,10 @@
     {
       "path": "Sources/SpeechVAD/Community1DiarizationPipeline.swift",
       "upstream_path": "Sources/SpeechVAD/Community1DiarizationPipeline.swift",
-      "sha256": "31e5776e6564012afe5352afb23799e3b490bcda63142795fe8974b05dec8ad4",
-      "unchanged": true
+      "sha256": "3d6df91f6b101601ff8fa2d9a3a8a3c81c5652a84e00d6f1ece14cef8b170e4e",
+      "unchanged": false,
+      "upstream_sha256": "31e5776e6564012afe5352afb23799e3b490bcda63142795fe8974b05dec8ad4",
+      "local_change": "Restrict frame-center timeline reconstruction to the original PCM sample duration before speaker compaction; no model graph, frame geometry, clustering, or source PCM changes."
     },
     {
       "path": "Sources/SpeechVAD/DiarizationHelpers.swift",
@@ -66,14 +68,15 @@
       "declaration_unchanged": true
     }
   ],
-  "scope": "Unchanged official Community-1 implementation and minimal system-framework support. Downloader shim only throws; bridge calls fromLocal.",
+  "scope": "Official Community-1 model inference with a local source-domain timeline restriction and strict bridge timestamp validation. Downloader shim only throws; bridge calls fromLocal.",
   "build_script": "build.sh",
   "architecture": "arm64",
   "minimum_os": "14.0",
   "runtime_model_downloads": false,
-  "inference_edits": false,
+  "inference_edits": true,
   "shim": "Sources/AudioCommon/DisabledDownloader.swift",
   "shim_behavior": "Both downloader entry points unconditionally throw; fromLocal never calls either.",
   "bridge_api": "Community1DiarizationPipeline.fromLocal",
-  "binary_sha256": "a3be4cc8ef52baac9febc2df84702088a89d8b03fe293dbc7b7e2bb25e584642"
+  "binary_sha256": "947aa2a00c7f08b8fbbf1473f179cb5db18e470191205cf1aa7c656054f83277",
+  "model_graph_edits": false
 }

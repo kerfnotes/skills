@@ -1,0 +1,116 @@
+/* Clayprint tokens are injected by form.py; exact clay defaults keep this form standalone. */
+:root {
+  color-scheme: light;
+  --wp-paper: var(--cp-paper, #FAF9F5);
+  --wp-ink: var(--cp-ink, #141413);
+  --wp-muted: var(--cp-muted, #5E5D59);
+  --wp-title: var(--cp-title, #141413);
+  --wp-line: var(--cp-line, #E8E6DC);
+  --wp-accent: var(--cp-accent, #C2553A);
+  --wp-tint: var(--cp-tint, #F5E6DE);
+  --wp-soft: var(--cp-soft, #B0AEA5);
+  --wp-font: var(--cp-font, "Helvetica Neue", "Segoe UI", "Arial", "PingFang TC", "Microsoft JhengHei", sans-serif);
+  --wp-body: var(--cp-body, 16px);
+  --wp-small: max(13px, var(--cp-small, 12px));
+  --wp-sub: var(--cp-sub, 18px);
+  --wp-title-size: var(--cp-title-size, 28px);
+  --wp-display: var(--cp-display, 52px);
+  /* color.worse and textOnFill from the canonical clay tokens. */
+  --wp-error: #9A3A26;
+  --wp-on-accent: #FFFFFF;
+  --wp-radius: 4px;
+  background: var(--wp-paper);
+  color: var(--wp-ink);
+  font-family: var(--wp-font);
+  -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; font: var(--wp-body)/1.65 var(--wp-font); overflow-wrap: anywhere; }
+main { max-width: 940px; min-width: 0; margin: 0 auto; padding: 0 24px 48px; }
+a { color: var(--wp-accent); text-underline-offset: .16em; }
+button, input, textarea { font: inherit; }
+button, label, summary { -webkit-tap-highlight-color: transparent; }
+button, input, textarea, a, summary, [tabindex] { scroll-margin-block: 24px; }
+:focus-visible { outline: 2px solid var(--wp-accent); outline-offset: 3px; }
+.skip-link { position: absolute; left: 16px; top: 8px; padding: 8px 16px; background: var(--wp-paper); transform: translateY(-180%); z-index: 5; }
+.skip-link:focus { transform: none; }
+.masthead { padding: 24px 0 18px; border-bottom: 3px solid var(--wp-accent); }
+h1 { margin: 0; color: var(--wp-title); font-size: min(32px, var(--wp-display)); font-weight: 600; line-height: 1.25; letter-spacing: -.035em; }
+h2, legend { color: var(--wp-title); font-size: var(--wp-title-size); font-weight: 600; line-height: 1.25; letter-spacing: -.02em; }
+h3 { color: var(--wp-title); font-size: var(--wp-body); font-weight: 600; margin: 0; }
+p { margin: 8px 0; }
+.hint, .meta, .count { color: var(--wp-muted); font-size: var(--wp-small); }
+.meta { display: block; font-variant-numeric: tabular-nums; }
+fieldset { min-width: 0; margin: 0; padding: 24px 0; border: 0; border-bottom: 1px solid var(--wp-line); }
+legend { float: left; width: 100%; padding: 0; margin: 0 0 16px; }
+legend + * { clear: both; }
+label { display: block; cursor: pointer; }
+input[type=checkbox], input[type=radio] { width: 18px; height: 18px; accent-color: var(--wp-accent); margin: 4px 0 0; flex: 0 0 auto; }
+.choice { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 10px 12px; border-radius: var(--wp-radius); }
+.choice:has(input:checked) { background: var(--wp-tint); }
+.choice > span, .item-content { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.field-label { padding: 14px 0 6px; }
+textarea, input[type=text] { display: block; width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--wp-muted); border-radius: var(--wp-radius); background: var(--wp-paper); color: var(--wp-ink); }
+textarea { resize: vertical; min-height: 84px; }
+::placeholder { color: var(--wp-muted); opacity: 1; }
+.row, .source-actions, .item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.row { margin-block: 12px; }
+button { max-width: 100%; min-width: 44px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--wp-muted); border-radius: var(--wp-radius); background: var(--wp-paper); color: var(--wp-ink); cursor: pointer; touch-action: manipulation; overflow-wrap: anywhere; }
+button:active:not(:focus-visible):not(:disabled) { transform: translateY(1px); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.primary { background: var(--wp-accent); color: var(--wp-on-accent); border-color: var(--wp-accent); font-weight: 600; padding-inline: 22px; }
+@media (hover: hover) {
+  button:hover:not(:disabled) { border-color: var(--wp-accent); }
+  .primary:hover:not(:disabled) { border-color: var(--wp-ink); }
+  summary:hover { color: var(--wp-accent); }
+}
+.drop-zone { margin-top: 16px; padding: 12px 16px; border: 1px dashed var(--wp-muted); border-radius: var(--wp-radius); background: var(--wp-paper); overflow-wrap: anywhere; }
+.drop-zone p:first-child { margin-top: 0; }
+.drop-zone .hint { margin-bottom: 0; }
+.drop-zone.drag-over { border-color: var(--wp-accent); background: var(--wp-tint); }
+.drop-zone[aria-disabled=true] { opacity: .6; }
+details { margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 8px 0; }
+summary .hint { margin-left: 8px; }
+.optional-settings { margin-top: 0; padding: 12px 0; border-bottom: 1px solid var(--wp-line); }
+.optional-settings[open] { padding-bottom: 24px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.selected-heading { margin-top: 24px; }
+.count { margin-left: 6px; font-variant-numeric: tabular-nums; }
+.memo-panel { margin-top: 20px; padding-block: 16px; border-block: 1px solid var(--wp-line); }
+.memos { max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+.memo-row, .source-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--wp-line); }
+.memo-row:last-child, .source-row:last-child { border-bottom: 0; }
+.memo-row > label { flex: 1; min-width: 0; }
+.memo-row .choice { padding: 8px 12px; }
+.source-list { list-style: none; padding: 0; margin: 8px 0 0; }
+.source-row .item-title { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.item-actions { gap: 6px; flex-shrink: 0; }
+.item-actions button { padding: 6px 10px; }
+.source-row progress { width: 100%; max-width: 320px; height: 6px; accent-color: var(--wp-accent); display: block; margin-block: 8px; }
+.source-row[data-status=failed] .upload-detail, .source-row[data-status=needs-selection] .upload-detail { color: var(--wp-error); }
+.engine-options .choice { border-bottom: 1px solid var(--wp-line); padding-block: 12px; }
+.engine-options strong { display: block; font-weight: 600; }
+.engine-options .hint { display: block; margin-top: 2px; }
+.summary-options { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.submit-area { padding-top: 24px; }
+.error { color: var(--wp-error); overflow-wrap: anywhere; }
+.error:empty, [role=status]:empty { display: none; }
+#error { margin: 0 0 16px; }
+#success { padding-block: 24px; }
+@media (max-width: 640px) {
+  main { padding-inline: 18px; padding-bottom: 44px; }
+}
+@media (max-width: 520px) {
+  .source-row { align-items: flex-start; flex-wrap: wrap; }
+  .source-row .item-content { flex-basis: 100%; }
+  .source-row .item-actions { width: 100%; }
+  .memo-row { align-items: flex-start; }
+  .memo-row > button { padding-inline: 10px; }
+  .drop-zone { padding: 12px; }
+  .summary-options { column-gap: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:focus-visible):not(:disabled) { transform: none; }
+}

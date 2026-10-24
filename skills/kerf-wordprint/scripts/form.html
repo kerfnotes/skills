@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wordprint</title>
+<style>@@CSS@@</style>
+</head>
+<body>
+<a class="skip-link" href="#form">跳到錄音設定</a>
+<main id="main-content">
+<header class="masthead"><h1 lang="en">Wordprint</h1></header>
+<form id="form" tabindex="-1" novalidate>
+<p id="draft-status" class="hint" role="status" aria-live="polite"></p>
+<fieldset><legend>錄音來源</legend>
+<div class="source-actions">
+<button id="read-memos" type="button" data-lock="source" aria-controls="memo-panel">讀取語音備忘錄</button>
+<button id="choose-files" type="button" data-lock="source">加入錄音</button>
+<input id="files" type="file" accept=".wav,.m4a,.mp3,.aac,.flac,.ogg,.opus,.aif,.aiff,.mp4,.wma,.qta" multiple hidden>
+</div>
+<div id="drop-zone" class="drop-zone" aria-describedby="upload-hint"><p>將錄音檔拖到這裡，或按「加入錄音」多選。</p>
+<p id="upload-hint" class="hint">每個檔案上限 1 GiB，保存在本機。資料夾請用「更多方式」選取；語音備忘錄請先匯出成檔案再拖入。</p></div>
+<p id="upload-error" class="error" role="alert"></p>
+<p id="upload-status" class="hint" role="status" aria-live="polite"></p>
+<section id="memo-panel" class="memo-panel" aria-labelledby="memo-heading" hidden>
+<div class="section-heading"><h3 id="memo-heading">語音備忘錄</h3><button id="add-memos" type="button" data-lock="source">加入所選</button></div>
+<p id="memo-status" class="hint" role="status"></p>
+<div id="memo-list" class="memos"></div>
+<p id="memo-hint" class="hint" hidden>無法加入的錄音，可先在語音備忘錄開啟後重新整理，或匯出後用「加入錄音」。</p>
+</section>
+<p id="memo-error" class="error" role="alert"></p>
+<details id="more-sources"><summary>更多方式</summary>
+<div class="row"><button type="button" data-lock="source" data-browse="file">選擇本機檔案</button><button type="button" data-lock="source" data-browse="folder">選擇本機資料夾</button></div>
+<p id="browse-status" class="hint" role="status"></p><p id="browse-error" class="error" role="alert"></p>
+<label for="paths" class="field-label">本機檔案或資料夾路徑</label>
+<textarea id="paths" rows="2" aria-describedby="paths-hint paths-error" placeholder="一行一個完整路徑"></textarea>
+<p id="paths-hint" class="hint">加入後可在下方調整順序。資料夾內的錄音由 agent 展開處理。</p>
+<button id="add-paths" type="button" data-lock="source">加入路徑</button>
+<p id="paths-error" class="error" role="alert"></p>
+</details>
+<div class="section-heading selected-heading"><h3 id="selected-heading" tabindex="-1">已選錄音 <span id="source-count" class="count">0</span></h3></div>
+<p id="sources-empty" class="hint">尚未加入錄音。</p>
+<ol id="source-list" class="source-list" aria-labelledby="selected-heading" aria-describedby="sources-error"></ol>
+<p id="source-status" class="hint" role="status" aria-live="polite"></p>
+<label id="merge-row" class="choice" hidden><input type="checkbox" id="merge"@@MERGE@@> 合併成一段（依清單順序）</label>
+<p id="sources-error" class="error" role="alert"></p>
+</fieldset>
+<fieldset><legend>轉錄設定</legend>
+<div class="engine-options">@@ENGINES@@</div>
+<h3 class="field-label">摘要</h3><div class="summary-options">@@SUMMARIES@@</div>
+<div id="custom-row"@@CUSTOM_HIDDEN@@>
+<label for="summary_custom" class="field-label">想保留哪些重點？</label>
+<textarea id="summary_custom" rows="3" aria-describedby="custom-error" placeholder="例如：整理決議、負責人與待辦事項">@@CUSTOM@@</textarea>
+<p id="custom-error" class="error" role="alert"></p></div>
+</fieldset>
+<details id="optional-settings" class="optional-settings"><summary>參與者與交付 <span class="hint">選填</span></summary>
+<label for="roster" class="field-label">參與者候選名單</label>
+<input type="text" id="roster" value="@@ROSTER@@" data-values="@@ROSTER_JSON@@" aria-describedby="roster-hint" placeholder="以逗號分隔姓名">
+<p id="roster-hint" class="hint">只當候選名單，不會直接把名字指派給某個聲音。</p>
+<label for="recipients" class="field-label">收件人 email</label>
+<input type="text" id="recipients" inputmode="email" value="@@RECIPIENTS@@" placeholder="多個地址以逗號分隔" aria-describedby="recipients-error">
+<p id="recipients-error" class="error" role="alert"></p>
+<label class="choice"><input type="checkbox" id="mail"@@MAIL@@> 開啟 Mail 草稿</label>
+<p class="hint">只建立草稿，不會寄出。</p>
+</details>
+<div class="submit-area">
+<p id="error" class="error" role="alert" tabindex="-1"></p>
+<button id="submit" type="submit" class="primary">確認並繼續</button>
+<p id="submit-status" class="hint" role="status">送出後，回到對話查看進度。</p>
+</div>
+</form>
+<section id="success" tabindex="-1" hidden><h2>設定已送出</h2><p>請回到對話查看處理進度。</p></section>
+</main>
+<script id="initial-state" type="application/json">@@STATE@@</script>
+<script>@@JS@@</script>
+</body>
+</html>
