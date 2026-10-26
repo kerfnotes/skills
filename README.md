@@ -28,4 +28,6 @@
 npx skills add kerfnotes/skills --list
 ```
 
+清單也會列出已停用的 `kerf-power-map-deprecated`；要使用新版 Power Map，請選 `kerf-power-map`。
+
 授權：[MIT](LICENSE)。
