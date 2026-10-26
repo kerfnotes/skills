@@ -21,9 +21,9 @@ const LABEL = T.type.label.px;
 const CHART = (T.type.chart ?? T.type.label).px, SOURCE = (T.type.source ?? T.type.label).px;
 const LH = 1.45;
 const INNER = W - 2 * M.x;
-// PowerPoint scales a line-spacing multiple by the font's own line height (about 1.2 em), so read decks set exact points
-// equal to the estimate (px × multiple) and render as tall as the layouts plan. Presentation decks keep the multiple.
-const spacing = (px, multiple) => (MODE === 'read' ? { lineSpacing: pt(px * multiple) } : { lineSpacingMultiple: multiple });
+// PowerPoint scales a line-spacing multiple by the font's own line height (about 1.2 em), so both modes set exact points
+// equal to the estimate (px × multiple) and render as tall as the layouts plan; a multiple ran boxes into what follows.
+const spacing = (px, multiple) => ({ lineSpacing: pt(px * multiple) });
 
 function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2, bullet } = {}) {
   if (str === '' || str === null || str === undefined) return;
@@ -129,18 +129,22 @@ function header(slide, left, right, ink = C.textSecondary) {
 }
 
 const TITLE_Y = M.top + LABEL + M.titleGap;
-// Microsoft JhengHei sits taller than the design font, so display lines get a little more room.
-const DISPLAY_LH = 1.35;
+// Microsoft JhengHei sits taller than the design font, so display lines get a little more room. Presentation decks keep
+// the pitch the earlier line-spacing multiples drew (cover and section 1.6, statement 1.5); read decks keep 1.35 and 1.25.
+const DISPLAY_LH = MODE === 'read' ? 1.35 : 1.6;
+const STATEMENT_LH = MODE === 'read' ? 1.25 : 1.5;
 const TITLE = T.type.title.px;
 // Cover, section and content titles all allow two estimated lines; statement's claim is its body and has its own height check.
 const TITLE_LINES = 2;
 // Read decks widen these to a body line (design/read.json); presentation decks keep 12 and 32.
 const LEDE_GAP = M.ledeGap ?? 12, TAKEAWAY_GAP = M.takeawayGap ?? 32;
 
+// Presentation titles keep the pitch the earlier 125% multiple drew (about 1.5 × the size); read decks keep 1.25.
+const TITLE_LH = MODE === 'read' ? 1.25 : 1.5;
 function title(slide, str, color = C.title) {
   const n = lines(str, TITLE, INNER);
-  text(slide, str, { x: M.x, y: TITLE_Y, w: INNER, h: n * TITLE * 1.25, px: TITLE, color, bold: true, lineHeight: 1.25 });
-  return TITLE_Y + n * TITLE * 1.25;
+  text(slide, str, { x: M.x, y: TITLE_Y, w: INNER, h: n * TITLE * TITLE_LH, px: TITLE, color, bold: true, lineHeight: TITLE_LH });
+  return TITLE_Y + n * TITLE * TITLE_LH;
 }
 
 function contentTop(slide, ctx, color = C.title, ledeColor = C.textSecondary) {
@@ -246,7 +250,13 @@ function nativeChart(slide, m, area, ctx) {
       : m.rows.map((r) => ({ name: r.label, labels: m.periods, values: [...r.values] }));
     Object.assign(opts, { chartColors: m.kind === 'line' ? m.series.map((s) => hex(s.color)) : m.rows.map(() => hex(C.gray)),
       lineDataSymbol: m.kind === 'slope' ? 'circle' : 'none' });
-    if (m.kind === 'slope') Object.assign(opts, { valAxisHidden: true, valGridLine: { style: 'none' } });
+    if (m.kind === 'slope') {
+      Object.assign(opts, { valAxisHidden: true, valGridLine: { style: 'none' } });
+      // PowerPoint places native labels without avoiding each other: endpoints closer than a label line are nudged apart
+      // (labelNudges, patchChart). The maximum stays automatic so edited data rescales; the model axis estimates it.
+      m.nudges = labelNudges(m, m.axis.lo, m.axis.hi, area.h);
+      if (!m.nudges) ctx.warn(`第 ${ctx.n} 頁斜線圖同一期的列太多，標籤會重疊：減少列數，或設 native: false 改用 SVG。`);
+    }
   } else if (m.kind === 'share' || m.kind === 'sharetrend') {
     type = 'bar';
     data = m.categories.map((c, i) => ({ name: c.name, labels: m.rows.map((r) => r.label), values: m.rows.map((r) => r.segments[i].value) }));
@@ -576,19 +586,19 @@ LAYOUT.statement = (slide, ctx) => {
   const n = lines(claim, S, width);
   const noteN = page.note ? lines(page.note, T.type.body.px, width) : 0;
   const ledeH = page.lede ? 24 + LABEL * LH : 0;
-  const blockH = n * S * 1.25 + ledeH + (page.note ? 40 + noteN * T.type.body.px * 1.5 : 0);
+  const blockH = n * S * STATEMENT_LH + ledeH + (page.note ? 40 + noteN * T.type.body.px * 1.5 : 0);
   // A statement is the page's only content: centre it, but never above the title anchor.
   const top = Math.max(TITLE_Y, (M.top + LABEL + ruleY) / 2 - blockH / 2);
   // Split ourselves: pptxgenjs otherwise adds a break after the final line of a multiline rich run.
   const paragraphs = runs.flatMap(({ text, options }) => text.split(/\r\n|\r|\n/).map((text, i, parts) => ({
     text, options: { ...options, breakLine: i < parts.length - 1 },
   })));
-  slide.addText(paragraphs, { x: inch(M.x), y: inch(top), w: inch(width), h: inch(n * S * 1.25), margin: 0, valign: 'top', ...spacing(S, 1.25) });
+  slide.addText(paragraphs, { x: inch(M.x), y: inch(top), w: inch(width), h: inch(n * S * STATEMENT_LH), margin: 0, valign: 'top', ...spacing(S, STATEMENT_LH) });
   if (page.lede) {
     checkWrap(ctx, 'lede', page.lede, LABEL, width, 1);
-    text(slide, page.lede, { x: M.x, y: top + n * S * 1.25 + 24, w: width, h: LABEL * LH });
+    text(slide, page.lede, { x: M.x, y: top + n * S * STATEMENT_LH + 24, w: width, h: LABEL * LH });
   }
-  if (page.note) text(slide, page.note, { x: M.x, y: top + n * S * 1.25 + ledeH + 40, w: width, h: noteN * T.type.body.px * 1.5, px: T.type.body.px, lineHeight: 1.5 });
+  if (page.note) text(slide, page.note, { x: M.x, y: top + n * S * STATEMENT_LH + ledeH + 40, w: width, h: noteN * T.type.body.px * 1.5, px: T.type.body.px, lineHeight: 1.5 });
   if (top < M.top + LABEL || top + blockH > ruleY - M.sourceGap) ctx.warn(`第 ${ctx.n} 頁一句話內容超出可用高度`);
   sparse(ctx, blockH, ruleY - M.sourceGap - TITLE_Y);
 };
@@ -901,7 +911,7 @@ LAYOUT.flow = (slide, ctx) => {
     if (node.label) text(slide, node.label, { x: x + 20, y: boxY + 20, w: nw - 40, h: LABEL * LH, color: focus ? ink : C.textSecondary });
     const headingY = boxY + (node.label ? 76 : 32), headingH = lines(node.heading, T.type.sub.px, nw - 40) * T.type.sub.px * 1.2;
     text(slide, node.heading, { x: x + 20, y: headingY, w: nw - 40, h: headingH, px: T.type.sub.px, color: ink, bold: true });
-    if (node.body) text(slide, node.body, { x: x + 20, y: headingY + headingH + 16, w: nw - 40, h: boxY + boxH - headingY - headingH - 30, px: LABEL, color: focus ? ink : C.textSecondary });
+    if (node.body) text(slide, node.body, { x: x + 20, y: headingY + headingH + 16, w: nw - 40, h: boxY + boxH - headingY - headingH - 30, px: LABEL, color: focus ? ink : C.textSecondary, lineHeight: LH });
     checkWrap(ctx, `visual.nodes[${node.index}].heading`, node.heading, T.type.sub.px, nw - 40, Math.max(0, Math.floor((boxY + boxH - 20 - headingY) / (T.type.sub.px * 1.2))));
     if (node.label) checkWrap(ctx, `visual.nodes[${node.index}].label`, node.label, LABEL, nw - 40, 1);
     if (node.body) checkWrap(ctx, `visual.nodes[${node.index}].body`, node.body, LABEL, nw - 40, Math.max(0, Math.floor((boxY + boxH - 20 - headingY - headingH - 16) / (LABEL * LH))));
@@ -1129,10 +1139,52 @@ function labelStyle(color, bold = false) {
   return `<a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${pt(CHART) * 100}" b="${bold ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill><a:latin typeface="${SLIDE_FONT}"/></a:defRPr></a:pPr></a:p>`;
 }
 
-function pointLabel(i, { color = C.text, bold = false, name = false, value = true, pos = 'r', label, formatCode } = {}) {
+// Per row and period, a vertical offset (fraction of the chart height, negative is up) that keeps slope labels at the
+// same period at least one label line apart. Only labels that collide move: overlapping neighbours merge into a group
+// stacked one line apart around the group's mean, and groups stay inside the plot (the chart box less the category
+// labels below it). Returns null offsets when a period needs more lines than the plot holds, so the caller can warn.
+function labelNudges(m, lo, hi, chartH) {
+  const plotH = chartH - CHART * 2.5, line = CHART * 1.3;
+  const nudges = m.rows.map(() => m.periods.map(() => 0));
+  let crowded = false;
+  m.periods.forEach((_, j) => {
+    const at = m.rows.map((r, i) => ({ i, y: r.values[j] === null ? null : (hi - r.values[j]) / (hi - lo) * plotH }))
+      .filter((p) => p.y !== null).sort((a, b) => a.y - b.y);
+    if (at.length < 2) return;
+    if (at.length * line > plotH + line) { crowded = true; return; }
+    let groups = at.map((p) => ({ members: [p] }));
+    const place = (g) => {
+      const mean = g.members.reduce((sum, p) => sum + p.y, 0) / g.members.length;
+      const span = (g.members.length - 1) * line;
+      g.top = Math.min(Math.max(mean - span / 2, -line / 2), plotH + line / 2 - span);
+      g.bottom = g.top + span;
+    };
+    groups.forEach(place);
+    for (let merged = true; merged;) {
+      merged = false;
+      for (let k = 1; k < groups.length; k++) {
+        if (groups[k].top - groups[k - 1].bottom < line) {
+          groups[k - 1].members.push(...groups[k].members);
+          groups.splice(k, 1);
+          place(groups[k - 1]);
+          merged = true;
+          break;
+        }
+      }
+    }
+    for (const g of groups) g.members.forEach((p, k) => {
+      const dy = g.top + k * line - p.y;
+      if (Math.abs(dy) > 0.5) nudges[p.i][j] = dy / chartH;
+    });
+  });
+  return crowded ? null : nudges;
+}
+
+function pointLabel(i, { color = C.text, bold = false, name = false, value = true, pos = 'r', label, formatCode, dy = 0 } = {}) {
   const tx = label === undefined ? '' : `<c:tx><c:rich>${labelStyle(color, bold).replace('</a:p>', () => `<a:r><a:t>${xml(label)}</a:t></a:r></a:p>`)}</c:rich></c:tx>`;
   const numFmt = formatCode === undefined ? '' : `<c:numFmt formatCode="${xml(formatCode)}" sourceLinked="0"/>`;
-  return `<c:dLbl><c:idx val="${i}"/>${tx}${numFmt}<c:txPr>${labelStyle(color, bold)}</c:txPr><c:dLblPos val="${pos}"/>`
+  const layout = dy ? `<c:layout><c:manualLayout><c:x val="0"/><c:y val="${dy.toFixed(4)}"/></c:manualLayout></c:layout>` : '';
+  return `<c:dLbl><c:idx val="${i}"/>${layout}${tx}${numFmt}<c:txPr>${labelStyle(color, bold)}</c:txPr><c:dLblPos val="${pos}"/>`
     + `<c:showLegendKey val="0"/><c:showVal val="${value ? 1 : 0}"/><c:showCatName val="0"/><c:showSerName val="${name ? 1 : 0}"/>`
     + '<c:showPercent val="0"/><c:showBubbleSize val="0"/><c:separator> </c:separator></c:dLbl>';
 }
@@ -1172,7 +1224,7 @@ function patchChart(s, m) {
     } else if (m.kind === 'slope') {
       m.rows[i].values.forEach((v, j) => {
         if (v === null) return;
-        labels += pointLabel(j, { name: j === 0, pos: j === 0 ? 'l' : 'r', formatCode });
+        labels += pointLabel(j, { name: j === 0, pos: j === 0 ? 'l' : 'r', formatCode, dy: m.nudges?.[i]?.[j] ?? 0 });
         points += pointMarker(j, m.colors[j]);
       });
     } else if (m.kind === 'share' || m.kind === 'sharetrend') {

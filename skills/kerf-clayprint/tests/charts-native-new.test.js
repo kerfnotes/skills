@@ -73,3 +73,25 @@ test('新增原生圖的極小非零值改用 SVG', async () => {
   assert.equal(charts(zip).length, 0);
   assert.equal(warnings.filter((warning) => warning.includes('改用 SVG')).length, 3);
 });
+
+test('原生斜線圖同一期端點太近時把標籤上下錯開，距離夠時不動', async () => {
+  const visuals = [
+    { kind: 'slope', periods: ['2015', '2025'], rows: [{ label: '太陽能', values: [226, 2391] }, { label: '風電', values: [300, 1291] }] },
+    { kind: 'slope', periods: ['2015', '2025'], rows: [{ label: '甲', values: [100, 2000] }, { label: '乙', values: [1900, 200] }] },
+    { kind: 'slope', periods: ['2015', '2025'], rows: [{ label: '遠', values: [2000, 1000] }, { label: '近一', values: [300, 2000] }, { label: '近二', values: [226, 100] }] },
+  ];
+  const zip = await JSZip.loadAsync((await build(pages(visuals))).buffer);
+  const close = await zip.file(charts(zip)[0]).async('string');
+  const offsets = [...close.matchAll(/<c:dLbl><c:idx val="0"\/><c:layout><c:manualLayout><c:x val="0"\/><c:y val="(-?[\d.]+)"\/>/g)].map((m) => Number(m[1]));
+  // 2015: 太陽能 226 sits just below 風電 300, so it moves down and 風電 moves up; 2025 is far apart and has no offsets.
+  assert.equal(offsets.length, 2);
+  assert.ok(offsets[0] > 0 && offsets[1] < 0, JSON.stringify(offsets));
+  assert.doesNotMatch(close, /<c:idx val="1"\/><c:layout>/);
+  const apart = await zip.file(charts(zip)[1]).async('string');
+  assert.doesNotMatch(apart, /<c:manualLayout>/);
+  // Only the two colliding 2015 labels move; the far one above them stays where PowerPoint puts it.
+  const three = (await zip.file(charts(zip)[2]).async('string')).split('<c:ser>').slice(1);
+  assert.doesNotMatch(three[0], /<c:idx val="0"\/><c:layout>/);
+  assert.match(three[1], /<c:idx val="0"\/><c:layout>/);
+  assert.match(three[2], /<c:idx val="0"\/><c:layout>/);
+});

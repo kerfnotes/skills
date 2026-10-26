@@ -2,7 +2,7 @@
 
 報告供讀者連續閱讀、轉寄與列印；先寫清楚每節判斷，再選擇能支撐它的段落、表格或圖。內容寫在 `report.json`，由 `scripts/report.js` 產生 HTML，`scripts/pdf.js` 印成 PDF。元件和簡報一樣只放有內容的，需要但原稿沒給的資料，在原位標「未提供」。
 
-完整示例見 [examples/report.json](../examples/report.json) 與產物 [examples/report.html](../examples/report.html)，原稿見 [explain-script.md](../evals/fixtures/explain-script.md)：三節加目錄、封面橫幅、自動編號的兩張圖與一張表（其中一張圖 `wide: true`）、一段引言。兩張圖的資料在 [時間圖 JSON](../examples/report-time.json) 與 [品質圖 JSON](../examples/report-quality.json)。[assets/report.html](../assets/report.html) 是同一套元件的 HTML 原型，供手工修改既有報告時參考。
+完整示例見 [examples/report.json](../examples/report.json) 與產物 [examples/report.html](../examples/report.html)，原稿見 [explain-script.md](../evals/fixtures/explain-script.md)：三節加目錄、封面橫幅、一張 `wide: true` 的圖、一張表、帶目前步驟的流程與一段引言。圖的資料在 [時間圖 JSON](../examples/report-time.json)；處理件數與遺漏件數不是可比較的類別，所以用表而不畫成同一張長條圖。[assets/report.html](../assets/report.html) 是同一套元件的 HTML 原型，供手工修改既有報告時參考。
 
 ## 流程
 
@@ -12,6 +12,8 @@
 2. 寫 `out/report.json`：封面、摘要，再依判斷寫各節的元件。摘要左側放建議，右側只放支撐它的數字。欄位見下方〈report.json〉。有數據才放圖：每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），圖表 JSON 必須填 `source`；無數字時使用段落、清單或流程。
 3. 產生 HTML：`node scripts/report.js out/report.json out/report.html`，結尾印「完成：N 節、M 張圖，K 項警告」（節數含摘要）。
 4. 驗收：`node evals/check-report.mjs out/report.html script.md out/report.json`，核對所有可見文字與 SVG 數字、未填的 `{{…}}` 示意文字，以及每張圖都有含「來源」的圖說。座標軸刻度（`data-tick`）和簡報驗收一樣不核對，產生器加的「圖 N」「表 N」標籤（`data-label`）也不核對；其他數字，包括摘要、引言與資料標籤，都必須出現在原稿，或在同節寫出可核對的加減算式。範例：`node scripts/report.js examples/report.json out/report.html`，再 `node evals/check-report.mjs out/report.html evals/fixtures/explain-script.md examples/report.json`。
+
+   驗收器不判斷圖表是否適合、內容是否重複。逐節人工確認：同一張圖比較的是同類、可比較的項目（總量與其中的子集分開呈現，例如用表）；同一組數字除了摘要以外，只在一處證據出現，不在相鄰的段落、圖與表重複。
 
    圖表含模型推導的比例、轉換率、差額或中位數時，提供生成規格：`node evals/check-report.mjs out/report.html script.md out/report.json`。外部圖表相對於 `report.json` 解析；驗收先核對原值，再重建並比對每張 SVG 及其位置，合法衍生標籤只在該圖有效。生成與驗收使用相同設計層，修改圖表或排列後須重產 HTML。雙檔舊入口仍可使用；詳細邊界見 [evals/README.md](../evals/README.md#報告數字驗收)。
 5. 印 PDF：`node scripts/pdf.js out/report.html out/print`（見下方〈列印 PDF〉）。逐條處理警告後重印，再逐頁看 `page-NN.png`。找不到瀏覽器時 PDF 標「受阻」並附原因，HTML 與驗收照常交付。
@@ -89,7 +91,7 @@ node scripts/pdf.js out/report.html out/print
 
 ```text
 PDF：…/out/print/report.pdf；每頁 PNG 與 sheet.png 在 …/out/print
-印出 4 頁（A4）；填滿率 79／98／89／41%。
+印出 3 頁（A4）；填滿率 80／88／98%。
 ```
 
 填滿率是每頁最後一列墨水的位置占版心高度的比例：從上邊界 12 mm 量到離紙底 15 mm，頁尾不算。第 1 頁從紙張上緣算起，因為封面印到紙邊。末頁不檢查填滿率。這與簡報按版型估算內容自然高度的填滿提示不同；兩者都不是資訊量或理解程度的直接量測，70% 也不是必須達成的配額。
@@ -106,5 +108,6 @@ PDF：…/out/print/report.pdf；每頁 PNG 與 sheet.png 在 …/out/print
 | `第 N 頁內容超出右邊界約 M mm：…` | 有墨水伸到離右紙邊 14 mm 以外；Chrome 遇到右側溢出會整頁縮小。減少表格欄數或設 `wide: true`。封面橫幅與色線本來就印到紙邊，不算溢出。 |
 | `圖 N 的標題在第 A 頁、來源在第 B 頁：…` | 圖被切開：標籤所在頁和其後第一行「來源」不同頁。縮短圖上方的段落，或改小圖。 |
 | `表 N 跨第 A–B 頁：…` | 八列以內的表被切開。只檢查填了 `source` 的表；超過八列的表本來就可分頁。縮短表上方的段落。 |
+| `第 N 節最後一段落在第 P 頁開頭，和本節其他內容分開：…` | 節末的段落或引言被擠到下一頁頂端，讀者翻頁才看到本節結論。縮短本節前面的元件、把這句移到節首或併入前一段。 |
 
 印完逐頁看 PNG，尤其留意多頁表格、圖說與圖是否分離，以及封面與章節開頭的位置。轉寄前在手機寬度看一次。

@@ -64,9 +64,10 @@ printf 'fake sheet' > "$sheet"
   return { bin, fixtures };
 }
 
-function run(dir, args, env = {}, pages) {
+function run(dir, args, env = {}, pages, text) {
   const { bin, fixtures } = shims(dir);
   if (pages) pages.forEach((page, i) => writeFileSync(join(fixtures, `${i + 1}.pgm`), page));
+  if (text) writeFileSync(join(fixtures, 'text'), text);
   const { CLAYPRINT_CHROME, ...rest } = process.env;
   return spawnSync(process.execPath, [script, ...args], {
     encoding: 'utf8', env: { ...rest, PATH: `${bin}:/usr/bin:/bin`, FAKE_LOG: join(dir, 'calls'), FAKE_FIXTURES: fixtures, ...env },
@@ -161,7 +162,7 @@ test('--letter --paper clay prints a marked temporary copy, deletes it, and skip
   try {
     const html = join(dir, 'brief.html'), out = join(dir, 'print');
     // Nine body rows: a table that long may break across pages.
-    const source = readFileSync(example, 'utf8').replace(/(<tbody>\n)(<tr>[^\n]*\n)/, (_, open, row) => open + row.repeat(7));
+    const source = readFileSync(example, 'utf8').replace(/(<tbody>\n)(<tr>[^\n]*\n)/, (_, open, row) => open + row.repeat(8));
     writeFileSync(html, source);
     const result = run(dir, [html, out, '--letter', '--paper', 'clay']);
     assert.equal(result.status, 0, result.stderr);
@@ -227,6 +228,46 @@ test('findBrowser() tries CLAYPRINT_CHROME, then PATH, then install locations', 
       assert.equal(findBrowser({ platform: 'win32', env: { PATH: '', ProgramFiles: 'C:\\Program Files' }, exists: (p) => p === exe }), exe);
     }
     assert.equal(findBrowser({ platform: 'linux', env: { PATH: '' }}), null);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a section whose closing callout or paragraph opens a page is flagged, inline markup included; one that stays with its section is not', { skip: process.platform === 'win32' && 'POSIX shell shims' }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
+  try {
+    const html = join(dir, 'report.html');
+    writeFileSync(html, `<main>
+<section aria-labelledby="a">
+<header class="section-heading"><h2 id="a">甲節</h2></header>
+<p>甲節正文。</p>
+<aside class="callout">
+  <p>先統一<strong>收件欄位</strong>，再固定交接順序。</p>
+</aside>
+</section>
+<section aria-labelledby="b">
+<header class="section-heading"><h2 id="b">乙節</h2></header>
+<p>乙節最後一段 &amp; 收尾。</p>
+<footer class="sources">
+<h3>來源與附註</h3>
+<p>來源：試行稿</p>
+</footer>
+</section>
+<section aria-labelledby="c">
+<header class="section-heading"><h2 id="c">丙節</h2></header>
+<p>丙節只有一段。</p>
+</section>
+</main>`);
+    const page = pgm([top + 10, bottom - 10]);
+    const flagged = run(dir, [html, join(dir, 'print')], {}, [page, page, page],
+      '封面\f甲節\n甲節正文。\f先統一收件欄位，再固定\n交接順序。\n乙節\n乙節最後一段 & 收尾。\n丙節\n丙節只有一段。\f');
+    assert.equal(flagged.status, 0, flagged.stderr);
+    assert.match(flagged.stderr, /第 1 節最後一段落在第 3 頁開頭，和本節其他內容分開/);
+    assert.doesNotMatch(flagged.stderr, /第 [23] 節最後一段/);
+
+    const together = run(mkdtempSync(join(dir, 'b-')), [html, join(dir, 'print2')], {}, [page, page, page],
+      '封面\f甲節\n甲節正文。\n先統一收件欄位，再固定交接順序。\f乙節\n乙節最後一段 & 收尾。\f丙節最後\f');
+    assert.doesNotMatch(together.stderr, /最後一段落在/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

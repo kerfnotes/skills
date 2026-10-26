@@ -73,6 +73,9 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 .diagnosis li, .flow li { padding: 9px 0; border-bottom: 1px solid var(--cp-line); }
 .diagnosis strong, .flow strong { display: block; }
 .flow li::marker { color: var(--cp-accent); font-weight: 700; }
+/* With a current step (process focus), only it keeps the accent, as in the deck's process layout. */
+.flow:has([aria-current]) li::marker { color: var(--cp-muted); }
+.flow li[aria-current]::marker, .flow [aria-current] strong { color: var(--cp-accent); }
 .missing { display: inline-block; padding: 0 .4em; border: 1px solid var(--cp-muted); color: var(--cp-muted); font-size: var(--cp-small); }
 @media (max-width: 640px) {
   body { padding: 0 18px 44px; }
@@ -154,6 +157,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   /* SVG text is in viewBox units (979 wide); 24 units at 146 mm is about 10 pt. */
   .chart-scroll svg [data-tick] { font-size: 24px; }
   .sources, .exhibit-note { break-before: avoid; }
+  .sources h3 { break-after: avoid; }
   a { color: inherit; }
 }
 </style>
@@ -175,7 +179,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 <h2>目錄</h2>
 <ol>
 <li><a href="#time">時間結果：試行登錄時間為 18 小時，低於 24 小時目標</a></li>
-<li><a href="#process">作業方法：欄位、交接與檢核要並列建立</a></li>
+<li><a href="#process">作業方法：重填與口頭交接是兩個卡點，先統一欄位再固定交接</a></li>
 <li><a href="#decide">下一步：先確認欄位與交接責任，再進入下一輪試行</a></li>
 </ol>
 </nav>
@@ -199,60 +203,49 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 <h2 id="time">試行登錄時間為 18 小時，低於 24 小時目標</h2>
 <p>比較的是從收件到完成登錄的時間，範圍為單一館區。</p>
 </header>
-<p>調整前需要 36 小時；這次試行把目標設為 24 小時，實際完成時間為 18 小時。這些數字支持在同一館區持續觀察，但還不能代表其他館區也會得到相同結果。</p>
-<figure>
+<p>圖中把目標與兩個觀察值分開：24 小時是試行設定的目標，不是量測結果。這是單一館區試行週的紀錄，還不能代表其他館區也會得到相同結果。</p>
+<figure class="wide">
 <p class="exhibit-title"><span class="exhibit-label" data-label>圖 1</span>登錄時間比較</p>
 <div class="chart-scroll" tabindex="0" role="region" aria-label="登錄時間比較，可橫向捲動">
 <svg role="img" aria-label="登錄時間比較" xmlns="http://www.w3.org/2000/svg" width="979" height="360" viewBox="0 0 979 360" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><line x1="116" y1="0" x2="116" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="116" y1="309" x2="116" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="116" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">0</text><line x1="320.05" y1="0" x2="320.05" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="320.05" y1="309" x2="320.05" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="320.05" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">10</text><line x1="524.1" y1="0" x2="524.1" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="524.1" y1="309" x2="524.1" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="524.1" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">20</text><line x1="728.15" y1="0" x2="728.15" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="728.15" y1="309" x2="728.15" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="728.15" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">30</text><line x1="932.2" y1="0" x2="932.2" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="932.2" y1="309" x2="932.2" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="932.2" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">40</text><line x1="116" y1="309" x2="932.2" y2="309" stroke="#8F8D86" stroke-width="1"/><rect x="116" y="29.5" width="734.58" height="44" fill="#8F8D86"/><text x="0" y="59.9" font-size="24" fill="#141413">調整前</text><text x="860.58" y="59.9" font-size="24" fill="#141413">36</text><rect x="116" y="132.5" width="489.72" height="44" fill="#8F8D86"/><text x="0" y="162.9" font-size="24" fill="#141413">試行目標</text><text x="615.72" y="162.9" font-size="24" fill="#141413">24</text><rect x="116" y="235.5" width="367.29" height="44" fill="#C2553A"/><text x="0" y="265.9" font-size="24" fill="#141413">試行實際</text><text x="493.29" y="265.9" font-size="24" fill="#C2553A" font-weight="600">18</text><line x1="116" y1="0" x2="116" y2="309" stroke="#8F8D86" stroke-width="1"/></svg>
 </div>
 <figcaption>單位：小時｜期間：調整前與試行週｜附註：24 小時是試行目標，非觀察值。｜來源：青林標本館流程試行稿（虛構示意資料）</figcaption>
 </figure>
-<div class="table-scroll" tabindex="0" role="region" aria-label="同一流程的時間對照，可橫向捲動">
-<table><caption><span class="exhibit-label" data-label>表 1</span>同一流程的時間對照</caption>
-<thead><tr><th scope="col">口徑</th><th scope="col" class="num">時間</th><th scope="col">性質</th></tr></thead>
-<tbody>
-<tr><th scope="row">調整前</th><td class="num">36 小時</td><td>觀察值</td></tr>
-<tr><th scope="row">試行目標</th><td class="num">24 小時</td><td>目標值</td></tr>
-<tr class="emphasis"><th scope="row">試行實際</th><td class="num">18 小時</td><td>觀察值</td></tr>
-</tbody>
-</table>
-</div>
-<p class="exhibit-note">來源：青林標本館流程試行稿（虛構示意資料）</p>
 </section>
 
 <section aria-labelledby="process">
 <header class="section-heading">
 <p class="eyebrow">作業方法</p>
-<h2 id="process">欄位、交接與檢核要並列建立</h2>
-<p>試行先處理反覆填寫與等待口頭說明，再固定後續檢核口徑。</p>
+<h2 id="process">重填與口頭交接是兩個卡點，先統一欄位再固定交接</h2>
+<p>流程依序為收件、交接檢核、正式登錄、結果回看；試行目前停在交接檢核。</p>
 </header>
-<p>同一資訊反覆登錄，讓收件欄位先成為統一工作的起點；下一站等待說明，則要求交接順序和責任都明確。品質檢核要沿用相同口徑，不應只看時間。</p>
 <ul class="diagnosis">
-<li><strong>欄位重填</strong><span>同一資訊反覆登錄；先統一收件欄位。</span></li>
-<li><strong>口頭交接</strong><span>下一站等待說明；固定交接順序。</span></li>
+<li><strong>欄位重填</strong><span>同一資訊反覆登錄。改法：先統一收件欄位。</span></li>
+<li><strong>口頭交接</strong><span>下一站等待說明。改法：固定交接順序。</span></li>
 </ul>
-<figure class="wide">
-<p class="exhibit-title"><span class="exhibit-label" data-label>圖 2</span>試行週處理與品質檢核</p>
-<div class="chart-scroll" tabindex="0" role="region" aria-label="試行週處理與品質檢核，可橫向捲動">
-<svg role="img" aria-label="試行週處理與品質檢核" xmlns="http://www.w3.org/2000/svg" width="979" height="360" viewBox="0 0 979 360" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><line x1="116" y1="0" x2="116" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="116" y1="309" x2="116" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="116" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">0</text><line x1="276.36" y1="0" x2="276.36" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="276.36" y1="309" x2="276.36" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="276.36" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">50</text><line x1="436.72" y1="0" x2="436.72" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="436.72" y1="309" x2="436.72" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="436.72" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">100</text><line x1="597.08" y1="0" x2="597.08" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="597.08" y1="309" x2="597.08" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="597.08" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">150</text><line x1="757.44" y1="0" x2="757.44" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="757.44" y1="309" x2="757.44" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="757.44" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">200</text><line x1="917.8" y1="0" x2="917.8" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="917.8" y1="309" x2="917.8" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="917.8" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">250</text><line x1="116" y1="309" x2="917.8" y2="309" stroke="#8F8D86" stroke-width="1"/><rect x="116" y="55.25" width="769.73" height="44" fill="#C2553A"/><text x="0" y="85.65" font-size="24" fill="#141413">試行處理</text><text x="895.73" y="85.65" font-size="24" fill="#C2553A" font-weight="600">240</text><rect x="116" y="209.75" width="0" height="44" fill="#8F8D86"/><text x="0" y="240.15" font-size="24" fill="#141413">遺漏欄位</text><text x="126" y="240.15" font-size="24" fill="#141413">0</text><line x1="116" y1="0" x2="116" y2="309" stroke="#8F8D86" stroke-width="1"/></svg>
-</div>
-<figcaption>單位：件｜期間：試行週｜附註：240 件是處理總量，0 件是遺漏欄位件數，兩者不是互斥分類。｜來源：青林標本館流程試行稿（虛構示意資料）</figcaption>
-</figure>
-<p>試行週共處理 240 件，遺漏欄位為 0 件。這是同一館區試行週的紀錄；接下來仍須回看登錄時間。</p>
 <ol class="flow">
-<li><strong>收件</strong><span>先統一收件欄位。</span></li>
-<li aria-current="step"><strong>交接檢核</strong><span>目前所在階段，核對交接。</span></li>
+<li><strong>收件</strong><span>使用統一的收件欄位。</span></li>
+<li aria-current="step"><strong>交接檢核</strong><span>目前階段：依固定順序核對交接。</span></li>
 <li><strong>正式登錄</strong><span>依固定順序完成登錄。</span></li>
-<li><strong>結果回看</strong><span>以同一口徑檢核時間與品質。</span></li>
+<li><strong>結果回看</strong><span>以相同口徑檢核時間與品質。</span></li>
 </ol>
-<aside class="callout"><p>先統一收件欄位，再固定交接順序，最後以相同口徑檢核登錄結果。</p></aside>
+<div class="table-scroll" tabindex="0" role="region" aria-label="試行週的品質紀錄，可橫向捲動">
+<table><caption><span class="exhibit-label" data-label>表 1</span>試行週的品質紀錄</caption>
+<thead><tr><th scope="col">項目</th><th scope="col" class="num">件數</th></tr></thead>
+<tbody>
+<tr><th scope="row">試行處理</th><td class="num">240 件</td></tr>
+<tr><th scope="row">遺漏欄位</th><td class="num">0 件</td></tr>
+</tbody>
+</table>
+</div>
+<p class="exhibit-note">附註：兩項不是互斥分類；0 件是 240 件中遺漏欄位的件數。｜來源：青林標本館流程試行稿（虛構示意資料）</p>
+<aside class="callout"><p>資料欄位、作業交接與品質檢核並列建立，以相同口徑檢核登錄結果。</p></aside>
 </section>
 
 <section aria-labelledby="decide">
 <header class="section-heading">
 <p class="eyebrow">下一步</p>
 <h2 id="decide">先確認欄位與交接責任，再進入下一輪試行</h2>
-<p>把原稿已指定的工作與負責單位整理成可追蹤的決議事項。</p>
 </header>
 <div class="table-scroll" tabindex="0" role="region" aria-label="下一輪試行的工作安排，可橫向捲動">
 <table class="decisions"><caption>下一輪試行的工作安排</caption>
@@ -267,7 +260,6 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 <footer class="sources">
 <h3>來源與附註</h3>
 <p>來源：〈青林標本館登錄流程改善〉原稿，虛構示意資料。數字與責任分工均依原稿整理。</p>
-<p>圖中的試行目標與實際結果分開呈現；後續試行結果仍需再檢核。</p>
 </footer>
 </section>
 </main>

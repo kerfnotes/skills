@@ -113,7 +113,7 @@
 | `panels` | 不支援 | 恰好 2 格，每格 `note` 至多 3 行 |
 | `footnotes` | 不支援 | 不限則數，9 pt 依頁寬換行，佔用內容區下方高度 |
 
-`summary` 6 格與 `close` 14 列是標題一行、沒有 `lede` 時的上限：摘要每格只放數字與標籤；每格加 `note` 時約放 4 格。兩行標題或加 `lede` 會少一點高度，依警告刪格或拆頁。
+`summary` 規格是 2～3 格：現場簡報標題一行時，3 格都加 `note` 仍放得下；標題兩行或加 `lede` 時，每格都加 `note` 只放得下 2 格，否則刪 `note`、把比較基準移到 `body`，或刪格。閱讀型簡報字級較小，3 格加 `note` 配兩行標題仍放得下。`close` 14 列是標題一行、沒有 `lede` 時的上限。依警告刪格、刪列或拆頁。
 
 ### 新欄位
 
@@ -177,6 +177,6 @@
 
 ## 預覽與交付
 
-有 PowerPoint 的 Mac 使用 PowerPoint；沒有 PowerPoint 但有 LibreOffice（`soffice`）時使用 LibreOffice。執行 `node scripts/preview.js out/deck.pptx out/preview`，需要 `pdftoppm`、`ffmpeg`，輸出 `page-N.png`、`sheet.png`（整份概覽）與 `deck.pdf`。LibreOffice 可能替換字型，正式字型仍需在 PowerPoint 複查。兩者都沒有時交代安裝需求；[SVG／PNG 圖表預覽](charts.md#共通欄位與輸出)可驗圖表，整頁版面仍標未驗。
+有 PowerPoint 的 Mac 使用 PowerPoint；沒有 PowerPoint，或 PowerPoint 自動化失敗（例如另一份簡報開著對話框）時改用 LibreOffice（`soffice`）。執行 `node scripts/preview.js out/deck.pptx out/preview`，需要 `pdftoppm`、`ffmpeg`，輸出 `page-N.png`、`sheet.png`（整份概覽）與 `deck.pdf`。LibreOffice 可能替換字型，正式字型仍需在 PowerPoint 複查。兩者都不可用時腳本印出原因並以結束碼 1 結束，簡報檔保留，預覽標「受阻」；[SVG／PNG 圖表預覽](charts.md#共通欄位與輸出)可驗圖表，整頁版面仍標未驗。
 
 現場簡報每張內容頁的 `notes` 寫 1～3 句要說的話與資料限制，計算行另列；閱讀型簡報把這些話寫進頁面。預覽逐頁核對主張、強調項目、口徑、空間分配與閱讀順序，找出末行單一中文字、過短末行或不均勻斷行。0 項容量警告只表示估算未偵測到溢出，換行品質需看圖。交付記錄最弱頁修改前後及理由；列出實際輸出的原生圖與 SVG，將「實際在 PowerPoint 改一個原生圖數值」標為完成或未驗。依 [四層交付證據](../SKILL.md#交付證據)分列程式核對、實際預覽、原生編輯與讀者理解，未收到目標讀者回饋時只回報內容檢視。

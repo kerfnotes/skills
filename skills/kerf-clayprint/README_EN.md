@@ -83,7 +83,7 @@ node scripts/pdf.js examples/showcase/ai-exports-report.html out/ai-exports
 | Numbers | Every number on screen must appear in the script or come from an add/subtract line on the same page; otherwise the build stops | `evals/check.mjs`, `evals/check-report.mjs` |
 | Fit | Estimates whether text fits each box using the design layer's glyph widths; warns on orphans and overflow instead of shrinking type | `scripts/pptx.js` |
 | Preview | Renders each page and a contact sheet through PowerPoint or LibreOffice, then reviews claim, emphasis and reading order page by page | `scripts/preview.js` |
-| Print | Prints the report to PDF with Chrome, Edge or another Chromium browser and warns about underfilled pages, split figures or tables, and right-edge overflow | `scripts/pdf.js` |
+| Print | Prints the report to PDF with Chrome, Edge or another Chromium browser and warns about underfilled pages, split figures or tables, a section ending stranded on the next page, and right-edge overflow | `scripts/pdf.js` |
 
 Delivery separates four evidence layers: programmatic checks, actual previews, editing a native chart in PowerPoint, and target-reader comprehension. Checks cover supported structure, source-number matching and fit diagnostics, not full fact checking. Record the software and viewing conditions for previews; native editing requires actually changing a value in PowerPoint. Without target-reader feedback, report content review and leave comprehension unverified. Mark unavailable tools or viewing conditions as blocked or unverified and retain completed artifacts. See [delivery evidence](SKILL.md#交付證據) (Traditional Chinese).
 
