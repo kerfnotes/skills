@@ -79,6 +79,9 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 .diagnosis li, .flow li { padding: 9px 0; border-bottom: 1px solid var(--cp-line); }
 .diagnosis strong, .flow strong { display: block; }
 .flow li::marker { color: var(--cp-accent); font-weight: 700; }
+/* With a current step (process focus), only it keeps the accent, as in the deck's process layout. */
+.flow:has([aria-current]) li::marker { color: var(--cp-muted); }
+.flow li[aria-current]::marker, .flow [aria-current] strong { color: var(--cp-accent); }
 .missing { display: inline-block; padding: 0 .4em; border: 1px solid var(--cp-muted); color: var(--cp-muted); font-size: var(--cp-small); }
 @media (max-width: 640px) {
   body { padding: 0 18px 44px; }
@@ -160,6 +163,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   /* SVG text is in viewBox units (979 wide); 24 units at 146 mm is about 10 pt. */
   .chart-scroll svg [data-tick] { font-size: ${tokens.screen?.type?.chart ?? 24}px; }
   .sources, .exhibit-note { break-before: avoid; }
+  .sources h3 { break-after: avoid; }
   a { color: inherit; }
 }`;
 }

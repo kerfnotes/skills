@@ -72,7 +72,7 @@ node scripts/svg.js examples/rank.json out/install-check/rank.svg
 node scripts/png.js out/install-check/rank.svg out/install-check/rank.png
 ```
 
-核心安裝成功需同時符合：所有命令結束碼為 0；測試有實際執行且沒有失敗；checker 回報範例為 9 頁簡報、4 節報告與 2 張圖；三個輸出檔存在且非空。檢查 PPTX 的 ZIP 內容確實有 9 個 `ppt/slides/slideN.xml`，SVG 可解析，PNG 可讀。中文字型的測試若因缺字型跳過，另列未驗項目。
+核心安裝成功需同時符合：所有命令結束碼為 0；測試有實際執行且沒有失敗；checker 回報範例為 9 頁簡報、4 節報告與 1 張圖；三個輸出檔存在且非空。檢查 PPTX 的 ZIP 內容確實有 9 個 `ppt/slides/slideN.xml`，SVG 可解析，PNG 可讀。中文字型的測試若因缺字型跳過，另列未驗項目。
 
 ## 4. 整頁預覽
 

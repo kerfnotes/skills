@@ -83,7 +83,7 @@ node scripts/pdf.js examples/showcase/ai-exports-report.html out/ai-exports
 | 核數字 | 畫面上每個數字都要出現在原稿，或寫成同頁可核對的加減算式；找不到就擋下 | `evals/check.mjs`、`evals/check-report.mjs` |
 | 估容量 | 依設計層字寬估算每格放不放得下，警告孤字與溢出，不自動縮字 | `scripts/pptx.js` |
 | 看預覽 | 用 PowerPoint 或 LibreOffice 輸出每頁 PNG 與整份概覽，逐頁看主張、強調與閱讀順序 | `scripts/preview.js` |
-| 印報告 | 用 Chrome、Edge 等瀏覽器把報告印成 PDF，警告填滿率不足、圖表被切開與右側溢出 | `scripts/pdf.js` |
+| 印報告 | 用 Chrome、Edge 等瀏覽器把報告印成 PDF，警告填滿率不足、圖表被切開、節末段落落單與右側溢出 | `scripts/pdf.js` |
 
 交付分開回報四層證據：程式核對、實際預覽、PowerPoint 原生圖表編輯及目標讀者理解。程式只核對支援的結構、原稿數字及容量診斷，不是完整事實查核；預覽須記錄軟體與觀看條件，原生編輯須實際在 PowerPoint 改數值。沒有目標讀者回饋時只回報內容檢視，理解仍標未驗；缺少工具或觀看條件時保留已完成產物並列明受阻或未驗項目。見[交付證據](SKILL.md#交付證據)。
 

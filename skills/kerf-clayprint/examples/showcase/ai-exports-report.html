@@ -73,6 +73,9 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 .diagnosis li, .flow li { padding: 9px 0; border-bottom: 1px solid var(--cp-line); }
 .diagnosis strong, .flow strong { display: block; }
 .flow li::marker { color: var(--cp-accent); font-weight: 700; }
+/* With a current step (process focus), only it keeps the accent, as in the deck's process layout. */
+.flow:has([aria-current]) li::marker { color: var(--cp-muted); }
+.flow li[aria-current]::marker, .flow [aria-current] strong { color: var(--cp-accent); }
 .missing { display: inline-block; padding: 0 .4em; border: 1px solid var(--cp-muted); color: var(--cp-muted); font-size: var(--cp-small); }
 @media (max-width: 640px) {
   body { padding: 0 18px 44px; }
@@ -87,7 +90,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 @page {
   size: A4; margin: 12mm 14mm 15mm 22mm;
   /* --report-title carries its own separator (report.js writes '報告名 | '), so without it the footer is just 2 / 4. */
-  @bottom-right { content: var(--report-title, "") counter(page) " / " counter(pages); font: 7pt var(--cp-font); color: var(--cp-muted); padding-right: 11mm; }
+  @bottom-right { content: var(--report-title, "") counter(page) " / " counter(pages); font: 9pt var(--cp-font); color: var(--cp-muted); padding-right: 11mm; }
 }
 /* The first page has no margin so the cover band can bleed, and no footer. */
 @page :first { margin: 0; @bottom-right { content: none; } }
@@ -99,8 +102,9 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   :root {
     --cp-print-indent: 28mm; --cp-print-gutter: 11mm; --cp-print-bottom: 15mm;
     --cp-print-text-left: 50mm; --cp-print-text-right: 25mm;
-    --cp-print-body: 10.5pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;
-    --cp-print-sub: 12pt; --cp-print-small: 7pt; --cp-print-cover: 30pt; --cp-print-summary: 16pt;
+    --cp-body: 11pt; --cp-small: 9pt; --cp-sub: 12pt; --cp-title-size: 24pt; --cp-display: 30pt;
+    --cp-print-body: 11pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;
+    --cp-print-sub: 12pt; --cp-print-small: 9pt; --cp-print-cover: 30pt; --cp-print-summary: 16pt;
   }
   html { background: #fff; font-size: var(--cp-print-body); line-height: var(--cp-print-leading); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   html[data-paper="clay"] { background: var(--cp-paper); }
@@ -108,6 +112,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   html[data-size="letter"] body { page: letter; }
   html[data-paper="clay"][data-size="letter"] body { page: clay-letter; }
   body { max-width: none; padding: 0 var(--cp-print-gutter) 0 var(--cp-print-indent); }
+  th, td { font-size: var(--cp-print-body); }
+  thead th { font-size: var(--cp-print-body); }
   h2 { font-size: var(--cp-print-heading); }
   h3 { font-size: var(--cp-print-sub); }
   /* The summary claim sits in the narrow left column next to the metrics: section-heading size would wrap it about 9 characters a line. */
@@ -148,9 +154,10 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .chart-scroll, .table-scroll { overflow: visible; box-shadow: none; }
   /* Overrides the narrow-screen min-width above: the A4 column is about 510 CSS px. */
   .chart-scroll svg { min-width: 0; max-width: 100%; }
-  /* SVG text is in viewBox units (979 wide); 19 units at 146 mm is about 8 pt. */
-  .chart-scroll svg [data-tick] { font-size: 19px; }
+  /* SVG text is in viewBox units (979 wide); 24 units at 146 mm is about 10 pt. */
+  .chart-scroll svg [data-tick] { font-size: 24px; }
   .sources, .exhibit-note { break-before: avoid; }
+  .sources h3 { break-after: avoid; }
   a { color: inherit; }
 }
 </style>

@@ -30,9 +30,9 @@ test('報告範本不強制表格最小寬度，也不使用粗側邊框', () =>
   assert.doesNotMatch(css, /border-(?:left|right)\s*:\s*(?:[3-9]|\d{2,})px/);
 });
 
-test('範例報告可核對原稿及兩張圖的來源', () => {
+test('範例報告可核對原稿及圖表來源', () => {
   const result = checkReport(file('examples/report.html'), file('evals/fixtures/explain-script.md'));
-  assert.equal(result.figures, 2);
+  assert.equal(result.figures, 1);
   const run = spawnSync(process.execPath, ['evals/check-report.mjs', 'examples/report.html', 'evals/fixtures/explain-script.md'], { encoding: 'utf8' });
   assert.equal(run.status, 0, run.stderr);
 });
@@ -67,12 +67,12 @@ test('theme-css keeps CRLF files in CRLF', () => {
 
 test('report.json 產生的範例報告通過原稿核對，樣式來自生效設計層', () => {
   const { html, figures, warnings } = buildReport(JSON.parse(file('examples/report.json')), { baseDir: 'examples' });
-  assert.equal(figures, 2);
+  assert.equal(figures, 1);
   assert.deepEqual(warnings, []);
   assert.equal(cssOf(html), themeCss());
   assert.match(html, /<nav class="toc"/);
   assert.match(html, /data-tick="1"/);
-  assert.equal(checkReport(html, file('evals/fixtures/explain-script.md')).figures, 2);
+  assert.equal(checkReport(html, file('evals/fixtures/explain-script.md')).figures, 1);
   const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-report-'));
   try {
     const run = spawnSync(process.execPath, ['scripts/report.js', 'examples/report.json', path.join(dir, 'r.html')], { encoding: 'utf8' });
@@ -152,7 +152,7 @@ test('報告名寫在根元素的 CSS 變數，給列印頁尾用，並跳脫引
 test('圖表區塊：圖、表各自編號，標籤與標題在上，註與來源在下', () => {
   const html = file('examples/report.html');
   const figures = html.match(/<figure[\s\S]*?<\/figure>/g);
-  assert.equal(figures.length, 2);
+  assert.equal(figures.length, 1);
   figures.forEach((f, i) => {
     const head = f.indexOf(`<span class="exhibit-label" data-label>圖 ${i + 1}</span>`);
     assert.ok(head > 0 && head < f.indexOf('<svg'), `圖 ${i + 1} 標籤在圖上方`);
@@ -162,8 +162,8 @@ test('圖表區塊：圖、表各自編號，標籤與標題在上，註與來�
   assert.match(figures[0], /class="exhibit-title"><span class="exhibit-label" data-label>圖 1<\/span>登錄時間比較<\/p>/);
   assert.match(figures[0], /<figcaption>[^<]*附註：24 小時是試行目標/);
   assert.doesNotMatch(figures[0], /<figcaption>登錄時間比較/);
-  assert.match(html, /<caption><span class="exhibit-label" data-label>表 1<\/span>同一流程的時間對照<\/caption>/);
-  assert.match(html, /<\/table>\n<\/div>\n<p class="exhibit-note">來源：/);
+  assert.match(html, /<caption><span class="exhibit-label" data-label>表 1<\/span>試行週的品質紀錄<\/caption>/);
+  assert.match(html, /<\/table>\n<\/div>\n<p class="exhibit-note">附註：[^<]*｜來源：/);
 
   // 圖與表分開從 1 起算；沒有標題的表格也編號；compare 不編號；註與來源只在有填時出現。
   const chart = { kind: 'rank', source: '原稿', rows: [{ label: '甲', value: 1 }] };

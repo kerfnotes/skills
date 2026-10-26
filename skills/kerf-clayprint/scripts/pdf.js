@@ -85,6 +85,28 @@ function splitExhibits(pages, html) {
   return warnings;
 }
 
+// A section's closing paragraph or callout that opens a page sits apart from the rest of its section, usually because
+// the block before it moved whole to that page or filled the one before. Matched on the first characters without spaces.
+const plain = (t) => t.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+  .replace(/&amp;/g, '&').replace(/\s+/g, '');
+function strandedEndings(pages, html) {
+  const starts = pages.map((text) => plain(text));
+  const warnings = [];
+  [...html.matchAll(/<section\b(?![^>]*class="summary")[^>]*>([\s\S]*?)<\/section>/g)].forEach(([, body], i) => {
+    const rest = body.replace(/<footer class="sources">[\s\S]*$/, '').trimEnd();
+    // The closing block must be a paragraph or a callout; its text may carry inline markup.
+    if (!/<\/p>\s*(?:<\/aside>)?$/.test(rest)) return;
+    const last = rest.slice(rest.lastIndexOf('<p'));
+    const key = plain(last).slice(0, 12), heading = plain(/<h2\b[^>]*>([\s\S]*?)<\/h2>/.exec(body)?.[1] ?? '').slice(0, 12);
+    // Short endings could match some other page's opening by chance.
+    if (key.length < 6) return;
+    const from = Math.max(1, starts.findIndex((text) => heading && text.includes(heading)) + 1);
+    const page = starts.findIndex((text, n) => n >= from && text.startsWith(key));
+    if (page > 0) warnings.push(`第 ${i + 1} 節最後一段落在第 ${page + 1} 頁開頭，和本節其他內容分開：縮短本節前面的元件，或把這句移到節首、併入前一段。`);
+  });
+  return warnings;
+}
+
 export function printPdf(html, outDir, { letter = false, paper = 'white' } = {}) {
   const browser = findBrowser();
   if (!browser) throw new Error(NO_BROWSER);
@@ -135,7 +157,8 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
   else pages.forEach(({ overflow }, i) => {
     if (overflow) warnings.push(`第 ${i + 1} 頁內容超出右邊界約 ${overflow} mm：減少表格欄數或設 wide: true。`);
   });
-  warnings.push(...splitExhibits(execFileSync('pdftotext', [pdf, '-'], { encoding: 'utf8' }).split('\f'), source));
+  const text = execFileSync('pdftotext', [pdf, '-'], { encoding: 'utf8' }).split('\f');
+  warnings.push(...splitExhibits(text, source), ...strandedEndings(text, source));
   return { pdf, pngs, sheet, fills: pages.map((p) => p.fill), size: letter ? 'Letter' : 'A4', warnings };
 }
 

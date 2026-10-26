@@ -214,7 +214,7 @@ function spaced(xml) {
   })).filter((s) => s.text);
 }
 
-test('閱讀版用精確行距排字，與高度估算一致；標題到 lede、欄正文到 takeaway 至少隔一個正文行高；簡報版不變', async () => {
+test('閱讀版用精確行距排字，與高度估算一致；標題到 lede、欄正文到 takeaway 至少隔一個正文行高；簡報版也用精確行距', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'clayprint-read-spacing-'));
   try {
     const page = { type: 'columns', claim: '標'.repeat(40), lede: '導言一行', sources,
@@ -238,8 +238,9 @@ test('閱讀版用精確行距排字，與高度估算一致；標題到 lede、
     const present = (await build({ title: '行距測試', pages: [page] })).buffer;
     const pboxes = spaced(await (await JSZip.loadAsync(present)).file('ppt/slides/slide1.xml').async('string'));
     const ptitle = pboxes.find((s) => s.text === page.claim), plede = pboxes.find((s) => s.text === page.lede);
-    assert.deepEqual(ptitle.pct, [125000]);
-    assert.ok(pboxes.every((s) => s.pts.length === 0));
+    // Presentation titles: 56 px × 1.5 = 42 pt, the pitch the old 125% multiple drew. No box keeps a multiple.
+    assert.deepEqual(ptitle.pts, [4200]);
+    assert.ok(pboxes.every((s) => s.pct.length === 0));
     assert.ok(Math.abs(plede.y - (ptitle.y + ptitle.h) - 12) < 1);
   } finally {
     rmSync(dir, { recursive: true, force: true });

@@ -26,7 +26,11 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 3. 先寫結論，再選最能支持它的圖或版型。
 4. 放不下先修版型、合理重排或拆頁，保留原稿數字與限制，不逐頁縮字級；閱讀型簡報整份採閱讀預設。
 5. `claim` 點名的數字與項目要在當頁可見，強調項目要與主張一致。
-6. 依讀者的先備知識安排解釋，簡報與報告都適用。讀者不熟主題時，以白話說清結論，用熟悉的情境或具體例子說明用途與運作；必要術語在首次出現時就地解釋，每頁／節回答一個主要問題。讀者熟悉主題時，直接聚焦證據與取捨。比喻有助理解才用，角色對應須一致；自行設計的例子標為「示意情境」，比喻須明示（如「可以想成……」），可放正文但不作事實證據、不補造數字或因果。影響判斷的限制放同頁／節正文。交付前檢查：依已知背景與文中解釋，讀者能否說明結論及其理由；斷點補在首次需要理解之處。只換樣式時沿用原文。
+6. 依讀者的先備知識安排解釋，簡報與報告都適用；只換樣式時沿用原文。
+   - 讀者不熟主題：以白話說清結論，用熟悉的情境或具體例子說明用途與運作；必要術語在首次出現時就地解釋，每頁／節回答一個主要問題。讀者熟悉主題：直接聚焦證據與取捨。
+   - 比喻有助理解才用，角色對應須一致；自行設計的例子標為「示意情境」，比喻須明示（如「可以想成……」），可放正文但不作事實證據、不補造數字或因果。
+   - 影響判斷的限制放同頁／節正文。
+   - 交付前檢查：依已知背景與文中解釋，讀者能否說明結論及其理由；斷點補在首次需要理解之處。
 
 每個版型都有對應的主張；原稿無法支持時就換版型，未決事項用沒有 `tag`／`focus` 的 `list` 或 `columns`。各版型的主張、欄位與容量見 [版型說明](references/layouts.md)。
 
@@ -54,7 +58,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 4. 寫 `out/story.json`，每張內容頁在 `notes` 放 1～3 句講稿（要說的話、補充細節），計算另列；影響判斷的限制依原則 6 放在頁面上；閱讀型簡報改把講稿寫在頁面上。執行 `node evals/check.mjs out/story.json script.md` 核對；範例：`node evals/check.mjs examples/story.json evals/fixtures/example-script.md`。
 5. 執行 `node scripts/pptx.js out/story.json out/deck.pptx` 建檔。
 6. 依 [預覽與交付](references/layouts.md#預覽與交付)執行 `node scripts/preview.js out/deck.pptx out/preview`；輸出 `page-N.png`、`sheet.png`（整份概覽）、`deck.pdf`。0 項容量警告只代表未偵測到溢出，仍逐頁找孤字與不均勻換行。
-7. 依警告和預覽修正最弱的一頁，再重建、重驗。能派 subagent 時，可請不同 subagent 對照原稿與需求，分別檢查數字、版面和敘事，再整合修正。交付集中列：核心判斷、缺資料／未完成頁、最弱頁修改前後及原因、哪些圖為原生可編輯／SVG，以及「實際在 PowerPoint 改一個原生圖數值：完成／未驗」。編輯限制見 [設計差異](docs/design-diff.md)。
+7. 依警告和預覽修正最弱的一頁，再重建、重驗。能派 subagent 時，可請不同 subagent 對照原稿與需求，分別檢查數字、版面和敘事，再整合修正。交付集中列：核心判斷、缺資料／未完成頁、最弱頁修改前後及原因、哪些圖為原生可編輯／SVG，再依〈交付證據〉分列四層結果。編輯限制見 [設計差異](docs/design-diff.md)。
 
 ## 交付證據
 
@@ -71,14 +75,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 
 要改成自己的設計或流程時，讀 [改造步驟](docs/make-it-yours.md)。
 
-預設 clay 設計層；切換 B′ 深藍範例與檢查自訂配色見 [設計層說明](design/README.md)。逐頁檢查判斷、數字、單位、期間、來源、缺值、遮擋與閱讀順序。驗收器通過只證明結構、數字對照和程式可建檔；獨立驗收見 [有數字稿](evals/with-numbers.md)與[無數字稿](evals/without-numbers.md)。
-
-## 文字稿 → 報告
-
-讀者要連續閱讀、轉寄或列印時，依 [報告流程](references/report.md)寫 `out/report.json`。
-先寫讀者要帶走的一句話與每節判斷；有資料才加圖，圖表 JSON 填單位、期間與來源，圖說會自動組成。
-執行 `node scripts/report.js out/report.json out/report.html` 產生報告，再用 `node evals/check-report.mjs out/report.html script.md out/report.json` 核對。
-核對通過後執行 `node scripts/pdf.js out/report.html out/print` 印成 PDF，處理填滿率與切頁警告並逐頁看 `page-NN.png`；找不到瀏覽器時 PDF 標「受阻」並附原因，其餘步驟繼續。
+預設 clay 設計層；切換 B′ 深藍範例與檢查自訂配色見 [設計層說明](design/README.md)。逐頁檢查判斷、數字、單位、期間、來源、缺值、遮擋與閱讀順序；也查每張圖比較的是否為同類、可比較的項目，以及同一組數字有沒有在相鄰的段落、圖與表重複。驗收器不判斷這些語意問題。驗收器通過只證明結構、數字對照和程式可建檔；獨立驗收見 [有數字稿](evals/with-numbers.md)與[無數字稿](evals/without-numbers.md)。
 
 ## 套用到既有檔案
 
