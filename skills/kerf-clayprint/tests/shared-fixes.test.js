@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import JSZip from 'jszip';
@@ -95,7 +96,7 @@ test('驗收器的增減值核對與畫面同一位數', async () => {
 
 test('範例報告的「完成 N 節」與驗收器的「通過 N 節」數字一致，安裝文件也一樣', () => {
   const report = JSON.parse(readFileSync(new URL('../examples/report.json', import.meta.url), 'utf8'));
-  const built = buildReport(report, { baseDir: new URL('../examples/', import.meta.url).pathname });
+  const built = buildReport(report, { baseDir: fileURLToPath(new URL('../examples/', import.meta.url)) });
   const script = readFileSync(new URL('../evals/fixtures/explain-script.md', import.meta.url), 'utf8');
   const checked = checkReport(built.html, script);
   assert.equal(built.sections, checked.sections);

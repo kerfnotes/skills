@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -247,7 +248,7 @@ test('report.js 會自己建立輸出資料夾', () => {
   try {
     const input = path.join(dir, 'report.json'), output = path.join(dir, 'new', 'deeper', 'report.html');
     writeFileSync(input, JSON.stringify({ title: '測試', message: '帶走這句', sections: [{ claim: '判斷', blocks: [{ type: 'text', text: '內文' }] }] }));
-    const run = spawnSync(process.execPath, [new URL('../scripts/report.js', import.meta.url).pathname, input, output], { encoding: 'utf8' });
+    const run = spawnSync(process.execPath, [fileURLToPath(new URL('../scripts/report.js', import.meta.url)), input, output], { encoding: 'utf8' });
     assert.equal(run.status, 0, run.stderr);
     assert.match(readFileSync(output, 'utf8'), /<main class="report">/);
   } finally {
