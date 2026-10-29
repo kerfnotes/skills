@@ -281,6 +281,8 @@ function nativeChart(slide, m, area, ctx) {
     }
     if (m.refs.length) ctx.warn(`第 ${ctx.n} 頁圖表：原生散佈圖省略參考線；若要保留，請設定 native: false`);
   }
+  // PowerPoint skips category labels it judges crowded, even when they fit; every bar needs its name.
+  if (type === 'bar') opts.catAxisLabelFrequency = 1;
   slide.addChart(type, data, opts);
   ctx.charts.push(m);
 }
@@ -811,8 +813,10 @@ LAYOUT.list = (slide, ctx) => {
   const top = contentTop(slide, ctx), end = sourceRow(slide, ctx) - M.sourceGap;
   const items = page.visual.items.map((item, index) => ({ ...item, index })).filter((item) => !emptyCell(page.visual.items[item.index]));
   if (outside(items.length, CAP.list)) ctx.warn(`第 ${ctx.n} 頁診斷清單是 ${items.length} 項，規格是 ${CAP.list.join('～')} 項`);
+  // Without any tag the tag column is dropped, so headings start at the margin instead of looking indented.
   const rowH = (end - top) / items.length, tagW = 200, noteW = 400, gap = 48;
-  const midX = M.x + tagW + gap, midW = INNER - tagW - noteW - 2 * gap;
+  const lead = items.some((item) => item.tag) ? tagW + gap : 0;
+  const midX = M.x + lead, midW = INNER - lead - noteW - gap;
   // Rows stretch to the page; fill counts each item at its own height: heading, body, 12 px above and below.
   sparse(ctx, items.reduce((sum, item) => sum + Math.max(24 + lines(item.heading, T.type.sub.px, midW) * T.type.sub.px * 1.2
     + (item.body ? 8 + Math.min(lines(item.body, T.type.body.px, midW), CAP.listBody) * T.type.body.px * 1.4 : 0),
@@ -1327,6 +1331,17 @@ function workbookNumbers(s, m) {
 }
 
 // After pptxgenjs: editable point labels, missing data, fonts, PNG fallbacks and metadata.
+// pptxgenjs repeats a paragraph's <a:pPr> before every run of mixed-format text; the schema allows one, as the first child.
+// Keep the first and move it to the front. PowerPoint opens either form, but strict readers and validators reject the repeats.
+const PARAGRAPH_PROPS = /<a:pPr\b(?:[^>]*\/>|[^>]*>[\s\S]*?<\/a:pPr>)/g;
+export function oneParagraphProps(s) {
+  return s.replace(/<a:p>([\s\S]*?)<\/a:p>/g, (p, inner) => {
+    const props = inner.match(PARAGRAPH_PROPS);
+    if (!props || (props.length === 1 && inner.startsWith(props[0]))) return p;
+    return `<a:p>${props[0]}${inner.replace(PARAGRAPH_PROPS, '')}</a:p>`;
+  });
+}
+
 async function finish(buf, story, charts) {
   const zip = await JSZip.loadAsync(buf);
   const chartNames = Object.keys(zip.files).filter((n) => /^ppt\/charts\/chart\d+\.xml$/.test(n))
@@ -1341,6 +1356,7 @@ async function finish(buf, story, charts) {
     bookModels.set(`ppt/embeddings/${target}`, charts[i]);
   }
   for (const [i, page] of story.pages.entries()) if (page.build) await patch(zip, `ppt/slides/slide${i + 1}.xml`, buildTiming);
+  for (const name of Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))) await patch(zip, name, oneParagraphProps);
   await patch(zip, 'ppt/theme/theme1.xml', (s) => s
     .replace(/<a:font script="Hant" typeface="[^"]*"\/>/g, `<a:font script="Hant" typeface="${SLIDE_FONT}"/>`)
     .replace(/<a:ea typeface="[^"]*"\/>/g, `<a:ea typeface="${SLIDE_FONT}"/>`));

@@ -1,9 +1,9 @@
-// Render a deck page by page: PowerPoint for Mac or LibreOffice saves a PDF, then pdftoppm rasterizes it.
+// Render a deck page by page: PowerPoint (Mac or Windows) or LibreOffice saves a PDF, then pdftoppm rasterizes it.
 // node scripts/preview.js deck.pptx out/preview
-// PowerPoint is sandboxed, so the deck is copied into its container first; "save as PNG" writes nothing, PDF works.
+// PowerPoint for Mac is sandboxed, so the deck is copied into its container first; "save as PNG" writes nothing, PDF works.
 import { accessSync, constants, copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { basename, delimiter, join, resolve } from 'node:path';
 import { isMain } from './main.js';
 import { PACKAGE } from './brand.js';
@@ -77,6 +77,43 @@ function powerPointPdf(deck, outPdf) {
   }
 }
 
+// PowerPoint for Windows saves the PDF through COM. Presentations.Open fails on paths over 255 characters, so it works on
+// a copy in the temp folder. It quits only when no other deck is open, leaving the user's own PowerPoint session alone.
+function windowsPowerPointPdf(powershell, deck, outPdf) {
+  // shortcut: assumes the temp folder path is short; point TEMP at a short folder if Open still reports the 255 limit.
+  const stem = join(tmpdir(), `${PACKAGE}-preview-${process.pid}-${Date.now()}`);
+  const inTemp = `${stem}.pptx`, pdf = `${stem}.pdf`;
+  copyFileSync(deck, inTemp);
+  try {
+    // Paths travel in environment variables, so no quoting reaches the PowerShell source. 32 is ppSaveAsPDF.
+    execFileSync(powershell, ['-NoProfile', '-NonInteractive', '-Command', `
+      [Console]::OutputEncoding = [Text.Encoding]::UTF8
+      $ErrorActionPreference = 'Stop'
+      trap { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }
+      $app = New-Object -ComObject PowerPoint.Application
+      $p = $null
+      try {
+        $p = $app.Presentations.Open($env:PREVIEW_PPTX, -1, 0, 0)
+        $p.SaveAs($env:PREVIEW_PDF, 32)
+      } finally {
+        if ($p) { $p.Close() }
+        if ($app.Presentations.Count -eq 0) { $app.Quit() }
+      }`], { timeout: 180000, stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, PREVIEW_PPTX: inTemp, PREVIEW_PDF: pdf } });
+    if (!existsSync(pdf)) throw new Error('PowerPoint 未產生 PDF');
+    copyFileSync(pdf, outPdf);
+  } finally {
+    rmSync(inTemp, { force: true });
+    rmSync(pdf, { force: true });
+  }
+}
+
+// PowerPoint for Windows registers its COM class; reg.exe answers without starting PowerPoint.
+function windowsPowerPoint() {
+  const reg = executable('reg');
+  if (!reg) return false;
+  try { execFileSync(reg, ['query', 'HKCR\\PowerPoint.Application\\CLSID'], { stdio: 'ignore' }); return true; } catch { return false; }
+}
+
 // One line from a failed command: its stderr, else its message.
 const reason = (err) => (err.stderr?.toString().trim() || err.message).split('\n').filter(Boolean).pop();
 
@@ -88,6 +125,10 @@ export function preview(deck, outDir) {
   let failed = null;
   if (process.platform === 'darwin' && existsSync('/Applications/Microsoft PowerPoint.app') && executable('osascript')) {
     try { powerPointPdf(deck, outPdf); } catch (err) { failed = `PowerPoint 轉檔失敗（${reason(err)}）`; }
+  }
+  const powershell = process.platform === 'win32' && executable('powershell');
+  if (powershell && windowsPowerPoint()) {
+    try { windowsPowerPointPdf(powershell, deck, outPdf); } catch (err) { failed = `PowerPoint 轉檔失敗（${reason(err)}）`; }
   }
   if (!existsSync(outPdf)) {
     const installed = [

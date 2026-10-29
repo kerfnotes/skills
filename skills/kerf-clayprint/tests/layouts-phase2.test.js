@@ -43,6 +43,19 @@ test('lede 只在填入時增加內容起點高度', async () => {
   assert.ok(y(withLede) > y(plain));
 });
 
+test('清單沒有 tag 時不保留左欄，標題與頁標題左緣對齊', async () => {
+  const left = async (items) => {
+    const xml = await slide((await build({ pages: [page('list', { items })] })).buffer);
+    const shapes = [...xml.matchAll(/<p:sp>[\s\S]*?<\/p:sp>/g)].map((m) => m[0]);
+    return (text) => Number(shapes.find((part) => part.includes(`<a:t>${text}</a:t>`)).match(/<a:off x="(\d+)"/)[1]);
+  };
+  const plain = await left([{ heading: '欄位' }, { heading: '交接' }, { heading: '檢核' }]);
+  const tagged = await left([{ tag: '先', heading: '欄位' }, { heading: '交接' }, { heading: '檢核' }]);
+  assert.equal(plain('欄位'), plain('結論'));
+  assert.ok(tagged('欄位') > tagged('結論'));
+  assert.equal(tagged('先'), tagged('結論'));
+});
+
 test('新版型指出錯誤欄位，容量超出時警告；四方案可容納', async () => {
   for (const [type, visual, path] of [
     ['list', { items: [{ heading: 3 }] }, 'items[0].heading'],

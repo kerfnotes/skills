@@ -135,3 +135,29 @@ printf 'fake PNG' > "\${prefix}-1.png"
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// Real PowerPoint for Windows through PowerShell COM. The deck sits on a path over 255 characters, which
+// Presentations.Open rejects, so this also covers the copy into the temp folder.
+const windowsPowerPoint = process.platform === 'win32' && executable('powershell') && executable('pdftoppm') && executable('ffmpeg')
+  && spawnSync('reg', ['query', 'HKCR\\PowerPoint.Application\\CLSID'], { stdio: 'ignore' }).status === 0;
+test('PowerPoint for Windows converts a deck on a long path through PowerShell', { skip: !windowsPowerPoint && 'needs PowerPoint for Windows, pdftoppm and ffmpeg', timeout: 240000 }, async () => {
+  const { build } = await import('../scripts/pptx.js');
+  const dir = mkdtempSync(join(tmpdir(), 'clayprint-preview-'));
+  try {
+    const deep = join(dir, ...Array.from({ length: 6 }, (_, i) => `${'深層資料夾'.repeat(4)}-${i}-${'x'.repeat(24)}`));
+    mkdirSync(deep, { recursive: true });
+    const deck = join(deep, 'deck.pptx'), out = join(dir, 'out');
+    assert.ok(deck.length > 255, `path is ${deck.length} characters`);
+    const page = (claim) => ({ type: 'statement', claim, sources: { source: '虛構示意稿' }, notes: '講稿' });
+    writeFileSync(deck, (await build({ pages: [page('第一頁'), page('第二頁')] })).buffer);
+    const result = spawnSync(process.execPath, [script, deck, out], { encoding: 'utf8', timeout: 200000 });
+    assert.equal(result.status, 0, result.stderr);
+    assert.doesNotMatch(result.stderr, /LibreOffice/);
+    assert.ok(existsSync(join(out, 'deck.pdf')));
+    assert.ok(existsSync(join(out, 'page-1.png')) && existsSync(join(out, 'page-2.png')));
+    assert.ok(existsSync(join(out, 'sheet.png')));
+    assert.ok(existsSync(deck));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

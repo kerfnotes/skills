@@ -95,3 +95,18 @@ test('原生斜線圖同一期端點太近時把標籤上下錯開，距離夠�
   assert.match(three[1], /<c:idx val="0"\/><c:layout>/);
   assert.match(three[2], /<c:idx val="0"\/><c:layout>/);
 });
+
+test('長條類原生圖每個類別都顯示標籤，折線圖維持自動間距', async () => {
+  const visuals = [
+    { kind: 'rank', rows: Array.from({ length: 15 }, (_, i) => ({ label: `項目${i + 1}`, value: 15 - i })) },
+    { kind: 'grouped', x: ['甲', '乙'], series: [{ name: '上期', values: [1, 2] }, { name: '本期', values: [3, 4] }] },
+    { kind: 'line', x: ['一', '二', '三'], series: [{ name: '甲', values: [1, 2, 3] }] },
+  ];
+  const zip = await JSZip.loadAsync((await build(pages(visuals))).buffer);
+  const xml = await Promise.all(charts(zip).map((name) => zip.file(name).async('string')));
+  const bars = xml.filter((x) => x.includes('<c:barChart>')), lines = xml.filter((x) => x.includes('<c:lineChart>'));
+  assert.equal(bars.length, 2);
+  assert.equal(lines.length, 1);
+  for (const bar of bars) assert.match(bar, /<c:tickLblSkip val="1"\/>/);
+  assert.doesNotMatch(lines[0], /<c:tickLblSkip/);
+});

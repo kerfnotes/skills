@@ -56,7 +56,7 @@
 
 ### 診斷、無日期流程、因果與並列
 
-`list.visual` 為 `{items: [{tag?, heading, body?, note?}], focus?}`。`items` 建議 3～5 項：左欄短標 `tag`、中欄粗體 `heading` 與一行 `body`、右欄一行小字 `note`；列間細線。`focus` 是從 0 起算的項目索引，只讓該列 `tag` 與 `heading` 用重點色。選填文字沒有內容就省略該格。
+`list.visual` 為 `{items: [{tag?, heading, body?, note?}], focus?}`。`items` 建議 3～5 項：左欄短標 `tag`、中欄粗體 `heading` 與一行 `body`、右欄一行小字 `note`；列間細線。`focus` 是從 0 起算的項目索引，只讓該列 `tag` 與 `heading` 用重點色。選填文字沒有內容就省略該格；所有項目都沒有 `tag` 時不留左欄，`heading` 與 `body` 從左邊界開始。
 
 原稿給了順序或優先序時才用 `tag`／`focus`；未決事項用沒有 `tag`／`focus` 的 `list`，或用各欄同重的 `columns`。將推論的優先序與理由寫在 `notes`，畫面保留原稿已確認的內容。
 
@@ -178,6 +178,6 @@
 
 ## 預覽與交付
 
-有 PowerPoint 的 Mac 使用 PowerPoint；沒有 PowerPoint，或 PowerPoint 自動化失敗（例如另一份簡報開著對話框）時改用 LibreOffice（`soffice`）。執行 `node scripts/preview.js out/deck.pptx out/preview`，需要 `pdftoppm`、`ffmpeg`，輸出 `page-N.png`、`sheet.png`（整份概覽）與 `deck.pdf`。LibreOffice 可能替換字型，正式字型仍需在 PowerPoint 複查。兩者都不可用時腳本印出原因並以結束碼 1 結束，簡報檔保留，預覽標「受阻」；[SVG／PNG 圖表預覽](charts.md#共通欄位與輸出)可驗圖表，整頁版面仍標未驗。
+有 PowerPoint 的 Mac 或 Windows 使用 PowerPoint（Windows 經 PowerShell 自動化）；沒有 PowerPoint，或 PowerPoint 自動化失敗（例如另一份簡報開著對話框）時改用 LibreOffice（`soffice`）。執行 `node scripts/preview.js out/deck.pptx out/preview`，需要 `pdftoppm`、`ffmpeg`，輸出 `page-N.png`、`sheet.png`（整份概覽）與 `deck.pdf`。LibreOffice 可能替換字型，正式字型仍需在 PowerPoint 複查。兩者都不可用時腳本印出原因並以結束碼 1 結束，簡報檔保留，預覽標「受阻」；[SVG／PNG 圖表預覽](charts.md#共通欄位與輸出)可驗圖表，整頁版面仍標未驗。
 
 現場簡報每張內容頁的 `notes` 寫 1～3 句要說的話與資料限制，計算行另列；閱讀型簡報把這些話寫進頁面。預覽逐頁核對主張、強調項目、口徑、空間分配與閱讀順序，找出末行單一中文字、過短末行或不均勻斷行。0 項容量警告只表示估算未偵測到溢出，換行品質需看圖。交付記錄最弱頁修改前後及理由；列出實際輸出的原生圖與 SVG，將「實際在 PowerPoint 改一個原生圖數值」標為完成或未驗。依 [四層交付證據](../SKILL.md#交付證據)分列程式核對、實際預覽、原生編輯與讀者理解，未收到目標讀者回饋時只回報內容檢視。
