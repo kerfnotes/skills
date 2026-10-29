@@ -9,6 +9,7 @@ import { render } from './svg.js';
 import { svgToPng } from './png.js';
 import { isMain, rerunForMode } from './main.js';
 import { MODE } from './tokens.js';
+import { ENV } from './brand.js';
 
 // Design px → PowerPoint units. The spec is drawn at 1920×1080 = 13.333×7.5 in.
 const inch = (px) => px / T.slide.pxPerIn;
@@ -25,10 +26,10 @@ const INNER = W - 2 * M.x;
 // equal to the estimate (px × multiple) and render as tall as the layouts plan; a multiple ran boxes into what follows.
 const spacing = (px, multiple) => ({ lineSpacing: pt(px * multiple) });
 
-function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2, bullet } = {}) {
+function text(slide, str, { x, y, w, h, px = LABEL, color = C.textSecondary, bold, align = 'left', valign = 'top', lineHeight = 1.2, bullet, display = false } = {}) {
   if (str === '' || str === null || str === undefined) return;
   slide.addText(String(str), {
-    x: inch(x), y: inch(y), w: inch(w), h: inch(h), fontFace: SLIDE_FONT, fontSize: pt(px), color: hex(color),
+    x: inch(x), y: inch(y), w: inch(w), h: inch(h), fontFace: display ? (T.font.display?.[0] ?? SLIDE_FONT) : SLIDE_FONT, fontSize: pt(px), color: hex(color),
     bold: !!bold, align, valign, margin: 0, ...spacing(px, lineHeight), fit: 'none', ...(bullet ? { bullet } : {}),
   });
 }
@@ -194,7 +195,7 @@ function nativeTable(slide, m, area, ctx) {
   const none = { type: 'none', color: hex(C.grid) };
   const border = (color, edge) => [0, 1, 2, 3].map((i) => i === edge ? { color: hex(color), pt: pt(T.stroke.grid) } : none);
   const rows = [m.header.map((h) => ({ text: h.text, options: {
-    align: h.align === 'end' ? 'right' : 'left', color: hex(C.textSecondary), fontSize: pt(head), border: border(C.text, 2),
+    align: h.align === 'end' ? 'right' : 'left', color: hex(C.textSecondary), fontSize: pt(head), border: border(C.tableRule ?? C.text, 2),
   } })), ...m.rows.map((r, i) => r.cells.map((c, j) => {
     checkWrap(ctx, `visual.rows[${i}][${j}]`, c.text, body, widths[j] - 32, Math.max(0, Math.floor((rowH - 16) / (body * LH))));
     return { text: c.text, options: { align: c.align === 'end' ? 'right' : 'left', color: hex(c.color), bold: r.bold,
@@ -280,6 +281,8 @@ function nativeChart(slide, m, area, ctx) {
     }
     if (m.refs.length) ctx.warn(`第 ${ctx.n} 頁圖表：原生散佈圖省略參考線；若要保留，請設定 native: false`);
   }
+  // PowerPoint skips category labels it judges crowded, even when they fit; every bar needs its name.
+  if (type === 'bar') opts.catAxisLabelFrequency = 1;
   slide.addChart(type, data, opts);
   ctx.charts.push(m);
 }
@@ -311,6 +314,16 @@ const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
 const emptyCell = (v) => isObject(v) && Object.values(v).every((x) => x === null || x === undefined || x === '' || (Array.isArray(x) && !x.length));
 const displayedValue = (value, digits) => value === null ? '未提供' : typeof value === 'string' ? value : formatValue(value, { digits: shownDigits(digits, value) }) ?? '';
 
+// "build": true pages reveal their items one click at a time. Layouts set ctx.step while drawing item i; on a build page every
+// shape drawn then is named build-<i>, and finish() turns each step into one click that fades its shapes in together.
+const BUILD_LAYOUTS = new Set(['list', 'process', 'columns', 'flow', 'numbers']);
+function nameBuildSteps(slide, ctx) {
+  for (const key of ['addText', 'addShape']) {
+    const draw = slide[key].bind(slide);
+    slide[key] = (content, opts) => draw(content, ctx.step === null ? opts : { ...opts, objectName: `build-${ctx.step}` });
+  }
+}
+
 // Validate before category collection or rendering, so malformed JSON points back to its editable field.
 export function validateStory(story) {
   const need = (ok, path, repair, n) => {
@@ -339,6 +352,11 @@ export function validateStory(story) {
     optional(page, ['kicker', 'note']);
     for (const key of ['takeaway', 'points', 'footnotes']) {
       if (page[key] != null && story.mode !== 'read') throw new Error(`第 ${n} 頁：${p}.${key} 只有閱讀版支援；請在根層加 "mode": "read"，或刪除此欄位。`);
+    }
+    if (page.build != null) {
+      check(typeof page.build === 'boolean', 'build', '填 true（逐項點擊出現）或刪除此欄位');
+      if (page.build && story.mode === 'read') throw new Error(`第 ${n} 頁：${p}.build 只有現場簡報支援；閱讀型簡報沒有人點擊翻頁，請刪除此欄位。`);
+      check(!page.build || BUILD_LAYOUTS.has(page.type), 'build', `只用在 ${[...BUILD_LAYOUTS].join('、')} 版型，或刪除此欄位`);
     }
     const strings = (v) => Array.isArray(v) && v.every((s) => typeof s === 'string' && s.trim());
     if (page.takeaway != null) {
@@ -533,8 +551,8 @@ export function validateStory(story) {
 
 LAYOUT.cover = (slide, ctx) => {
   const { page, story } = ctx;
-  slide.background = { color: hex(C.dark) };
-  const [ink, muted] = C.onDark;
+  slide.background = { color: hex(C.cover ? C.onDark[0] : C.dark) };
+  const [ink, muted] = C.cover ? [C.cover, C.textSecondary] : C.onDark;
   header(slide, page.kicker, story.date, muted);
   const ruleY = sourceRow(slide, ctx, { line: muted, ink: muted });
   const D = T.type.display.px;
@@ -543,31 +561,33 @@ LAYOUT.cover = (slide, ctx) => {
   const lh = D * DISPLAY_LH;
   const blockH = titleLines * lh + (page.note ? 72 + T.type.sub.px * 1.5 : 0);
   const top = (M.top + LABEL + ruleY) / 2 - blockH / 2;
-  if (page.claim) text(slide, page.claim, { x: M.x, y: top, w: INNER, h: titleLines * lh, px: D, color: ink, bold: true, lineHeight: DISPLAY_LH });
+  if (page.claim) text(slide, page.claim, { x: M.x, y: top, w: INNER, h: titleLines * lh, px: D, color: ink, bold: true, lineHeight: DISPLAY_LH, display: true });
   if (page.note) text(slide, page.note, { x: M.x, y: top + titleLines * lh + 72, w: INNER, h: T.type.sub.px * 1.5, px: T.type.sub.px, color: muted });
 };
 
 LAYOUT.section = (slide, ctx) => {
   const { page, story } = ctx;
-  slide.background = { color: hex(C.tint) };
-  header(slide, story.title);
-  const ruleY = sourceRow(slide, ctx);
+  slide.background = { color: hex(C.cover ? C.dark : C.tint) };
+  const [ink, muted] = C.cover ? C.onDark : [C.title, C.textSecondary];
+  header(slide, story.title, undefined, muted);
+  const ruleY = sourceRow(slide, ctx, { line: C.cover ? muted : C.gray, ink: muted });
   const rulerY = ruleY - 64 - LABEL * LH - 16 - 4;
   const sections = ctx.sections;
   const gap = 24, segW = (INNER - gap * (sections.length - 1)) / sections.length;
   sections.forEach((name, i) => {
     const x = M.x + i * (segW + gap);
     const current = name === (page.kicker ?? page.claim);
-    if (current) box(slide, x, rulerY, segW, T.stroke.focusRule, C.focus);
-    else rule(slide, x, rulerY + 3, x + segW, rulerY + 3, C.gray);
-    text(slide, name, { x, y: rulerY + 4 + 16, w: segW, h: LABEL * LH, color: current ? C.focus : C.textSecondary, bold: current });
+    if (current) box(slide, x, rulerY, segW, T.stroke.focusRule, C.cover ? ink : C.focus);
+    else rule(slide, x, rulerY + 3, x + segW, rulerY + 3, C.cover ? muted : C.gray);
+    text(slide, name, { x, y: rulerY + 4 + 16, w: segW, h: LABEL * LH, color: current ? (C.cover ? ink : C.focus) : muted, bold: current });
   });
-  const D = T.type.display.px;
+  // The design layer's section size, capped by display so read decks shrink it too.
+  const D = Math.min(T.type.section?.px ?? Infinity, T.type.display.px);
   const titleH = checkWrap(ctx, 'claim', page.claim ?? '', D, INNER, TITLE_LINES) * D * DISPLAY_LH;
   const blockH = titleH + (page.note ? 28 + T.type.sub.px * 1.5 : 0);
   const top = (M.top + LABEL + rulerY) / 2 - blockH / 2;
-  if (page.claim) text(slide, page.claim, { x: M.x, y: top, w: INNER, h: titleH, px: D, color: C.title, bold: true, lineHeight: DISPLAY_LH });
-  if (page.note) text(slide, page.note, { x: M.x, y: top + titleH + 28, w: INNER, h: T.type.sub.px * 1.5, px: T.type.sub.px });
+  if (page.claim) text(slide, page.claim, { x: M.x, y: top, w: INNER, h: titleH, px: D, color: ink, bold: true, lineHeight: DISPLAY_LH, display: true });
+  if (page.note) text(slide, page.note, { x: M.x, y: top + titleH + 28, w: INNER, h: T.type.sub.px * 1.5, px: T.type.sub.px, color: muted });
 };
 
 LAYOUT.statement = (slide, ctx) => {
@@ -668,6 +688,7 @@ LAYOUT.numbers = (slide, ctx) => {
   sparse(ctx, blockH, free);
   const top0 = topBase + Math.max(0, (free - blockH) / 2);
   items.forEach((it, i) => {
+    ctx.step = i;
     const x = M.x + (i % perRow) * (cw + gap), top = top0 + Math.floor(i / perRow) * (cellH + gap);
     rule(slide, x, top, x + cw, top, C.gray);
     rule(slide, x, top, x, top + 16, C.gray);
@@ -684,6 +705,7 @@ LAYOUT.numbers = (slide, ctx) => {
     }
     if (it.note) text(slide, it.note, { x: x + 16, y: top + deltaY + B * 1.4 + 8, w: cw - 16, h: noteN * B * LH, px: B, lineHeight: LH });
   });
+  ctx.step = null;
 };
 
 LAYOUT.summary = (slide, ctx) => {
@@ -791,13 +813,16 @@ LAYOUT.list = (slide, ctx) => {
   const top = contentTop(slide, ctx), end = sourceRow(slide, ctx) - M.sourceGap;
   const items = page.visual.items.map((item, index) => ({ ...item, index })).filter((item) => !emptyCell(page.visual.items[item.index]));
   if (outside(items.length, CAP.list)) ctx.warn(`第 ${ctx.n} 頁診斷清單是 ${items.length} 項，規格是 ${CAP.list.join('～')} 項`);
+  // Without any tag the tag column is dropped, so headings start at the margin instead of looking indented.
   const rowH = (end - top) / items.length, tagW = 200, noteW = 400, gap = 48;
-  const midX = M.x + tagW + gap, midW = INNER - tagW - noteW - 2 * gap;
+  const lead = items.some((item) => item.tag) ? tagW + gap : 0;
+  const midX = M.x + lead, midW = INNER - lead - noteW - gap;
   // Rows stretch to the page; fill counts each item at its own height: heading, body, 12 px above and below.
   sparse(ctx, items.reduce((sum, item) => sum + Math.max(24 + lines(item.heading, T.type.sub.px, midW) * T.type.sub.px * 1.2
     + (item.body ? 8 + Math.min(lines(item.body, T.type.body.px, midW), CAP.listBody) * T.type.body.px * 1.4 : 0),
   item.tag || item.note ? 32 + LABEL * LH : 0), 0), end - top);
   items.forEach((item, i) => {
+    ctx.step = i;
     const y = top + i * rowH, focus = item.index === page.visual.focus;
     if (i) rule(slide, M.x, y, W - M.x, y, C.grid);
     if (item.tag) text(slide, item.tag, { x: M.x, y: y + 16, w: tagW, h: LABEL * LH, color: focus ? C.focus : C.textSecondary, bold: focus });
@@ -811,6 +836,7 @@ LAYOUT.list = (slide, ctx) => {
     if (item.body) checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, midW, CAP.listBody);
     if (item.note) checkWrap(ctx, `visual.items[${item.index}].note`, item.note, LABEL, noteW, 1);
   });
+  ctx.step = null;
 };
 
 LAYOUT.process = (slide, ctx) => {
@@ -830,6 +856,7 @@ LAYOUT.process = (slide, ctx) => {
   const lineY = top + 94;
   rule(slide, M.x + cw / 2, lineY, W - M.x - cw / 2, lineY, C.gray);
   steps.forEach((step, i) => {
+    ctx.step = i;
     const x = M.x + i * (cw + gap), focus = step.index === page.visual.focus;
     const label = step.label || `步驟 ${i + 1}`;
     checkWrap(ctx, `visual.steps[${step.index}].label`, label, LABEL, cw, 1, true);
@@ -843,6 +870,7 @@ LAYOUT.process = (slide, ctx) => {
       text(slide, step.body, { x, y: headingY + headingH + 18, w: cw, h: Math.max(0, stepsEnd - headingY - headingH - 18), px: T.type.body.px, color: focus ? C.focus : C.textSecondary, align: 'center', lineHeight: LH });
     }
   });
+  ctx.step = null;
   if (page.visual.note) {
     const y = top + Math.min(stepH, stepsEnd - top) + 24;
     checkWrap(ctx, 'visual.note', page.visual.note, LABEL, INNER, 1);
@@ -906,6 +934,7 @@ LAYOUT.flow = (slide, ctx) => {
   if (blockH > end - topBase) ctx.warn(`第 ${ctx.n} 頁因果圖高度不足`);
   const focusIndex = page.visual.focus ?? nodes.at(-1).index;
   nodes.forEach((node, i) => {
+    ctx.step = i;
     const x = M.x + i * (nw + connW), focus = node.index === focusIndex, ink = focus ? textOn(C.focus) : C.text;
     box(slide, x, boxY, nw, boxH, focus ? C.focus : C.tint);
     if (node.label) text(slide, node.label, { x: x + 20, y: boxY + 20, w: nw - 40, h: LABEL * LH, color: focus ? ink : C.textSecondary });
@@ -915,8 +944,11 @@ LAYOUT.flow = (slide, ctx) => {
     checkWrap(ctx, `visual.nodes[${node.index}].heading`, node.heading, T.type.sub.px, nw - 40, Math.max(0, Math.floor((boxY + boxH - 20 - headingY) / (T.type.sub.px * 1.2))));
     if (node.label) checkWrap(ctx, `visual.nodes[${node.index}].label`, node.label, LABEL, nw - 40, 1);
     if (node.body) checkWrap(ctx, `visual.nodes[${node.index}].body`, node.body, LABEL, nw - 40, Math.max(0, Math.floor((boxY + boxH - 20 - headingY - headingH - 16) / (LABEL * LH))));
+    // A connector arrives with the box it points to.
+    ctx.step = i + 1;
     if (i < nodes.length - 1) text(slide, page.visual.connectors?.[i] ?? '→', { x: x + nw, y: boxY + boxH / 2 - T.type.sub.px / 2, w: connW, h: T.type.sub.px * 1.4, px: T.type.sub.px, color: C.textSecondary, align: 'center' });
   });
+  ctx.step = null;
   if (page.visual.note) {
     const y = boxY + boxH + 32;
     text(slide, page.visual.note, { x: M.x, y, w: INNER, h: LABEL * LH });
@@ -944,6 +976,7 @@ LAYOUT.columns = (slide, ctx) => {
   if (blockH > end - topBase) ctx.warn(`第 ${ctx.n} 頁並列重點高度不足`);
   sparse(ctx, blockH, end - topBase);
   items.forEach((item, i) => {
+    ctx.step = i;
     const x = M.x + i * (cw + gap), focus = item.index === page.visual.focus;
     rule(slide, x, top, x + cw, top, focus ? C.focus : C.gray);
     let y = top + 28;
@@ -963,6 +996,7 @@ LAYOUT.columns = (slide, ctx) => {
     if (item.kicker) checkWrap(ctx, `visual.items[${item.index}].kicker`, item.kicker, LABEL, cw, 1);
     if (item.body) { const bodyH = checkWrap(ctx, `visual.items[${item.index}].body`, item.body, T.type.body.px, cw, Math.min(CAP.columnsBody, Math.max(0, Math.floor((end - y) / (T.type.body.px * LH))))) * T.type.body.px * LH; text(slide, item.body, { x, y, w: cw, h: bodyH, px: T.type.body.px, color: C.textSecondary, lineHeight: LH }); y += bodyH; }
   });
+  ctx.step = null;
 };
 
 // Read decks only: two titled cells side by side, each a chart, table, list or text with a note of up to CAP.panelNote lines.
@@ -1097,13 +1131,13 @@ export function deckCategories(story) {
 export async function build(story) {
   validateStory(story);
   if ((story.mode ?? 'present') !== MODE) {
-    throw new Error(`story 的 mode 是 ${story.mode ?? 'present'}，但字級以 ${MODE} 載入；請用 node scripts/pptx.js 或 node evals/check.mjs 建檔，它們會自動切換。程式內呼叫要先設 CLAYPRINT_MODE=${story.mode ?? 'present'}。`);
+    throw new Error(`story 的 mode 是 ${story.mode ?? 'present'}，但字級以 ${MODE} 載入；請用 node scripts/pptx.js 或 node evals/check.mjs 建檔，它們會自動切換。程式內呼叫要先設 ${ENV}_MODE=${story.mode ?? 'present'}。`);
   }
   const warnings = [];
   const charts = [];
   const pres = new PptxGenJS();
-  pres.defineLayout({ name: 'CLAYPRINT', width: T.slide.widthIn, height: T.slide.heightIn });
-  pres.layout = 'CLAYPRINT';
+  pres.defineLayout({ name: ENV, width: T.slide.widthIn, height: T.slide.heightIn });
+  pres.layout = ENV;
   pres.title = story.title ?? '';
   pres.author = story.author ?? '';
   pres.company = '';
@@ -1118,7 +1152,8 @@ export async function build(story) {
     const fn = LAYOUT[page.type];
     const slide = pres.addSlide();
     slide.background = { color: hex(C.onDark[0]) };
-    const ctx = { story, page, n: i + 1, total: story.pages.length, sections, categoryOrder, charts, missing: [], warn: (w) => warnings.push(w) };
+    const ctx = { story, page, n: i + 1, total: story.pages.length, sections, categoryOrder, charts, missing: [], step: null, warn: (w) => warnings.push(w) };
+    if (page.build) nameBuildSteps(slide, ctx);
     if (page.type === 'numbers' || page.type === 'summary' || page.type === 'columns') ctx.missing.push(...page.visual.items.filter((it) => !emptyCell(it) && it.value === null).map((it) => it.label ?? it.heading));
     if (page.type === 'compare') ctx.missing.push(...page.visual.options.filter((o) => !emptyCell(o)).flatMap((o) => o.values.flatMap((value, r) => value === null ? [`${o.name}／${page.visual.rows[r]}`] : [])));
     if (page.type === 'kpi') ctx.missing.push(...[page.visual.main, ...page.visual.main.benchmarks, ...(page.visual.secondary ?? [])].filter((it) => !emptyCell(it) && it.value === null).map((it) => it.label));
@@ -1296,6 +1331,17 @@ function workbookNumbers(s, m) {
 }
 
 // After pptxgenjs: editable point labels, missing data, fonts, PNG fallbacks and metadata.
+// pptxgenjs repeats a paragraph's <a:pPr> before every run of mixed-format text; the schema allows one, as the first child.
+// Keep the first and move it to the front. PowerPoint opens either form, but strict readers and validators reject the repeats.
+const PARAGRAPH_PROPS = /<a:pPr\b(?:[^>]*\/>|[^>]*>[\s\S]*?<\/a:pPr>)/g;
+export function oneParagraphProps(s) {
+  return s.replace(/<a:p>([\s\S]*?)<\/a:p>/g, (p, inner) => {
+    const props = inner.match(PARAGRAPH_PROPS);
+    if (!props || (props.length === 1 && inner.startsWith(props[0]))) return p;
+    return `<a:p>${props[0]}${inner.replace(PARAGRAPH_PROPS, '')}</a:p>`;
+  });
+}
+
 async function finish(buf, story, charts) {
   const zip = await JSZip.loadAsync(buf);
   const chartNames = Object.keys(zip.files).filter((n) => /^ppt\/charts\/chart\d+\.xml$/.test(n))
@@ -1309,6 +1355,8 @@ async function finish(buf, story, charts) {
     if (!target) throw new Error('原生圖表找不到內嵌活頁簿');
     bookModels.set(`ppt/embeddings/${target}`, charts[i]);
   }
+  for (const [i, page] of story.pages.entries()) if (page.build) await patch(zip, `ppt/slides/slide${i + 1}.xml`, buildTiming);
+  for (const name of Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))) await patch(zip, name, oneParagraphProps);
   await patch(zip, 'ppt/theme/theme1.xml', (s) => s
     .replace(/<a:font script="Hant" typeface="[^"]*"\/>/g, `<a:font script="Hant" typeface="${SLIDE_FONT}"/>`)
     .replace(/<a:ea typeface="[^"]*"\/>/g, `<a:ea typeface="${SLIDE_FONT}"/>`));
@@ -1316,7 +1364,11 @@ async function finish(buf, story, charts) {
   for (const name of Object.keys(zip.files).filter((n) => /^ppt\/.*\.xml$/.test(n))) {
     await patch(zip, name, (s) => s
       .replace(/<a:(?:rPr|defRPr|endParaRPr)\b[^>]*>/g, (tag) => tag.replace(/\s(?:lang|altLang)="[^"]*"/g, '').replace(/^<a:\w+/, '$& lang="zh-TW"'))
-      .replace(/(<c:lang\b[^>]*\bval=)"[^"]*"/g, '$1"zh-TW"'));
+      .replace(/(<c:lang\b[^>]*\bval=)"[^"]*"/g, '$1"zh-TW"')
+      .replace(/<a:(rPr|defRPr)\b[^>]*(?<!\/)>([\s\S]*?)<\/a:\1>/g, (run) => {
+        if (!T.font.display || !run.includes(`<a:latin typeface="${xml(T.font.display[0])}"`)) return run;
+        return run.replace(/<a:ea typeface="[^"]*"[^>]*\/>/g, `<a:ea typeface="${xml(T.font.display[1] ?? T.font.display[0])}"/>`);
+      }));
   }
   for (const name of Object.keys(zip.files)) {
     const m = name.match(/^ppt\/media\/image-(\d+)-(\d+)\.svg$/);
@@ -1343,6 +1395,37 @@ async function finish(buf, story, charts) {
     zip.file(name, await inner.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }));
   }
   return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+}
+
+// The slide's build-<step> shapes become PowerPoint's own timing tree: one click per step in step order, every shape of a
+// step fading in together (Fade entrance, 0.3 s). The XML follows what PowerPoint writes; ids only need to be unique.
+export function buildTiming(s) {
+  const steps = new Map();
+  for (const [, spid, step] of s.matchAll(/<p:cNvPr id="(\d+)" name="build-(\d+)"/g)) steps.set(+step, [...(steps.get(+step) ?? []), spid]);
+  if (!steps.size) return s;
+  let id = 2;
+  const effect = (spid, nodeType) => `<p:par><p:cTn id="${++id}" presetID="10" presetClass="entr" presetSubtype="0" fill="hold" grpId="0" nodeType="${nodeType}">`
+    + '<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>'
+    + `<p:set><p:cBhvr><p:cTn id="${++id}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn>`
+    + `<p:tgtEl><p:spTgt spid="${spid}"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>`
+    + '<p:to><p:strVal val="visible"/></p:to></p:set>'
+    + `<p:animEffect transition="in" filter="fade"><p:cBhvr><p:cTn id="${++id}" dur="300"/><p:tgtEl><p:spTgt spid="${spid}"/></p:tgtEl></p:cBhvr></p:animEffect>`
+    + '</p:childTnLst></p:cTn></p:par>';
+  const clicks = [...steps.keys()].sort((a, b) => a - b).map((step) => {
+    const outer = ++id, inner = ++id;
+    const effects = steps.get(step).map((spid, i) => effect(spid, i ? 'withEffect' : 'clickEffect')).join('');
+    return `<p:par><p:cTn id="${outer}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst><p:childTnLst>`
+      + `<p:par><p:cTn id="${inner}" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>${effects}</p:childTnLst></p:cTn></p:par>`
+      + '</p:childTnLst></p:cTn></p:par>';
+  }).join('');
+  const built = [...steps.values()].flat().map((spid) => `<p:bldP spid="${spid}" grpId="0" animBg="1"/>`).join('');
+  const timing = '<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>'
+    + `<p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"><p:childTnLst>${clicks}</p:childTnLst></p:cTn>`
+    + '<p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>'
+    + '<p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst>'
+    + `</p:seq></p:childTnLst></p:cTn></p:par></p:tnLst><p:bldLst>${built}</p:bldLst></p:timing>`;
+  if (!s.includes('</p:clrMapOvr>')) throw new Error('投影片 XML 找不到 clrMapOvr，無法寫入進場動畫');
+  return s.replace('</p:clrMapOvr>', `</p:clrMapOvr>${timing}`);
 }
 
 async function patch(zip, name, fn) {

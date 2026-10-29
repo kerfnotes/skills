@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { loadTokens } from './tokens.js';
 import { isMain } from './main.js';
+import { SLUG } from './brand.js';
 
 export function themeCss(tokens = loadTokens()) {
   const c = tokens.color;
@@ -16,8 +17,11 @@ export function themeCss(tokens = loadTokens()) {
   --cp-ink: ${c.text};
   --cp-muted: ${c.textSecondary};
   --cp-title: ${c.title};
+  --cp-cover: ${c.cover ?? c.title};
+  --cp-display-font: ${(tokens.font.display ?? [...tokens.font.latin, ...tokens.font.cjk]).map((name) => `"${name}"`).join(', ')}, ${tokens.font.display ? 'serif' : 'sans-serif'};
   --cp-line: ${c.grid};
   --cp-accent: ${c.focus};
+  --cp-table-rule: ${c.tableRule ?? c.text};
   --cp-tint: ${c.tint};
   --cp-soft: ${c.onDark[1]};
   --cp-font: ${font}, sans-serif;
@@ -38,6 +42,7 @@ h2 { font-size: var(--cp-title-size); letter-spacing: -.02em; }
 h3 { font-size: var(--cp-sub); }
 p, li { max-width: 72ch; }
 a { color: var(--cp-accent); text-underline-offset: .16em; }
+.report-cover h1 { color: var(--cp-cover); font-family: var(--cp-display-font); }
 .report-cover { padding: 72px 0 64px; border-bottom: 3px solid var(--cp-accent); }
 .eyebrow { color: var(--cp-accent); font-size: var(--cp-small); font-weight: 700; letter-spacing: .08em; }
 .report-cover > p:not(:first-child) { font-size: var(--cp-sub); }
@@ -62,6 +67,13 @@ figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .exhibit-title, caption { margin-bottom: 10px; color: var(--cp-title); font-weight: 700; line-height: 1.4; }
 .exhibit-label { display: block; color: var(--cp-accent); font-size: var(--cp-small); letter-spacing: .08em; }
 figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
+/* Screen only: the figure's input numbers, closed until the reader opens them. */
+.chart-data { margin-top: 8px; color: var(--cp-muted); font-size: var(--cp-small); }
+.chart-data summary { width: fit-content; cursor: pointer; }
+.chart-data .table-scroll { margin-top: 8px; }
+.chart-data table { color: var(--cp-ink); font-size: var(--cp-small); }
+.chart-data th, .chart-data td { padding: 6px 10px; }
+.chart-data p { margin: 8px 0 0; }
 .chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
 .chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
 .chart-grid { stroke: var(--cp-line); }
@@ -71,7 +83,7 @@ figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); 
 table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
 caption { text-align: left; }
 th, td { padding: 11px 14px; border-bottom: 1px solid var(--cp-line); vertical-align: top; }
-thead th { border-bottom: 2px solid var(--cp-ink); font-size: var(--cp-small); }
+thead th { border-bottom: 2px solid var(--cp-table-rule); font-size: var(--cp-small); }
 .num, td[data-type="number"], th[data-type="number"] { text-align: right; white-space: nowrap; }
 tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 .comparison .recommended { background: var(--cp-tint); }
@@ -164,13 +176,14 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .chart-scroll svg [data-tick] { font-size: ${tokens.screen?.type?.chart ?? 24}px; }
   .sources, .exhibit-note { break-before: avoid; }
   .sources h3 { break-after: avoid; }
+  .chart-data { display: none; }
   a { color: inherit; }
 }`;
 }
 
 export function replaceTheme(html, css = themeCss()) {
-  const pattern = /(<style\s+id=["']clayprint-theme["']\s*>)[\s\S]*?(<\/style>)/i;
-  if (!pattern.test(html)) throw new Error('找不到 <style id="clayprint-theme"> 區塊');
+  const pattern = new RegExp(`(<style\\s+id=["']${SLUG}-theme["']\\s*>)[\\s\\S]*?(</style>)`, 'i');
+  if (!pattern.test(html)) throw new Error(`找不到 <style id="${SLUG}-theme"> 區塊`);
   // Keep the file's own line endings (Windows checkouts and editors may use CRLF).
   const eol = /\r\n/.test(html) ? '\r\n' : '\n';
   return html.replace(pattern, (_, open, close) => `${open}${eol}${css.replace(/\r?\n/g, eol)}${eol}${close}`);

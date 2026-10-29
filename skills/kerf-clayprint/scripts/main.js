@@ -3,6 +3,7 @@ import { realpathSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { MODE } from './tokens.js';
+import { ENV } from './brand.js';
 
 export const isMain = (url) => {
   if (!process.argv[1]) return false;
@@ -15,7 +16,7 @@ export const isMain = (url) => {
 export function rerunForMode(story) {
   const want = story?.mode === 'read' ? 'read' : 'present';
   if (want === MODE) return false;
-  const child = spawnSync(process.execPath, [...process.execArgv, ...process.argv.slice(1)], { stdio: 'inherit', env: { ...process.env, CLAYPRINT_MODE: want } });
+  const child = spawnSync(process.execPath, [...process.execArgv, ...process.argv.slice(1)], { stdio: 'inherit', env: { ...process.env, [`${ENV}_MODE`]: want } });
   process.exitCode = child.status ?? 1;
   return true;
 }

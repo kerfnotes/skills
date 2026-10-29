@@ -143,10 +143,10 @@ test('列數上限只屬於閱讀版：簡報版比較 9 列、表格與收尾 1
 });
 
 test('閱讀版行數上限：數字格 note 與清單 body 3 行不警告、4 行警告', () => {
-  // 24 px body: a two-cell numbers note is 816 px wide (35 characters a line), a list body 1024 px (44 a line).
+  // 24 px body: a two-cell numbers note is 816 px wide (35 characters a line), a tagged list body 1024 px (44 a line).
   const pages = (lines) => [
     { type: 'numbers', claim: '數字', sources, visual: { items: [{ label: '甲', value: 1, note: '註'.repeat(32 * (lines - 1) + 1) }, { label: '乙', value: 2 }] } },
-    { type: 'list', claim: '清單', sources, visual: { items: [{ heading: '甲', body: '文'.repeat(40 * (lines - 1) + 1) }, { heading: '乙' }, { heading: '丙' }] } },
+    { type: 'list', claim: '清單', sources, visual: { items: [{ tag: '先', heading: '甲', body: '文'.repeat(40 * (lines - 1) + 1) }, { heading: '乙' }, { heading: '丙' }] } },
   ];
   const limit = (warnings) => warnings.filter((w) => /note：估算|body：估算/.test(w));
   assert.deepEqual(limit(readWarnings(pages(3))), []);

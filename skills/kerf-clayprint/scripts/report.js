@@ -3,10 +3,11 @@
 // Markup and classes follow assets/report.html; charts come from scripts/svg.js, tables from the same model as the deck.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { T, formatValue, prepare, shownDigits, documentCategories, categoryColors, categoryLimit } from './core.js';
+import { T, formatValue, decimalsOf, prepare, shownDigits, documentCategories, categoryColors, categoryLimit } from './core.js';
 import { render, reportHeight } from './svg.js';
 import { themeCss } from './theme-css.js';
 import { isMain } from './main.js';
+import { SLUG } from './brand.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const MISSING = '<span class="missing">未提供</span>';
@@ -86,6 +87,65 @@ export function resolveReport(report, { baseDir = '.' } = {}) {
 // The generated 「圖 N」「表 N」 label; data-label tells evals/check-report.mjs not to check its number.
 const label = (text) => `<span class="exhibit-label" data-label>${text}</span>`;
 
+// Every chart offers its input numbers as a table inside the caption, so a reader can trace each mark back to the chart JSON
+// and its source. Values print as written in the chart JSON, not rounded to the chart's digits; reference lines, split lines
+// and baselines follow the table. Screen only: print hides it. evals/check-report.mjs matches it against report.json, or
+// without report.json checks its numbers against the manuscript like any other text.
+function chartData(spec, m) {
+  const num = (v) => (v === null || v === undefined ? MISSING : esc(formatValue(v, { digits: decimalsOf([v]) })));
+  // A string is a cell already built here: the not-applicable mark or a labelled box summary.
+  const cell = (v) => (typeof v === 'string' ? v : Array.isArray(v) ? v.map(num).join('、') : num(v));
+  const byLabel = (items, head, values) => ({ head, rows: items.map((it) => [esc(it.label), ...values(it).map(cell)]) });
+  const byX = (head, columns) => ({ head, rows: spec.x.map((x, i) => [esc(x), ...columns.map((values) => num(values[i]))]) });
+  const unit = (name, u) => (typeof u === 'string' && u.trim() ? `${name}（${u.trim()}）` : name);
+  const axis = { x: spec.xLabel ?? (spec.kind === 'histogram' ? '區間' : 'X'), y: spec.yLabel ?? 'Y' };
+  const FIVE = ['最小值', '第一四分位', '中位數', '第三四分位', '最大值'];
+  const data = {
+    line: () => byX(['', ...spec.series.map((s) => s.name)], spec.series.map((s) => s.values)),
+    combo: () => byX(['', unit('金額', spec.amountUnit ?? m.unit), unit('比率', spec.rateUnit ?? '%')], [spec.amounts, spec.rates]),
+    dumbbell: () => byLabel(spec.rows, ['', ...spec.periods], (r) => r.values),
+    share: () => byLabel(spec.rows, ['', ...spec.categories], (r) => r.values),
+    rank: () => byLabel(spec.rows, ['', '數值'], (r) => [r.value]),
+    funnel: () => byLabel(spec.steps, ['', '數值'], (s) => [s.value]),
+    bridge: () => ({ head: ['', '數值', '類型'], rows: spec.steps.map((s) => [esc(s.label), num(s.value), s.total ? '累計' : '增減']) }),
+    // ranges are optional: the column appears only when some row has them, and a row without them is not missing data.
+    bullet: () => {
+      const ranges = spec.rows.some((r) => r.ranges);
+      return byLabel(spec.rows, ['', '實際', '目標', ...(ranges ? ['背景區間'] : [])], (r) => [r.value, r.target, ...(ranges ? [r.ranges ?? '—'] : [])]);
+    },
+    tornado: () => byLabel(spec.rows, ['', '低', '高'], (r) => [r.low, r.high]),
+    waffle: () => ({ head: ['', '數值'], rows: spec.categories.map((c, i) => [esc(c), num(spec.values[i])]) }),
+    // An open last bin (to: null) has no upper edge.
+    histogram: () => ({ head: [axis.x, unit('數值', spec.suffix)], rows: spec.bins.map((b) => [b.to === null ? `${num(b.from)} 以上` : `${num(b.from)}–${num(b.to)}`, num(b.value)]) }),
+    strip: () => byLabel(spec.groups, ['', '數值'], (g) => [g.values]),
+    // A group given as a five-number summary prints those five numbers by name, then its outliers.
+    box: () => byLabel(spec.groups, ['', '數值'], (g) => [g.summary
+      ? FIVE.map((name, i) => `${name} ${num(g.summary[i])}`).join('、') + (g.outliers?.length ? `；離群值 ${g.outliers.map(num).join('、')}` : '')
+      : g.values]),
+    heat: () => ({ head: ['', ...spec.colLabels], rows: spec.rowLabels.map((r, i) => [esc(r), ...spec.values[i].map(num)]) }),
+    scatter: () => byLabel(spec.points, ['', axis.x, unit(axis.y, spec.suffix)], (p) => [p.x, p.y]),
+  };
+  Object.assign(data, { multiples: data.line, grouped: data.line, slope: data.dumbbell, sharetrend: data.share, mekko: data.share,
+    ordered: data.rank, pareto: data.rank, matrix: data.scatter });
+  // A table chart already shows every number as text.
+  if (!data[spec.kind]) return '';
+  const { head, rows } = data[spec.kind]();
+  const at = (point) => ['x', 'y'].filter((k) => typeof point?.[k] === 'number').map((k) => `${esc(axis[k])} ${num(point[k])}`).join('，');
+  const extras = [
+    ...(spec.refs ?? []).map((r) => `參考線${r.label ? `「${esc(r.label)}」` : ''}：${at(r)}`),
+    at(spec.split) && `分割線：${at(spec.split)}`,
+    typeof spec.baseline === 'number' && `基準：${num(spec.baseline)}`,
+  ].filter(Boolean);
+  return `\n<details class="chart-data"><summary>查看資料</summary>
+<div class="table-scroll" tabindex="0" role="region" aria-label="圖表資料，可橫向捲動"><table>
+<thead><tr>${head.map((h, i) => `<th scope="col"${i ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead>
+<tbody>
+${rows.map((r) => `<tr>${r.map((c, i) => (i ? `<td class="num">${c}</td>` : `<th scope="row">${c}</th>`)).join('')}</tr>`).join('\n')}
+</tbody>
+</table></div>${extras.length ? `\n<p>${extras.join('；')}</p>` : ''}
+</details>`;
+}
+
 function figure(block, n, where, warnings, categoryOrder) {
   const spec = block.chart;
   let out;
@@ -103,7 +163,7 @@ function figure(block, n, where, warnings, categoryOrder) {
   return `<figure${block.wide ? ' class="wide"' : ''}>
 <p class="exhibit-title">${label(`圖 ${n}`)}${esc(block.title)}</p>
 <div class="chart-scroll" tabindex="0" role="region" aria-label="${esc(block.title)}，可橫向捲動">\n${svg}\n</div>
-<figcaption>${caption}</figcaption>
+<figcaption>${caption}${chartData(spec, m)}</figcaption>
 </figure>`;
 }
 
@@ -229,7 +289,7 @@ ${body.join('\n')}${sources}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(report.title)}</title>
-<style id="clayprint-theme">
+<style id="${SLUG}-theme">
 ${themeCss()}
 </style>
 </head>

@@ -1,5 +1,6 @@
 {
   "name": "clayprint",
+  "brand": "Clayprint",
   "version": "0.1.0",
   "private": true,
   "type": "module",

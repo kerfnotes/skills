@@ -521,7 +521,7 @@ DRAW.table = (m, W, H, warn) => {
   const cellX = (j, align) => (align === 'end' ? xs[j + 1] - 12 : xs[j] + 12);
   const headH = headPx * 1.45 + 16;
   m.header.forEach((h, j) => P.push(text(cellX(j, h.align), headH - 16, h.text, { size: headPx, anchor: h.align })));
-  P.push(line(0, headH, W, headH, { stroke: C.text }));
+  P.push(line(0, headH, W, headH, { stroke: C.tableRule ?? C.text }));
   const rowH = clamp((H - headH) / m.rows.length, 48, 72 * 1.8);
   if (headH + rowH * m.rows.length > H + 1) warn('表格列數太多，超出圖表區');
   m.rows.forEach((r, i) => {

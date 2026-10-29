@@ -8,7 +8,7 @@ Clayprint 的視覺規格。預設使用 clay 配色，原本的 B′ 深藍保�
 - 設計層可選的 `screen.type` 區塊：HTML 的 CSS px 字級，`body`、`small`、`sub`、`title`、`display` 分別控制正文、小字、小標題、節標題與封面標題。內建 clay／blue 明填現行的 16／12／18／28／52 px，與簡報 `type`、閱讀版 `read.json`、列印 `print.type` 分開。舊自訂設計層未填的欄位，維持原本對應簡報字級除以 2 的換算（`small` 對應 `type.label.px`）；填齊即可獨立控制。報告 SVG 圖表採獨立預設，見下方全交付索引。
 - 設計層的 `print` 區塊：報告列印的邊界（mm；`indent`、`gutter` 是 22／14 mm 線內側的正文內距）與字級（pt），由 `scripts/theme-css.js` 輸出成 `--cp-print-*` 變數；缺少時用預設值。
 - `spec.md`：頁面格線、字級、線寬、刻度、來源列、標註規則、資料顯示、版型與 PowerPoint 輸出對應；色碼保留原始設計紀錄。
-- `claude-design/`：第一版在 Claude Design 製作的 8 頁版型與 13 種圖表樣張，保留原始名稱與檔名。要在 Claude Design 裡打開才看得到畫面；匯出時附帶的執行檔沒有放進來。
+- 第一版在 Claude Design 製作的 8 頁版型與 13 種圖表樣張，是 Clayprint 前身 B′ 深藍版的設計稿，原檔名帶 Blueprint。它們要在 Claude Design 裡才看得到畫面，已移出目前版本；需要對照時從 Git 歷史取回：[簡報樣張](https://github.com/kerfnotes/skills/blob/4602afa8a7a5f2003cbd966c40ab7023b4b7d9ec/skills/kerf-clayprint/design/claude-design/Blueprint%20Deck.dc.html)、[圖表樣張](https://github.com/kerfnotes/skills/blob/4602afa8a7a5f2003cbd966c40ab7023b4b7d9ec/skills/kerf-clayprint/design/claude-design/Blueprint%20Charts.dc.html)。
 
 ## 全交付字級索引
 
@@ -37,6 +37,8 @@ SVG 實際 pt = `font-size` viewBox units × 最終寬度（in）× 72 ÷ viewBo
 ### 舊自訂設計層
 
 未填的 `screen.type` 欄位維持舊換算：對應 `type` 的 `px / 2`，`small` 對應 `type.label.px`；填齊螢幕欄位才與簡報字級獨立。缺少 `print` 時由內建列印預設補足。舊圖表設定缺少專用 chart 欄位時沿用一般 label fallback；不要把自訂層 fallback 說成所有輸出都會強制升級。內建 preset 的跨媒介隔離與舊層相容性分開核對。
+
+表頭線色由選用的 `color.tableRule` 決定，未填時用 `color.text`，與先前相同。`check-design.js` 只在填了這欄時核對色碼格式。
 
 從 skill 根目錄執行；`CLAYPRINT_TOKENS` 可指定另一份設計層，相對路徑從目前工作目錄解析：
 

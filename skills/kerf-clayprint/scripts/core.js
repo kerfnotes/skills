@@ -1,4 +1,4 @@
-// Data side of Clayprint charts: number formatting, deltas, ticks, color roles.
+// Data side of the charts: number formatting, deltas, ticks, color roles.
 // Everything visual comes from the active design layer; nothing here draws.
 import { loadTokens } from './tokens.js';
 

@@ -10,8 +10,11 @@
   --cp-ink: #141413;
   --cp-muted: #5E5D59;
   --cp-title: #141413;
+  --cp-cover: #141413;
+  --cp-display-font: "Helvetica Neue", "Segoe UI", "Arial", "PingFang TC", "Microsoft JhengHei", sans-serif;
   --cp-line: #E8E6DC;
   --cp-accent: #C2553A;
+  --cp-table-rule: #141413;
   --cp-tint: #F5E6DE;
   --cp-soft: #B0AEA5;
   --cp-font: "Helvetica Neue", "Segoe UI", "Arial", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -32,6 +35,7 @@ h2 { font-size: var(--cp-title-size); letter-spacing: -.02em; }
 h3 { font-size: var(--cp-sub); }
 p, li { max-width: 72ch; }
 a { color: var(--cp-accent); text-underline-offset: .16em; }
+.report-cover h1 { color: var(--cp-cover); font-family: var(--cp-display-font); }
 .report-cover { padding: 72px 0 64px; border-bottom: 3px solid var(--cp-accent); }
 .eyebrow { color: var(--cp-accent); font-size: var(--cp-small); font-weight: 700; letter-spacing: .08em; }
 .report-cover > p:not(:first-child) { font-size: var(--cp-sub); }
@@ -56,6 +60,13 @@ figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .exhibit-title, caption { margin-bottom: 10px; color: var(--cp-title); font-weight: 700; line-height: 1.4; }
 .exhibit-label { display: block; color: var(--cp-accent); font-size: var(--cp-small); letter-spacing: .08em; }
 figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
+/* Screen only: the figure's input numbers, closed until the reader opens them. */
+.chart-data { margin-top: 8px; color: var(--cp-muted); font-size: var(--cp-small); }
+.chart-data summary { width: fit-content; cursor: pointer; }
+.chart-data .table-scroll { margin-top: 8px; }
+.chart-data table { color: var(--cp-ink); font-size: var(--cp-small); }
+.chart-data th, .chart-data td { padding: 6px 10px; }
+.chart-data p { margin: 8px 0 0; }
 .chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
 .chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
 .chart-grid { stroke: var(--cp-line); }
@@ -65,7 +76,7 @@ figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); 
 table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
 caption { text-align: left; }
 th, td { padding: 11px 14px; border-bottom: 1px solid var(--cp-line); vertical-align: top; }
-thead th { border-bottom: 2px solid var(--cp-ink); font-size: var(--cp-small); }
+thead th { border-bottom: 2px solid var(--cp-table-rule); font-size: var(--cp-small); }
 .num, td[data-type="number"], th[data-type="number"] { text-align: right; white-space: nowrap; }
 tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 .comparison .recommended { background: var(--cp-tint); }
@@ -158,6 +169,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .chart-scroll svg [data-tick] { font-size: 24px; }
   .sources, .exhibit-note { break-before: avoid; }
   .sources h3 { break-after: avoid; }
+  .chart-data { display: none; }
   a { color: inherit; }
 }
 </style>
@@ -209,7 +221,17 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 <div class="chart-scroll" tabindex="0" role="region" aria-label="登錄時間比較，可橫向捲動">
 <svg role="img" aria-label="登錄時間比較" xmlns="http://www.w3.org/2000/svg" width="979" height="360" viewBox="0 0 979 360" font-family="'Helvetica Neue', 'Segoe UI', Arial, 'PingFang TC', 'Microsoft JhengHei', sans-serif"><line x1="116" y1="0" x2="116" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="116" y1="309" x2="116" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="116" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">0</text><line x1="320.05" y1="0" x2="320.05" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="320.05" y1="309" x2="320.05" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="320.05" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">10</text><line x1="524.1" y1="0" x2="524.1" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="524.1" y1="309" x2="524.1" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="524.1" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">20</text><line x1="728.15" y1="0" x2="728.15" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="728.15" y1="309" x2="728.15" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="728.15" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">30</text><line x1="932.2" y1="0" x2="932.2" y2="309" stroke="#E8E6DC" stroke-width="1"/><line x1="932.2" y1="309" x2="932.2" y2="317" stroke="#8F8D86" stroke-width="1"/><text x="932.2" y="345" font-size="24" fill="#5E5D59" text-anchor="middle" data-tick="1">40</text><line x1="116" y1="309" x2="932.2" y2="309" stroke="#8F8D86" stroke-width="1"/><rect x="116" y="29.5" width="734.58" height="44" fill="#8F8D86"/><text x="0" y="59.9" font-size="24" fill="#141413">調整前</text><text x="860.58" y="59.9" font-size="24" fill="#141413">36</text><rect x="116" y="132.5" width="489.72" height="44" fill="#8F8D86"/><text x="0" y="162.9" font-size="24" fill="#141413">試行目標</text><text x="615.72" y="162.9" font-size="24" fill="#141413">24</text><rect x="116" y="235.5" width="367.29" height="44" fill="#C2553A"/><text x="0" y="265.9" font-size="24" fill="#141413">試行實際</text><text x="493.29" y="265.9" font-size="24" fill="#C2553A" font-weight="600">18</text><line x1="116" y1="0" x2="116" y2="309" stroke="#8F8D86" stroke-width="1"/></svg>
 </div>
-<figcaption>單位：小時｜期間：調整前與試行週｜附註：24 小時是試行目標，非觀察值。｜來源：青林標本館流程試行稿（虛構示意資料）</figcaption>
+<figcaption>單位：小時｜期間：調整前與試行週｜附註：24 小時是試行目標，非觀察值。｜來源：青林標本館流程試行稿（虛構示意資料）
+<details class="chart-data"><summary>查看資料</summary>
+<div class="table-scroll" tabindex="0" role="region" aria-label="圖表資料，可橫向捲動"><table>
+<thead><tr><th scope="col"></th><th scope="col" class="num">數值</th></tr></thead>
+<tbody>
+<tr><th scope="row">調整前</th><td class="num">36</td></tr>
+<tr><th scope="row">試行目標</th><td class="num">24</td></tr>
+<tr><th scope="row">試行實際</th><td class="num">18</td></tr>
+</tbody>
+</table></div>
+</details></figcaption>
 </figure>
 </section>
 

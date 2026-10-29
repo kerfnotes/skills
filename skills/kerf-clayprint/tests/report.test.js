@@ -177,7 +177,7 @@ test('圖表區塊：圖、表各自編號，標籤與標題在上，註與來�
   assert.deepEqual(out.match(/data-label>[^<]+/g).map((s) => s.slice(11)), ['表 1', '圖 1', '圖 2', '表 2']);
   assert.match(out, /<figure class="wide">/);
   assert.equal((out.match(/<figure>/g) ?? []).length, 1);
-  assert.match(out, /<figcaption>附註：區塊附註｜來源：原稿<\/figcaption>/);
+  assert.match(out, /<figcaption>附註：區塊附註｜來源：原稿\n<details class="chart-data">/);
   assert.match(out, /<p class="exhibit-note">附註：表附註｜來源：原稿<\/p>/);
   assert.equal((out.match(/<p class="exhibit-note">/g) ?? []).length, 1);
   assert.throws(() => buildReport({ title: '測試', message: '帶走這句', sections: [{ claim: '一', blocks: [{ type: 'chart', title: '圖', chart, wide: 'yes' }] }] }), /wide/);
