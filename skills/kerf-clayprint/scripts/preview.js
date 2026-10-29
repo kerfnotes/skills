@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { basename, delimiter, join, resolve } from 'node:path';
 import { isMain } from './main.js';
+import { PACKAGE } from './brand.js';
 
 // Find a program on PATH. Windows programs carry an extension from PATHEXT (soffice.exe, tool.cmd).
 export function executable(name, { platform = process.platform, env = process.env } = {}) {
@@ -46,7 +47,7 @@ export function contactSheet(pngs, sheet, { perRow, width, height }) {
 // PowerPoint for Mac saves the PDF. The copy gets a unique name and is addressed by it: "active presentation" can be
 // another deck the user has open, which fails with error -9074 or saves the wrong file.
 function powerPointPdf(deck, outPdf) {
-  const box = join(homedir(), 'Library/Containers/com.microsoft.Powerpoint/Data/Documents/clayprint-preview');
+  const box = join(homedir(), 'Library/Containers/com.microsoft.Powerpoint/Data/Documents', `${PACKAGE}-preview`);
   mkdirSync(box, { recursive: true });
   // Only safe characters reach the AppleScript string literals.
   const stem = `${basename(deck, '.pptx').replace(/[^\p{L}\p{N}._-]/gu, '_')}-${process.pid}-${Date.now()}`;

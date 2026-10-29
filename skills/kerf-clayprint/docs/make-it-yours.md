@@ -2,6 +2,8 @@
 
 **外觀**（顏色、字型、字級、間距、線寬）從[設計層](../design/README.md)改起。**內容流程、版型、圖種**還要調整 [SKILL.md](../SKILL.md)、[references/](../references/layouts.md) 與 `scripts/`，並更新相關測試。PowerPoint 內的字型由設計層的 `font.slide` 決定（預設微軟正黑體）；字寬估算以正黑體校準，換字型後要看預覽確認換行。
 
+`scripts/` 與 `evals/` 的 `check.mjs`、`check-report.mjs`、`numbers.mjs` 是引擎，可以和其他品牌的同型 skill 逐字共用：品牌名稱只寫在 `package.json` 的 `brand`（它決定 `<BRAND>_TOKENS`、`<BRAND>_MODE`、`<BRAND>_CHROME` 環境變數與報告樣式區塊的 id），外觀差異只寫在設計層，例如表頭線的 `color.tableRule`。fork 成自己的品牌時引擎不必改，`npm test` 會擋下寫進引擎的品牌名稱；測試、文件與 HTML 範本仍寫著舊名稱（例如 `CLAYPRINT_TOKENS`、`<style id="clayprint-theme">`），要一起換，可用 `grep -rlE 'CLAYPRINT_|clayprint-theme' .` 列出這些檔案。維護兩個品牌時，改完一邊用 `node scripts/sync-engine.js check <另一個 skill 資料夾>` 列出不同的檔案，`copy` 把這邊的引擎複製過去，再到那邊跑 `npm test`。
+
 ## 五個步驟
 
 | 步驟 | 可以怎麼問 AI | 要拿到什麼才往下走 | Clayprint 對應 |

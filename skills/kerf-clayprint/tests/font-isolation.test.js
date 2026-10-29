@@ -40,7 +40,7 @@ function fixture(t) {
   mkdirSync(join(root, 'out'), { recursive: true });
   const dir = mkdtempSync(join(root, 'out', 'font-isolation-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
-  for (const part of ['scripts', 'design', 'assets']) cpSync(join(root, part), join(dir, part), { recursive: true });
+  for (const part of ['scripts', 'design', 'assets', 'package.json']) cpSync(join(root, part), join(dir, part), { recursive: true });
   return dir;
 }
 

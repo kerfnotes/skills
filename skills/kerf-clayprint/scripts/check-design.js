@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { contrast, textOn } from './core.js';
 import { loadTokens } from './tokens.js';
+import { BRAND } from './brand.js';
 
 // 公開數學資料；檢查流程自行實作，沒有引入外部驗證器。
 // WCAG：https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
@@ -66,6 +67,8 @@ export function checkDesign(design) {
   for (const key of ['text', 'textSecondary', 'better', 'worse', 'unchanged', 'dark', 'tint', 'focus', 'gray', 'other']) {
     validHex(`color.${key}`, c?.[key]);
   }
+  // Optional: the table header rule; without it the engine uses color.text.
+  if (c?.tableRule !== undefined) validHex('color.tableRule', c.tableRule);
   for (const [key, min] of [['onDark', 2], ['categorical', 1], ['ordered', 2]]) {
     const values = c?.[key];
     if (!Array.isArray(values) || values.length < min) failFormat(`color.${key}`, values, `至少 ${min} 個色碼`, '補足色階，不能用空色階產生圖表');
@@ -136,10 +139,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const { failures, warnings, checks } = checkDesign(design);
     warnings.forEach((message) => console.log(`警告：${message}`));
     failures.forEach((message) => console.error(`失敗：${message}`));
-    console.log(`Clayprint 設計層 ${design.name ?? '未命名'}：${failures.length ? '未通過' : '通過'} ${checks} 項檢查，${failures.length} 項失敗、${warnings.length} 項警告。`);
+    console.log(`${BRAND} 設計層 ${design.name ?? '未命名'}：${failures.length ? '未通過' : '通過'} ${checks} 項檢查，${failures.length} 項失敗、${warnings.length} 項警告。`);
     process.exitCode = failures.length ? 1 : 0;
   } catch (error) {
-    console.error(`Clayprint 設計層檢查失敗：${error.message}`);
+    console.error(`${BRAND} 設計層檢查失敗：${error.message}`);
     process.exitCode = 1;
   }
 }

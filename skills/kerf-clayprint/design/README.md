@@ -38,6 +38,8 @@ SVG 實際 pt = `font-size` viewBox units × 最終寬度（in）× 72 ÷ viewBo
 
 未填的 `screen.type` 欄位維持舊換算：對應 `type` 的 `px / 2`，`small` 對應 `type.label.px`；填齊螢幕欄位才與簡報字級獨立。缺少 `print` 時由內建列印預設補足。舊圖表設定缺少專用 chart 欄位時沿用一般 label fallback；不要把自訂層 fallback 說成所有輸出都會強制升級。內建 preset 的跨媒介隔離與舊層相容性分開核對。
 
+表頭線色由選用的 `color.tableRule` 決定，未填時用 `color.text`，與先前相同。`check-design.js` 只在填了這欄時核對色碼格式。
+
 從 skill 根目錄執行；`CLAYPRINT_TOKENS` 可指定另一份設計層，相對路徑從目前工作目錄解析：
 
 ```sh

@@ -161,8 +161,8 @@ test('--letter --paper clay prints a marked temporary copy, deletes it, and skip
   const dir = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
   try {
     const html = join(dir, 'brief.html'), out = join(dir, 'print');
-    // Nine body rows: a table that long may break across pages.
-    const source = readFileSync(example, 'utf8').replace(/(<tbody>\n)(<tr>[^\n]*\n)/, (_, open, row) => open + row.repeat(8));
+    // Nine body rows in 表 1 (the first captioned table, not a figure's data table): a table that long may break across pages.
+    const source = readFileSync(example, 'utf8').replace(/(<caption>[\s\S]*?<tbody>\n)(<tr>[^\n]*\n)/, (_, open, row) => open + row.repeat(8));
     writeFileSync(html, source);
     const result = run(dir, [html, out, '--letter', '--paper', 'clay']);
     assert.equal(result.status, 0, result.stderr);

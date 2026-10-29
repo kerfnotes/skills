@@ -9,11 +9,13 @@ import { basename, dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { isMain } from './main.js';
 import { contactSheet, findProgram, numbered, programFiles } from './preview.js';
+import { ENV, SLUG } from './brand.js';
 
-const NO_BROWSER = '找不到 Chrome、Edge、Chromium 或 Brave；設 CLAYPRINT_CHROME 指向瀏覽器執行檔後重跑。';
+const NO_BROWSER = `找不到 Chrome、Edge、Chromium 或 Brave；設 ${ENV}_CHROME 指向瀏覽器執行檔後重跑。`;
 
 export function findBrowser({ platform = process.platform, env = process.env, exists = existsSync } = {}) {
-  if (env.CLAYPRINT_CHROME) return exists(env.CLAYPRINT_CHROME) ? env.CLAYPRINT_CHROME : null;
+  const chosen = env[`${ENV}_CHROME`];
+  if (chosen) return exists(chosen) ? chosen : null;
   const installed = platform === 'darwin'
     ? ['Google Chrome', 'Chromium', 'Microsoft Edge', 'Brave Browser'].map((app) => `/Applications/${app}.app/Contents/MacOS/${app}`)
     : platform === 'win32'
@@ -135,7 +137,7 @@ export function printPdf(html, outDir, { letter = false, paper = 'white' } = {})
   // Portrait pages, four to a row.
   const sheet = contactSheet(pngs, join(outDir, 'sheet.png'), { perRow: 4, width: 420, height: 580 });
 
-  const tmp = mkdtempSync(join(tmpdir(), 'clayprint-pdf-'));
+  const tmp = mkdtempSync(join(tmpdir(), `${SLUG}-pdf-`));
   let pages;
   try {
     execFileSync('pdftoppm', ['-gray', '-r', '50', pdf, join(tmp, 'm')]);
