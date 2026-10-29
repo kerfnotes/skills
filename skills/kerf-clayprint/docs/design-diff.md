@@ -1,6 +1,6 @@
 # Phase 3：PowerPoint 與設計稿的差異
 
-對照 [簡報樣張](../design/claude-design/Blueprint%20Deck.dc.html)、[圖表樣張](../design/claude-design/Blueprint%20Charts.dc.html) 與 [規格 v1.1](../design/spec.md)。色彩、字級與線寬以[目前生效的設計層](../design/README.md)為準。以下實機驗收紀錄對應原本的 B′ 深藍版本，clay 輸出仍需另行驗收。既有開檔紀錄與當次輸出的驗收分開記錄；正式交付需逐頁預覽，並實際操作「編輯資料」。
+對照 B′ 深藍版的 [簡報樣張](https://github.com/kerfnotes/skills/blob/4602afa8a7a5f2003cbd966c40ab7023b4b7d9ec/skills/kerf-clayprint/design/claude-design/Blueprint%20Deck.dc.html)、[圖表樣張](https://github.com/kerfnotes/skills/blob/4602afa8a7a5f2003cbd966c40ab7023b4b7d9ec/skills/kerf-clayprint/design/claude-design/Blueprint%20Charts.dc.html)（已移出目前版本，連到 Git 歷史）與 [規格 v1.1](../design/spec.md)。色彩、字級與線寬以[目前生效的設計層](../design/README.md)為準。以下實機驗收紀錄對應原本的 B′ 深藍版本，clay 輸出仍需另行驗收。既有開檔紀錄與當次輸出的驗收分開記錄；正式交付需逐頁預覽，並實際操作「編輯資料」。
 
 ## 版型與字型
 
