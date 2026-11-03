@@ -141,8 +141,10 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
      the cover band cancels that again to reach the paper edge. Sections always start on the next page. */
   .report-front { margin: 0 calc(-1 * var(--cp-print-gutter)) 0 calc(-1 * var(--cp-print-indent)); padding: 0 var(--cp-print-text-right) var(--cp-print-bottom) var(--cp-print-text-left); break-after: page; }
-  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 24mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-tint); }
+  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 18mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-tint); }
   .report-cover h1 { font-size: var(--cp-print-cover); line-height: 1.2; }
+  /* Source, period and check date stay on one row at the 10 pt print size; a second row pushes the summary off page 1. */
+  .cover-meta { gap: 2mm 6mm; }
   /* A full-page cover fills the paper; 1 mm short so it never spills onto a second page. */
   .report-front[data-cover="page"] { padding-bottom: 0; }
   .report-front[data-cover="page"] .report-cover { min-height: 296mm; margin-bottom: 0; padding-top: 80mm; }
@@ -150,6 +152,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .toc { margin-top: 0; }
   section { margin-top: 8mm; }
   .toc h2 { font-size: var(--cp-print-sub); }
+  .toc li { padding: 1.2mm 0; }
   /* Section headings, contents and pull quotes sit on the 22 mm line, the inner edge of @page. */
   .toc, .section-heading, .callout { margin-left: calc(-1 * var(--cp-print-indent)); }
   .section-heading { break-inside: avoid; break-after: avoid; margin-bottom: 4mm; border-top: 1.5pt solid var(--cp-accent); padding-top: 4mm; }

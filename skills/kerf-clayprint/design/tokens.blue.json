@@ -12,7 +12,7 @@
   "screen": { "type": { "body": 16, "small": 14, "sub": 18, "title": 28, "display": 52 } },
   "print": {
     "margin": { "top": 12, "right": 14, "bottom": 15, "left": 22, "indent": 28, "gutter": 11 },
-    "type": { "body": 11, "leading": 16, "heading": 24, "sub": 12, "small": 9, "cover": 30, "summary": 16 }
+    "type": { "body": 12, "leading": 18, "heading": 24, "sub": 14, "small": 10, "cover": 30, "summary": 16 }
   },
   "font": {
     "latin": ["Helvetica Neue", "Segoe UI", "Arial"],

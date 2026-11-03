@@ -101,7 +101,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
 @page {
   size: A4; margin: 12mm 14mm 15mm 22mm;
   /* --report-title carries its own separator (report.js writes '報告名 | '), so without it the footer is just 2 / 4. */
-  @bottom-right { content: var(--report-title, "") counter(page) " / " counter(pages); font: 9pt var(--cp-font); color: var(--cp-muted); padding-right: 11mm; }
+  @bottom-right { content: var(--report-title, "") counter(page) " / " counter(pages); font: 10pt var(--cp-font); color: var(--cp-muted); padding-right: 11mm; }
 }
 /* The first page has no margin so the cover band can bleed, and no footer. */
 @page :first { margin: 0; @bottom-right { content: none; } }
@@ -113,9 +113,9 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   :root {
     --cp-print-indent: 28mm; --cp-print-gutter: 11mm; --cp-print-bottom: 15mm;
     --cp-print-text-left: 50mm; --cp-print-text-right: 25mm;
-    --cp-body: 11pt; --cp-small: 9pt; --cp-sub: 12pt; --cp-title-size: 24pt; --cp-display: 30pt;
-    --cp-print-body: 11pt; --cp-print-leading: 16pt; --cp-print-heading: 24pt;
-    --cp-print-sub: 12pt; --cp-print-small: 9pt; --cp-print-cover: 30pt; --cp-print-summary: 16pt;
+    --cp-body: 12pt; --cp-small: 10pt; --cp-sub: 14pt; --cp-title-size: 24pt; --cp-display: 30pt;
+    --cp-print-body: 12pt; --cp-print-leading: 18pt; --cp-print-heading: 24pt;
+    --cp-print-sub: 14pt; --cp-print-small: 10pt; --cp-print-cover: 30pt; --cp-print-summary: 16pt;
   }
   html { background: #fff; font-size: var(--cp-print-body); line-height: var(--cp-print-leading); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   html[data-paper="clay"] { background: var(--cp-paper); }
@@ -134,8 +134,10 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
      the cover band cancels that again to reach the paper edge. Sections always start on the next page. */
   .report-front { margin: 0 calc(-1 * var(--cp-print-gutter)) 0 calc(-1 * var(--cp-print-indent)); padding: 0 var(--cp-print-text-right) var(--cp-print-bottom) var(--cp-print-text-left); break-after: page; }
-  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 24mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-tint); }
+  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 18mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-tint); }
   .report-cover h1 { font-size: var(--cp-print-cover); line-height: 1.2; }
+  /* Source, period and check date stay on one row at the 10 pt print size; a second row pushes the summary off page 1. */
+  .cover-meta { gap: 2mm 6mm; }
   /* A full-page cover fills the paper; 1 mm short so it never spills onto a second page. */
   .report-front[data-cover="page"] { padding-bottom: 0; }
   .report-front[data-cover="page"] .report-cover { min-height: 296mm; margin-bottom: 0; padding-top: 80mm; }
@@ -143,6 +145,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .toc { margin-top: 0; }
   section { margin-top: 8mm; }
   .toc h2 { font-size: var(--cp-print-sub); }
+  .toc li { padding: 1.2mm 0; }
   /* Section headings, contents and pull quotes sit on the 22 mm line, the inner edge of @page. */
   .toc, .section-heading, .callout { margin-left: calc(-1 * var(--cp-print-indent)); }
   .section-heading { break-inside: avoid; break-after: avoid; margin-bottom: 4mm; border-top: 1.5pt solid var(--cp-accent); padding-top: 4mm; }
