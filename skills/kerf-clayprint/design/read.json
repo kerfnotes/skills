@@ -6,17 +6,17 @@
     "number": 88,
     "conclusionNumber": 64,
     "title": 44,
-    "sub": 28,
-    "body": 24,
-    "chartTitle": 24,
-    "tableBody": 20,
-    "tableHeader": 20,
-    "label": 20,
-    "chart": 20,
-    "source": 18,
-    "minimum": 18
+    "sub": 32,
+    "body": 28,
+    "chartTitle": 28,
+    "tableBody": 24,
+    "tableHeader": 24,
+    "label": 24,
+    "chart": 24,
+    "source": 20,
+    "minimum": 20
   },
-  "margin": { "top": 45, "bottom": 40, "ledeGap": 35, "takeawayGap": 35 },
+  "margin": { "top": 45, "bottom": 40, "ledeGap": 42, "takeawayGap": 42 },
   "chartArea": {
     "evidence": { "width": 1000, "height": 669 }
   },
@@ -32,8 +32,8 @@
     "process": [3, 8],
     "columns": [2, 5],
     "columnsBody": 6,
-    "tableRows": 14,
-    "closeRows": 14,
+    "tableRows": 12,
+    "closeRows": 12,
     "points": [2, 4],
     "panelNote": 3,
     "minFill": 0.7

@@ -58,16 +58,16 @@ async function slides(pages) {
 const rank = { kind: 'rank', rows: [{ label: '甲', value: 12 }, { label: '乙', value: 8 }] };
 const evidence = (extra) => ({ type: 'evidence', claim: '甲 12 件領先', sources, visual: rank, ...extra });
 
-test('閱讀版 evidence 右欄依序顯示 takeaway、points、note：takeaway 10 pt 粗體、points 10 pt', async () => {
+test('閱讀版 evidence 右欄依序顯示 takeaway、points、note：takeaway 12 pt 粗體、points 12 pt', async () => {
   const points = ['甲的件數最多，領先乙約一半。', '乙仍在成長，差距可能縮小。', '兩者合計占全部案件的大宗。'];
   const page = evidence({ takeaway: '甲是目前最主要的來源。', points, note: '資料只含已結案件，未結案件不列入。' });
   const { warnings, boxes: [boxes] } = await slides([page]);
   assert.deepEqual(warnings, []);
   const takeaway = boxes.find((s) => s.text === page.takeaway);
-  assert.deepEqual([...new Set(takeaway.sizes)], [1000]);
+  assert.deepEqual([...new Set(takeaway.sizes)], [1200]);
   assert.ok(takeaway.bold, 'takeaway 粗體');
   const shown = points.map((p) => boxes.find((s) => s.text === p));
-  for (const s of shown) assert.deepEqual([...new Set(s.sizes)], [1000]);
+  for (const s of shown) assert.deepEqual([...new Set(s.sizes)], [1200]);
   const note = boxes.find((s) => s.text === page.note);
   const ys = [takeaway, ...shown, note].map((s) => s.y);
   assert.deepEqual(ys, [...ys].sort((a, b) => a - b), `右欄由上而下 ${ys.join(', ')}`);
@@ -76,11 +76,11 @@ test('閱讀版 evidence 右欄依序顯示 takeaway、points、note：takeaway 
 });
 
 test('points 少於 2、多於 4 或單點超過兩行時警告並指出頁碼', () => {
-  // 624 px column minus a 20 px bullet indent: 28 characters a line at 20 px.
+  // 624 px column minus a 20 px bullet indent: 23 characters a line at 24 px.
   const warnings = readBuild([
     evidence({ points: ['只有一點'] }),
     evidence({ points: ['一', '二', '三', '四', '五'] }),
-    evidence({ points: ['點'.repeat(56), '點'.repeat(57)] }),
+    evidence({ points: ['點'.repeat(46), '點'.repeat(47)] }),
   ]);
   assert.ok(warnings.includes('第 1 頁 points 是 1 點，規格是 2～4 點：增刪 points，細節移到 note。'), warnings.join('\n'));
   assert.ok(warnings.includes('第 2 頁 points 是 5 點，規格是 2～4 點：增刪 points，細節移到 note。'), warnings.join('\n'));
@@ -96,24 +96,24 @@ test('閱讀版 evidence 右欄空白時警告；簡報版不警告', async () =
   assert.ok(!(await build({ pages: [evidence({})] })).warnings.some((w) => /右欄空白/.test(w)));
 });
 
-test('閱讀版 columns 每欄正文 6 行不警告、7 行警告；takeaway 顯示在欄下方 10 pt', async () => {
-  // Two columns are 836 px wide: 33 characters a line at 24 px.
+test('閱讀版 columns 每欄正文 6 行不警告、7 行警告；takeaway 顯示在欄下方 12 pt', async () => {
+  // Two columns are 836 px wide: 28 characters a line at 28 px.
   const columns = (body, takeaway) => ({ type: 'columns', claim: '兩個方向', sources, takeaway,
     visual: { items: [{ heading: '甲', body }, { heading: '乙', body: '短' }] } });
-  assert.ok(!readBuild([columns('文'.repeat(33 * 6))]).some((w) => /body：估算/.test(w)));
-  assert.ok(readBuild([columns('文'.repeat(33 * 6 + 1))]).some((w) => /^第 1 頁 visual\.items\[0\]\.body：估算 7 行，上限 6 行/.test(w)));
-  const page = columns('文'.repeat(33 * 3), '兩個方向都要做，先做甲。');
+  assert.ok(!readBuild([columns('文'.repeat(28 * 6))]).some((w) => /body：估算/.test(w)));
+  assert.ok(readBuild([columns('文'.repeat(28 * 6 + 1))]).some((w) => /^第 1 頁 visual\.items\[0\]\.body：估算 7 行，上限 6 行/.test(w)));
+  const page = columns('文'.repeat(28 * 3), '兩個方向都要做，先做甲。');
   const { boxes: [boxes] } = await slides([page]);
   const takeaway = boxes.find((s) => s.text === page.takeaway), body = boxes.find((s) => s.text === page.visual.items[0].body);
-  assert.deepEqual([...new Set(takeaway.sizes)], [1000]);
-  assert.ok(takeaway.y > body.y + 3 * 24 * 1.45 - 1, `takeaway y ${takeaway.y} 在正文 ${body.y} 下方`);
+  assert.deepEqual([...new Set(takeaway.sizes)], [1200]);
+  assert.ok(takeaway.y > body.y + 3 * 28 * 1.45 - 1, `takeaway y ${takeaway.y} 在正文 ${body.y} 下方`);
 });
 
-test('footnotes 自動編號、9 pt，置於來源行上方', async () => {
+test('footnotes 自動編號、10 pt，置於來源行上方', async () => {
   const page = evidence({ takeaway: '甲最多(1)。', points: ['甲 12 件(2)。', '乙 8 件。'], footnotes: ['只計已結案件。', '含轉介案件。'] });
   const { boxes: [boxes] } = await slides([page]);
   const notes = ['(1) 只計已結案件。', '(2) 含轉介案件。'].map((t) => boxes.find((s) => s.text === t));
-  for (const s of notes) assert.deepEqual([...new Set(s.sizes)], [900], JSON.stringify(s));
+  for (const s of notes) assert.deepEqual([...new Set(s.sizes)], [1000], JSON.stringify(s));
   const source = boxes.find((s) => s.text === `資料來源：${sources.source}`);
   assert.ok(notes[0].y < notes[1].y && notes[1].y < source.y, `${notes.map((s) => s.y)} < ${source.y}`);
   const lowest = Math.max(...boxes.filter((s) => s.text === page.points[1]).map((s) => s.y));
