@@ -42,7 +42,7 @@ node evals/check-report.mjs out/mine-report.html evals/fixtures/explain-script.m
 現場簡報由設計層 `type` 控制（設計 px，2 px = 1 pt）；閱讀版由 `design/read.json` 覆寫；HTML 螢幕由可選的 `screen.type` 控制（CSS px）；PDF 列印由 `print.type` 控制（pt）。色彩與字型家族繼續共用。內建 clay／blue 的螢幕設定如下：
 
 ```json
-"screen": { "type": { "body": 16, "small": 12, "sub": 18, "title": 28, "display": 52 } }
+"screen": { "type": { "body": 16, "small": 14, "sub": 18, "title": 28, "display": 52 } }
 ```
 
 把這個區塊放進舊自訂設計層後，調整簡報字級就不會連帶改變 HTML 正文與標題。沒有填的螢幕欄位仍用舊換算法：對應 `type` 的 `px / 2`，其中 `small` 對應 `label`。報告 SVG 採獨立字級預設；viewBox units 須按最終容器換算，詳見全交付索引。

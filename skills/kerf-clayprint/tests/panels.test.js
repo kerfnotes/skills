@@ -65,7 +65,7 @@ test('panels：圖表加表格、清單加文字兩頁可建檔，每格有標�
 
     const one = shapes(await zip.file('ppt/slides/slide1.xml').async('string'));
     const titles = chartPage.visual.items.map((it) => one.find((s) => s.text === it.title));
-    for (const t of titles) assert.deepEqual([...new Set(t.sizes)], [1000], `格標題 10 pt：${t.text}`);
+    for (const t of titles) assert.deepEqual([...new Set(t.sizes)], [1200], `格標題 12 pt：${t.text}`);
     near(titles[0].w, titles[1].w * 1.5, '左格寬為右格 1.5 倍');
     assert.ok(titles[0].x + titles[0].w < titles[1].x, '兩格不重疊');
     const chart = one.find((s) => s.chart), table = one.find((s) => s.table);
@@ -76,7 +76,7 @@ test('panels：圖表加表格、清單加文字兩頁可建檔，每格有標�
     assert.ok(chart.y > titles[0].y && table.y > titles[1].y, '圖表與表格在格標題下方');
     for (const [i, it] of chartPage.visual.items.entries()) {
       const note = one.find((s) => s.text === it.note);
-      assert.deepEqual([...new Set(note.sizes)], [1000], `第 ${i + 1} 格註 10 pt`);
+      assert.deepEqual([...new Set(note.sizes)], [1200], `第 ${i + 1} 格註 12 pt`);
       near(note.x, titles[i].x, `第 ${i + 1} 格註對齊`);
       assert.ok(note.y > (i ? table : chart).y, `第 ${i + 1} 格註在內容下方`);
     }
@@ -86,7 +86,7 @@ test('panels：圖表加表格、清單加文字兩頁可建檔，每格有標�
     const [risk, choice] = textPage.visual.items.map((it) => two.find((s) => s.text === it.title));
     near(risk.w, choice.w, '省略 split 時等分');
     const body = two.find((s) => s.text === textPage.visual.items[1].visual);
-    assert.deepEqual([...new Set(body.sizes)], [1200], '文字格正文 12 pt');
+    assert.deepEqual([...new Set(body.sizes)], [1400], '文字格正文 14 pt');
     near(body.x, choice.x, '文字在右格');
     for (const item of textPage.visual.items[0].visual.items) {
       const heading = two.find((s) => s.text === item.heading);
@@ -164,10 +164,10 @@ test('panels：格內圖表與 evidence 同一套檢查，x、columns、refs 錯
 });
 
 test('panels：格內表格超過列數上限時警告並給改法', () => {
-  const rows = Array.from({ length: 15 }, (_, i) => [`列${i}`, i]);
+  const rows = Array.from({ length: 13 }, (_, i) => [`列${i}`, i]);
   const warnings = buildRead({ mode: 'read', pages: [{ type: 'panels', claim: '兩格', sources: { source: '虛構' }, visual: { items: [
     { title: '左', visual: { kind: 'table', columns: [{ name: '項目' }, { name: '值' }], rows } }, { title: '右', visual: '文字' }] } }] });
-  assert.ok(warnings.includes('第 1 頁第 1 格表格是 15 列，規格是至多 14 列：刪列，或把這張表移到 evidence 頁。'), warnings.join('\n'));
+  assert.ok(warnings.includes('第 1 頁第 1 格表格是 13 列，規格是至多 12 列：刪列，或把這張表移到 evidence 頁。'), warnings.join('\n'));
 });
 
 test('panels：簡報版 story 使用時，validateStory 與驗收器都說明只有閱讀版支援', () => {
