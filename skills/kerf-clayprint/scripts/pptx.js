@@ -234,6 +234,21 @@ function nativeChart(slide, m, area, ctx) {
     type = 'bar';
     data = [{ name: m.unit ?? '數值', labels: m.rows.map((r) => r.label), values: m.rows.map((r) => r.value) }];
     Object.assign(opts, { barDir: 'bar', catAxisOrientation: 'maxMin', catAxisCrossesAt: 'max', valAxisLabelPos: 'nextTo', chartColors: m.rows.map((r) => hex(r.color)), showValue: true, dataLabelPosition: 'outEnd' });
+    if (m.rows.some((r) => r.focus)) {
+      if (m.axis.lo < 0) opts.catAxisLabelPos = 'low';
+      // PowerPoint's automatic plot fits the axis labels but can overlap a longer custom bar-end label.
+      const axisWidth = Math.max(...m.rows.map((r) => textWidth(r.label, CHART))) + CHART;
+      const endWidth = (rows) => Math.max(0, ...rows.map((r) => textWidth(r.focus ? `${r.label} ${r.text}` : r.text, CHART) * 1.2 + CHART));
+      const left = axisWidth + endWidth(m.rows.filter((r) => r.value < 0));
+      const right = endWidth(m.rows.filter((r) => r.value >= 0));
+      const bottom = 2 * CHART / area.h, plotWidth = area.w - left - right;
+      if (plotWidth >= area.w * 0.25 && bottom < 0.5) {
+        opts.layout = { x: left / area.w, y: 0.04, w: plotWidth / area.w, h: 0.96 - bottom };
+      } else {
+        m.rankEndNames = false;
+        ctx.warn(`第 ${ctx.n} 頁排行圖焦點名稱保留在類別軸：加寬圖表或縮短類別名稱，即可在長條末端同時顯示名稱與數值。`);
+      }
+    }
   } else if (m.kind === 'ordered') {
     type = 'bar';
     data = [{ name: m.unit ?? '數值', labels: m.rows.map((r) => r.label), values: m.rows.map((r) => r.value) }];
@@ -279,7 +294,6 @@ function nativeChart(slide, m, area, ctx) {
       // shortcut: a padded upper bound is fixed; regenerate after data edits exceed it.
       if (touches(axis.hi)) opts[`${prefix}AxisMaxVal`] = axis.hi + axis.step;
     }
-    if (m.refs.length) ctx.warn(`第 ${ctx.n} 頁圖表：原生散佈圖省略參考線；若要保留，請設定 native: false`);
   }
   // PowerPoint skips category labels it judges crowded, even when they fit; every bar needs its name.
   if (type === 'bar') opts.catAxisLabelFrequency = 1;
@@ -289,9 +303,11 @@ function nativeChart(slide, m, area, ctx) {
 
 function chart(slide, spec, area, ctx) {
   let model = ctx.model;
-  const native = spec.native !== false && NATIVE.has(model.kind);
+  const scatterRefs = model.kind === 'scatter' && model.refs.length > 0;
+  const native = spec.native !== false && NATIVE.has(model.kind) && !scatterRefs;
   const tiny = native && tinyValues(model);
   if (tiny) ctx.warn(`第 ${ctx.n} 頁圖表：非零極小值在顯示精度下會變成 0，改用 SVG`);
+  if (scatterRefs && spec.native !== false) ctx.warn(`第 ${ctx.n} 頁圖表：散佈圖以 SVG 保留參考線，請修改原始圖表 JSON 後重產。`);
   if (native && !tiny) nativeChart(slide, model, area, ctx);
   else {
     const rendered = render(spec, { width: area.w, height: area.h, font: SLIDE_FONT, categoryOrder: ctx.categoryOrder });
@@ -1215,12 +1231,12 @@ function labelNudges(m, lo, hi, chartH) {
   return crowded ? null : nudges;
 }
 
-function pointLabel(i, { color = C.text, bold = false, name = false, value = true, pos = 'r', label, formatCode, dy = 0 } = {}) {
+function pointLabel(i, { color = C.text, bold = false, name = false, category = false, value = true, pos = 'r', label, formatCode, dy = 0 } = {}) {
   const tx = label === undefined ? '' : `<c:tx><c:rich>${labelStyle(color, bold).replace('</a:p>', () => `<a:r><a:t>${xml(label)}</a:t></a:r></a:p>`)}</c:rich></c:tx>`;
   const numFmt = formatCode === undefined ? '' : `<c:numFmt formatCode="${xml(formatCode)}" sourceLinked="0"/>`;
   const layout = dy ? `<c:layout><c:manualLayout><c:x val="0"/><c:y val="${dy.toFixed(4)}"/></c:manualLayout></c:layout>` : '';
   return `<c:dLbl><c:idx val="${i}"/>${layout}${tx}${numFmt}<c:txPr>${labelStyle(color, bold)}</c:txPr><c:dLblPos val="${pos}"/>`
-    + `<c:showLegendKey val="0"/><c:showVal val="${value ? 1 : 0}"/><c:showCatName val="0"/><c:showSerName val="${name ? 1 : 0}"/>`
+    + `<c:showLegendKey val="0"/><c:showVal val="${value ? 1 : 0}"/><c:showCatName val="${category ? 1 : 0}"/><c:showSerName val="${name ? 1 : 0}"/>`
     + '<c:showPercent val="0"/><c:showBubbleSize val="0"/><c:separator> </c:separator></c:dLbl>';
 }
 
@@ -1242,7 +1258,7 @@ function patchChart(s, m) {
     const i = si++;
     let labels = '', points = '';
     if (m.kind === 'rank') {
-      labels = m.rows.map((r, j) => pointLabel(j, { color: r.focus ? C.focus : C.text, bold: r.focus, pos: 'outEnd', formatCode })).join('');
+      labels = m.rows.map((r, j) => pointLabel(j, { color: r.focus ? C.focus : C.text, bold: r.focus, category: r.focus && m.rankEndNames !== false, pos: 'outEnd', formatCode })).join('');
     } else if (m.kind === 'ordered') {
       labels = m.rows.flatMap((r, j) => r.value === null ? [] : [pointLabel(j, {
         color: r.focus ? C.focus : C.text, bold: r.focus, pos: 'outEnd', formatCode,
@@ -1254,6 +1270,11 @@ function patchChart(s, m) {
       })]).join('');
     } else if (m.kind === 'line') {
       const row = m.series[i];
+      if (row.width !== T.stroke.otherLine) {
+        // pptxgenjs emits one width for all series. Override the series stroke in OOXML (12700 EMU per pt).
+        const width = Math.round(pt(row.width) * 12700);
+        ser = ser.replace(/(<c:spPr>[^]*?<a:ln w=")\d+/, (_, prefix) => `${prefix}${width}`);
+      }
       if (row.last >= 0) labels += pointLabel(row.last, { color: row.color, bold: row.focus, name: true, formatCode });
       if (row.peak >= 0) labels += pointLabel(row.peak, { color: row.color, bold: true, pos: 't', formatCode });
     } else if (m.kind === 'slope') {

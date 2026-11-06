@@ -2,6 +2,8 @@
 
 目前有 23 種圖表與 1 種表格。把下列 spec 放進證據頁的 `visual`；版面結構見 [layouts.md](layouts.md)。這些是輸入欄位，`core.prepare()` 產生的 `axis`、`missing`、`warnings`、`text` 等結果不用自己填。範例數字都是虛構示意；製作簡報時以文字稿為準。
 
+有足夠且同口徑的資料時，先看讀者是否需要比較差距、看趨勢、理解組成、分布或關係。圖能讓支持結論的證據更容易看懂，就主動選圖。單一關鍵數字用 KPI，精確查值用表格；數字不足或圖無助判斷時，用適合的非圖表版型。
+
 ## 共通欄位與輸出
 
 - `kind`：下列圖種名稱；各圖的資料欄位必填，其他欄位除特別註明外可省略。
@@ -9,7 +11,7 @@
 - `better`：`higher` 或 `lower`，預設 `higher`；控制支援增減的圖表之增減標籤色，不改動正負號。
 - `unit`、`period`、`source`：獨立 SVG 的來源列。放進簡報後，每頁來源列改讀頁面的 `sources`，請另填 `sources.source`、`sources.unit`、`sources.period`。
 - 數值用 JSON 數字，缺值用 `null`，0 照常保留。缺值會自動列入證據頁來源列；表格會在原格寫「未提供」，其他圖種依圖種留白、斷線或略去。若缺值本身是論證重點，改用能在原格標示的數字、比較或表格版型。文字稿沒有可畫數字時，選非圖表版型。
-- 原生：`rank`、`line`、`slope`、`share`、`scatter`、`grouped`、`sharetrend`、`ordered` 是 PowerPoint 圖表，`table` 是 PowerPoint 表格。其餘為 SVG，簡報內附 PNG 後備。原生圖可加 `native: false` 改用 SVG；極小非零值若會顯示成 0，也會自動改 SVG 並警告。
+- 原生：`rank`、`line`、`slope`、`share`、`scatter`、`grouped`、`sharetrend`、`ordered` 是 PowerPoint 圖表，`table` 是 PowerPoint 表格。其餘為 SVG，簡報內附 PNG 後備。原生圖可加 `native: false` 改用 SVG；散佈圖有 `refs`，或極小非零值會顯示成 0 時，也會自動改用 SVG 並提示。
 - 一張圖只有一個數值軸；`combo` 是上下對齊的兩張圖，各有自己的數值軸與單位，沒有雙軸圖。
 - 同類別整份簡報維持同色。`share`、`sharetrend`、`waffle`、`mekko` 超過可用類別色數的類別會合併為「其他」；無 `focus` 的多系列 `line` 超出可用色數者改用灰色，但不合併資料。可用色數取 `categoryRules.maxCategorical` 與 `categorical` 長度的較小值；預設為四色。看警告與圖面再決定是否調整。
 
@@ -221,7 +223,7 @@ node scripts/png.js out/rank.svg out/rank.png
 用於每個對象同時有兩個數值的關係與異常點；相關性本身不表示因果。
 
 - 欄位：`points: [{label, x, y}]`；選用 `focus`（點名）、`xLabel`、`yLabel`、`suffix`（縱軸刻度尾碼）、`refs: [{x?, y?, label}]`。座標可為 `null`，缺任一軸的點及其標籤都略去，SVG 與原生圖相同；每條參考線選一個軸。
-- 輸出：原生圖表；`refs` 在原生版省略並警告，需要參考線時設 `native: false`。SVG 顯示 `xLabel` 與縱軸數值，沒有另畫 `yLabel` 標題，可把縱軸意義放入來源單位。
+- 輸出：無參考線時用原生圖表。有 `refs` 時改用 SVG 保留參考線與標籤，更新資料須修改 JSON 後重產。SVG 顯示 `xLabel` 與縱軸數值，沒有另畫 `yLabel` 標題，可把縱軸意義放入來源單位。
 - 常見錯誤：憑印象補座標；把兩個不同族群混在一起推論關係；以為 PowerPoint 的點名會跟著活頁簿改名。點名標籤要重產或手動改。
 - 最小範例：`{"kind":"scatter","points":[{"label":"甲","x":3,"y":8},{"label":"乙","x":7,"y":4}],"xLabel":"工時","yLabel":"件數"}`。完整檔：[examples/scatter.json](../examples/scatter.json)。
 

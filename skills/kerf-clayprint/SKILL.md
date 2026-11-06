@@ -1,6 +1,6 @@
 ---
 name: kerf-clayprint
-description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的 HTML 報告，也為既有 PowerPoint、Word、Excel、HTML 的指定圖表或圖片換樣式。適用於內容視覺化；不適用於軟體或架構藍圖、只要大綱、圖片提示詞簡報。"
+description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的 HTML 報告，也為既有 PowerPoint、Word、Excel、HTML 的指定圖表或圖片換樣式。指定 Clayprint 風格時，可把已提供的資料做成獨立 SVG 證據圖，保留結論與來源。適用於內容視覺化；不適用於軟體或架構藍圖、只要大綱、圖片提示詞簡報。"
 ---
 
 # Clayprint
@@ -16,6 +16,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
   - 有講者說明：現場簡報（`present`，預設），依下方〈簡報流程〉。
   - 無講者、需要逐頁比較證據：閱讀型簡報（`read`），依〈簡報流程〉及[閱讀型簡報](references/layouts.md#閱讀型簡報)。
   - 連續閱讀、轉寄或列印：直接依 [報告流程](references/report.md)製作 HTML／PDF，不必先拆成投影片。
+  - 只需一張圖：依 [圖表選單](references/charts.md)選圖，以該頁指令交付獨立 SVG 和可重產的圖表 JSON。保留已知單位、期間、來源與影響判讀的限制。
 
 所有交付先依[全交付字級索引](design/README.md#全交付字級索引)選用途、單位與預設來源；既有檔案只套用授權指定目標。
 
@@ -54,7 +55,7 @@ description: "Clayprint 把文字稿做成簡報／PowerPoint 或連續閱讀的
 
 1. 讀文字稿，確認聽眾及其先備知識、目的、可用數字、來源與資料缺口，依原則 6 決定解釋深度。使用者說明的背景優先；聽眾或目的不明且會改變取捨時，先問一次。
 2. 選合適的骨架，寫故事線和每頁一句結論。
-3. 依 [版型說明](references/layouts.md)挑支撐結論的版型；需要圖表時依 [圖表選單](references/charts.md)選圖。
+3. 依 [版型說明](references/layouts.md)挑支撐結論的版型，並依 [圖表選單](references/charts.md)主動判斷是否適合用圖。
 4. 寫 `out/story.json`，每張內容頁在 `notes` 放 1～3 句講稿（要說的話、補充細節），計算另列；影響判斷的限制依原則 6 放在頁面上；閱讀型簡報改把講稿寫在頁面上。執行 `node evals/check.mjs out/story.json script.md` 核對；範例：`node evals/check.mjs examples/story.json evals/fixtures/example-script.md`。
 5. 執行 `node scripts/pptx.js out/story.json out/deck.pptx` 建檔。
 6. 依 [預覽與交付](references/layouts.md#預覽與交付)執行 `node scripts/preview.js out/deck.pptx out/preview`；輸出 `page-N.png`、`sheet.png`（整份概覽）、`deck.pdf`。0 項容量警告只代表未偵測到溢出，仍逐頁找孤字與不均勻換行。

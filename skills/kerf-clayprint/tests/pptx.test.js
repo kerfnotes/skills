@@ -640,6 +640,20 @@ test('rank：單一系列、反向類別、外部標籤與粗體重點標籤', a
   assert.ok(nodes(label, 'a:srgbClr').some((c) => c.attrs.val === hex(C.focus)));
   assert.ok([...nodes(label, 'a:defRPr'), ...nodes(label, 'a:rPr')].some((p) => p.attrs.b === '1'));
   assert.equal(nodes(label, 'c:tx').length, 0);
+  assert.deepEqual(nodes(series[0], 'c:dLbl').filter((item) => enabled(item, 'c:showCatName')).map(labelIndex), [0]);
+  assert.ok(enabled(label, 'c:showVal'));
+  assert.ok(nodes(root, 'c:manualLayout').some((layout) => nodes(layout, 'c:layoutTarget').length));
+});
+
+test('rank keeps long focus names on the category axis when a narrow plot cannot fit both ends', async () => {
+  const label = '很長的排行類別名稱'.repeat(3);
+  const spec = { kind: 'rank', focus: label, rows: [{ label, value: -20 }, { label: '乙', value: 10 }] };
+  const { zip, warnings } = await deck([{ ...evidence(spec), note: '雙向比較' }]);
+  const { root } = await chartAt(zip, 1);
+  assert.ok(warnings.some((w) => w.includes('焦點名稱保留在類別軸')));
+  assert.equal(value(one(root, 'c:catAx'), 'c:tickLblPos'), 'low');
+  assert.ok(nodes(root, 'c:dLbl').every((item) => !enabled(item, 'c:showCatName')));
+  assert.ok(textOf(one(root, 'c:cat')).includes(label));
 });
 
 test('line: missing cache/workbook cells are absent and labels follow only tail/peak indices', async () => {
@@ -648,6 +662,9 @@ test('line: missing cache/workbook cells are absent and labels follow only tail/
   assert.ok(source.includes('未提供：主線／三月、副線／四月'));
   assert.equal(value(chart.root, 'c:dispBlanksAs'), 'gap');
   assert.equal(nodes(chart.root, 'c:legend').length, 0);
+  const strokes = prepare(visuals[1]).series.map((row) => Math.round(row.width / T.slide.pxPerPt * 12700));
+  assert.deepEqual(series.map((s) => Number(one(one(s, 'c:spPr'), 'a:ln').attrs.w)), strokes);
+  assert.ok(strokes[0] > strokes[1]);
   for (let i = 0; i < series.length; i++) {
     const expected = visuals[1].series[i].values.flatMap((v, index) => v === null ? [] : [{ index, value: String(v) }]);
     assert.deepEqual(cacheValues(one(one(series[i], 'c:val'), 'c:numCache')), expected);
@@ -976,16 +993,20 @@ test('scatter pads only occupied axis boundaries by one step without changing da
   assert.deepEqual(specs, before);
 });
 
-test('native scatter warns about omitted reference lines and points to the SVG option', async () => {
-  const spec = example('scatter');
-  const tiny = { ...spec, points: [{ label: '甲', x: 0.001, y: 1 }, { label: '乙', x: 2, y: 2 }] };
-  const { warnings, zip } = await deck([spec, { ...spec, native: false }, { ...spec, refs: [] }, tiny].map(evidence));
-  const refs = warnings.filter((w) => w.includes('參考線'));
-  assert.equal(refs.length, 1);
-  assert.ok(refs[0].includes('第 1 頁'));
-  assert.ok(refs[0].includes('native: false'));
-  assert.ok((await zip.file('ppt/slides/slide1.xml').async('string')).includes('<c:chart '));
-  assert.ok((await zip.file('ppt/slides/slide2.xml').async('string')).includes('svgBlip'));
+test('scatter preserves references in SVG, while an empty refs array keeps editable data', async () => {
+  const base = example('scatter');
+  const spec = { ...base, refs: [...base.refs, { x: 32, label: '車柱門檻' }] };
+  const tiny = { ...base, refs: [], points: [{ label: '甲', x: 0.001, y: 1 }, { label: '乙', x: 2, y: 2 }] };
+  const { warnings, zip } = await deck([spec, { ...spec, native: false }, { ...spec, refs: [] }, tiny, { ...spec, native: true }].map(evidence));
+  const refs = warnings.filter((w) => w.includes('以 SVG 保留參考線'));
+  assert.deepEqual(refs.map((warning) => Number(warning.match(/第 (\d+) 頁/)[1])), [1, 5]);
+  assert.ok(warnings.some((warning) => warning.includes('第 4 頁') && warning.includes('非零極小值')));
+  for (const n of [1, 2, 4, 5]) assert.match(await zip.file(`ppt/slides/slide${n}.xml`).async('string'), /svgBlip/);
+  const svgs = await Promise.all(files(zip, /^ppt\/media\/.*\.svg$/).map((name) => zip.file(name).async('string')));
+  assert.ok(svgs.some((svg) => svg.includes('車柱門檻') && svg.includes('全市平均') && svg.includes('stroke-dasharray')));
+  const native = await chartAt(zip, 3);
+  one(native.root, 'c:scatterChart');
+  assert.ok(await workbook(zip, native));
 });
 
 test('native slope hides its value axis and gridlines', async () => {

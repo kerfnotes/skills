@@ -17,11 +17,12 @@ rank、line、slope、share、scatter、grouped、sharetrend、ordered 使用原
 
 | 項目 | PowerPoint 的做法、原因與限制 |
 | --- | --- |
-| 折線線寬 | 原生 line 的所有系列統一使用 `T.stroke.otherLine`，即 1.5 px（0.75 pt）。pptxgenjs 4.0.1 無法逐系列設定線寬，故未保留 SVG 重點線 3 px／其他線 1.5 px 的區別；系列顏色仍依 model。 |
+| 折線線寬 | 原生 line 的重點線與其他線沿用 SVG 的線寬職務，預設分別為 1.5 pt 與 0.75 pt，圖表仍可編輯資料。 |
+| 排行焦點名稱 | 原生 rank 在焦點長條末端用重點色粗體顯示「類別名稱＋值」，名稱與數值都來自內嵌資料。類別軸維持統一灰色。圖太窄時，名稱只顯示在類別軸，長條末端保留重點色數值，並提示加寬圖表。 |
 | 折線直接標值 | 不放圖例；每個系列只在輸出時最後一個有值的點標「系列名稱＋值」，focus 系列另標最高點。XML 標籤連動系列名稱與數值，但索引固定：新增資料欄後不會自動移到新尾端，最高點換位置也不會重選。這些變動需重新輸出。 |
 | 斜率圖 | 每列為兩期折線，線為灰色，舊、新標記分別用 Ordered 第一階與最後一階。左端標「名稱＋值」，右端標「值」；隱藏數值軸與格線，保留兩期名稱。v1 省略設計稿的增減文字，避免改了內嵌資料後，旁邊靜態增減文字仍顯示舊值。 |
 | 散佈名稱 | 逐點 `c:dLbl` 的名稱是靜態 `c:tx`，位置隨資料點移動，但名稱不連動活頁簿。修改點名須重新輸出或在 PowerPoint 手動改標籤。 |
-| 散佈參考線 | 原生 scatter 的 v1 省略 `refs` 參考線與文字；有指定 `refs` 時發出警告，提示改用 `native: false` 的 SVG。圖表內部繪圖區由 PowerPoint 排版，外加圖形線段難以保證在改軸或改尺寸後仍對準。 |
+| 散佈參考線 | scatter 有 `refs` 時改用 SVG 加 PNG 後備，保留參考線及文字。變更資料或參考線時，修改原始圖表 JSON 後重產；無參考線時仍用原生可編輯圖表。 |
 | 數值軸上界 | 原生 rank、line、slope 不固定 Max，交由 PowerPoint 自動決定，讓編輯後增加的數值仍可顯示；刻度間距與下界仍取 model。share 的比例範圍固定為 0～100%。自動上界可能與 SVG 的 model 上界不同。 |
 | 散佈留白與上界例外 | scatter 的 x、y 軸分別判斷：只有資料點貼到 model 邊界時，該邊向外加一個 step；沒有貼邊就不另加留白。貼上界時必須明定 Max 為原上界加一個 step，確保標記不貼框，這是自動 Max 的例外；其他情況使用自動 Max。編輯後若數值超過明定的 Max，需手動調整軸界或重新輸出。 |
 | 橫條數值軸位置 | rank、share 類別反轉後，設定 `catAxisCrossesAt: 'max'`，使數值軸的 `c:crosses` 為 `max`，並用 `valAxisLabelPos: 'nextTo'` 讓刻度標籤跟隨軸線，修正軸與標籤分離的位置。 |
@@ -32,7 +33,7 @@ rank、line、slope、share、scatter、grouped、sharetrend、ordered 使用原
 | 極小值與強制 SVG | 非零值若在顯示精度下會成為 0，原生圖改走 SVG 並警告，以保留 `<`／`>−` 標籤；也可指定 `native: false`。這兩種情況沒有可「編輯資料」的圖表活頁簿。 |
 | 標籤位置 | 原生圖表的標籤位置交由 PowerPoint 排版，無法逐像素重現 SVG 的固定偏移與避碰。刻度、數字精度、顏色取 model；軸界採上述自動上界與散佈留白規則。密集標籤仍可能需要手動調整。 |
 
-原生圖的數值標籤使用 `showSerName`／`showVal`，並在逐點 `c:dLbl` 明定 `numFmt`，避免 PowerPoint 忽略系列層級格式；數字仍隨資料更新，不寫成靜態文字。scatter 名稱是上述例外。缺值從圖表 `numCache` 與活頁簿空儲存格移除，折線使用 `displayBlanksAs: gap`；0 則保留為觀察值。改內嵌資料只能更新 PowerPoint 的圖表，無法重新執行 Clayprint 的排序、Focus 選擇、極小值判定、缺值來源列或頁面結論；需要這些規則時應改原始 spec 後重產。
+原生圖的數值標籤使用 `showCatName`／`showSerName`／`showVal`，並在逐點 `c:dLbl` 明定 `numFmt`，避免 PowerPoint 忽略系列層級格式；數字仍隨資料更新，不寫成靜態文字。scatter 名稱是上述例外。缺值從圖表 `numCache` 與活頁簿空儲存格移除，折線使用 `displayBlanksAs: gap`；0 則保留為觀察值。改內嵌資料只能更新 PowerPoint 的圖表，無法重新執行 Clayprint 的排序、Focus 選擇、極小值判定、缺值來源列或頁面結論；需要這些規則時應改原始 spec 後重產。
 
 ## 交付前的編輯驗收
 

@@ -35,7 +35,12 @@ test('既有 PPTX 逐頁擷取文字、備忘稿與圖表快取，保留零與�
 
     const kinds = ['rank', 'line', 'slope', 'share', 'scatter', 'table'];
     const nativeFile = path.join(dir, 'native.pptx');
-    writeFileSync(nativeFile, (await build({ pages: kinds.map((k) => ({ type: 'evidence', claim: k, sources: { source: '測試' }, visual: read(k) })) })).buffer);
+    const pages = kinds.map((kind) => {
+      const visual = read(kind);
+      if (kind === 'scatter') delete visual.refs; // This fixture exercises native chart caches.
+      return { type: 'evidence', claim: kind, sources: { source: '測試' }, visual };
+    });
+    writeFileSync(nativeFile, (await build({ pages })).buffer);
     const native = await extract(nativeFile);
     assert.equal(native.slides.length, kinds.length);
     assert.deepEqual(native.slides.map((s) => s.charts[0]?.type).filter(Boolean), ['barChart', 'lineChart', 'lineChart', 'barChart', 'scatterChart']);
