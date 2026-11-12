@@ -33,7 +33,7 @@ The rest depends on what you need:
 - **Words you can send, or a path to take**: if you need a message to send tonight, you get the draft and the judgement behind it, including what reading it out commits you to. If you need to decide your next move, you get the chosen strategy and why not the others, what to do in the next two weeks, where it is most likely to fail, and a fallback that is real; a stakeholder table when it helps.
 - **A map**: included on the first read; when you only need a message, it may be left out or cut down to the one line that matters.
 
-If you number your questions, it answers them one by one, still opening with the conclusion and the read. When information is missing, it states its assumptions and answers anyway, asking back only about the one or two things that would change the answer. Follow-ups update only the judgements, drafts and map that changed.
+If you number your questions, it answers them one by one, still opening with the conclusion and the read. When something you know and it does not would flip the advice, it asks up to two questions before judging, and it reads any emails, documents or org chart you attach first. If you ask how to reply now, face a near deadline or will not reply again, it states its assumptions and answers anyway, asking back only about the one or two things that would change the answer. Follow-ups update only the judgements, drafts and map that changed.
 
 ## How to ask
 
@@ -47,7 +47,7 @@ Just describe your situation. To give it a full picture in one go, use these fiv
 - What I have already tried:
 ```
 
-End with what you want to know; number the questions if there are several. Leave an item blank if you are unsure; it will state its assumptions and answer.
+End with what you want to know; number the questions if there are several. Leave an item blank if you are unsure; it will ask first, or state its assumptions and answer.
 
 A filled-in example (the short example's question below, rearranged into the five items):
 
