@@ -8,11 +8,12 @@ import { render, reportHeight } from './svg.js';
 import { themeCss, webThemeCss } from './theme-css.js';
 import { isMain } from './main.js';
 import { SLUG } from './brand.js';
+import { figureInput, resolveFigure } from './figure.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const MISSING = '<span class="missing">未提供</span>';
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
-const BLOCKS = ['text', 'callout', 'chart', 'table', 'compare', 'list', 'process', 'close', 'missing'];
+const BLOCKS = ['text', 'callout', 'chart', 'figure', 'table', 'compare', 'list', 'process', 'close', 'missing'];
 // A summary or meta value: number formatted like the deck, text as written, null marked in place.
 const shown = (value, { digits, unit } = {}) => value === null ? MISSING
   : `${esc(typeof value === 'number' ? formatValue(value, { digits: shownDigits(digits, value) }) : value)}${unit ? ` ${esc(unit)}` : ''}`;
@@ -51,7 +52,8 @@ function validate(report) {
       if (['text', 'callout', 'missing'].includes(b.type)) str(b.text, `${q}.text`);
       if (b.type === 'chart') { str(b.title, `${q}.title`); need(typeof b.chart === 'string' || isObject(b.chart), `${q}.chart`, '填圖表 JSON 路徑或圖表物件'); }
       if (b.type === 'table') { list(b.columns, `${q}.columns`); list(b.rows, `${q}.rows`); b.columns.forEach((c, k) => str(c?.name, `${q}.columns[${k}].name`)); }
-      if (b.type === 'chart' || b.type === 'table') {
+      if (b.type === 'figure') { str(b.title, `${q}.title`); str(b.source, `${q}.source`); need(figureInput(b.figure), `${q}.figure`, '填自畫圖的 SVG 檔路徑（相對於 report.json），例如 "flow.svg"'); }
+      if (['chart', 'table', 'figure'].includes(b.type)) {
         if (b.wide != null) need(typeof b.wide === 'boolean', `${q}.wide`, '填 true 或 false');
         for (const key of b.type === 'table' ? ['note', 'source'] : ['note']) if (b[key] != null) str(b[key], `${q}.${key}`);
       }
@@ -72,6 +74,7 @@ export function resolveReport(report, { baseDir = '.' } = {}) {
   validate(report);
   return { ...report, sections: report.sections.map((section, i) => ({ ...section,
     blocks: section.blocks.map((block, j) => {
+      if (block.type === 'figure') return { ...block, figure: resolveFigure(block.figure, { baseDir, path: `sections[${i}].blocks[${j}].figure` }) };
       if (block.type !== 'chart') return block;
       const path = `sections[${i}].blocks[${j}].chart`;
       let spec = block.chart;
@@ -169,6 +172,17 @@ function figure(block, n, where, warnings, categoryOrder) {
 </figure>`;
 }
 
+// A figure the author drew (scripts/figure.js): same frame as a chart, shares the 「圖 N」 numbering, has no data table.
+function drawn(block, n) {
+  const caption = [block.note && `附註：${block.note}`, `來源：${block.source}`].filter(Boolean).map(esc).join('｜');
+  const svg = block.figure.svg.replace(/^<svg\b(?![^>]*\srole=)/i, `$& role="img" aria-label="${esc(block.title)}"`);
+  return `<figure${block.wide ? ' class="wide"' : ''}>
+<p class="exhibit-title">${label(`圖 ${n}`)}${esc(block.title)}</p>
+<div class="chart-scroll" tabindex="0" role="region" aria-label="${esc(block.title)}，可橫向捲動">\n${svg}\n</div>
+<figcaption>${caption}</figcaption>
+</figure>`;
+}
+
 function table(block, n, where, warnings) {
   const m = prepare({ kind: 'table', columns: block.columns, rows: block.rows, total: block.total, emphasis: block.emphasis });
   for (const w of m.warnings) warnings.push(`${where}：${w}`);
@@ -220,6 +234,7 @@ function block(b, n, where, warnings, categoryOrder) {
     case 'callout': return `<aside class="callout"><p>${esc(b.text)}</p></aside>`;
     case 'missing': return `<p class="missing">未提供：${esc(b.text)}</p>`;
     case 'chart': return figure(b, n, where, warnings, categoryOrder);
+    case 'figure': return drawn(b, n);
     case 'table': return table(b, n, where, warnings);
     case 'compare': return compare(b);
     case 'close': return close(b);
@@ -285,7 +300,7 @@ ${report.kicker ? `<p class="eyebrow">${esc(report.kicker)}</p>\n` : ''}<h1>${es
   }
   report.sections.forEach((s, i) => {
     const body = s.blocks.map((b, j) => {
-      const n = b.type === 'chart' ? ++figures : b.type === 'table' ? ++tables : 0;
+      const n = b.type === 'chart' || b.type === 'figure' ? ++figures : b.type === 'table' ? ++tables : 0;
       return block(b, n, `第 ${i + 1} 節第 ${j + 1} 個元件`, warnings, categoryOrder);
     });
     const sources = s.sources ? `\n<footer class="sources">\n<h3>來源與附註</h3>\n${s.sources.map((t) => `<p>${esc(t)}</p>`).join('\n')}\n</footer>` : '';

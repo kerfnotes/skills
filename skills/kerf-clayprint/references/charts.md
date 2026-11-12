@@ -1,6 +1,6 @@
 # 圖表選單：先決定要回答的問題
 
-目前有 24 種圖表與 1 種表格。把下列 spec 放進證據頁的 `visual`；版面結構見 [layouts.md](layouts.md)。這些是輸入欄位，`core.prepare()` 產生的 `axis`、`missing`、`warnings`、`text` 等結果不用自己填。範例數字都是虛構示意；製作簡報時以文字稿為準。
+目前有 24 種圖表與 1 種表格。選單沒有能畫出主張的圖時，用[自畫圖](#自畫圖)。把下列 spec 放進證據頁的 `visual`；版面結構見 [layouts.md](layouts.md)。這些是輸入欄位，`core.prepare()` 產生的 `axis`、`missing`、`warnings`、`text` 等結果不用自己填。範例數字都是虛構示意；製作簡報時以文字稿為準。
 
 有足夠且同口徑的資料時，先看讀者是否需要比較差距、看趨勢、理解組成、分布或關係。圖能讓支持結論的證據更容易看懂，就主動選圖。單一關鍵數字用 KPI，精確查值用表格；數字不足或圖無助判斷時，用適合的非圖表版型。
 
@@ -268,3 +268,16 @@ node scripts/png.js out/rank.svg out/rank.png
 - 輸出：原生 PowerPoint 表格，直接編輯儲存格，沒有圖表活頁簿。
 - 常見錯誤：格數不一致；用加上千分位的字串填數值欄；以為 `total` 自動相加。純文字表格可用於無數字文字稿，但若只是比較方案，`compare` 通常更直接。
 - 最小範例：`{"kind":"table","columns":[{"name":"項目","type":"text"},{"name":"件數","type":"number"}],"rows":[["甲",12],["乙",8]]}`。完整檔：[examples/table.json](../examples/table.json)。
+
+## 選單沒有能畫出主張的圖？
+
+### 自畫圖
+
+選單的圖都畫不出主張時，自己畫一張 SVG，存在 `story.json` 或 `report.json` 旁邊，由引擎放進成品；不在產生後手動貼圖。
+
+- 簡報：`evidence` 頁填 `"visual": {"figure": "檔名.svg"}`，路徑相對於 `story.json`；右側結論欄、來源列照常使用。位置與尺寸見[版型說明](layouts.md#版型與各自的主張)；`panels` 的格不支援。
+- 報告：元件 `{"type": "figure", "title": "圖上方標題", "figure": "檔名.svg", "source": "來源"}`，路徑相對於 `report.json`；選用 `note`、`wide`。與圖表共用「圖 N」編號，沒有「查看資料」。
+- SVG 寫法：只有一個 `<svg>` 且有 `viewBox`；文字用 `<text>`，樣式寫在元素屬性上（`fill`、`stroke`、`font-size`），顏色取設計層 `design/tokens.json` 的 `color`。不能含 `<style>`、`<script>`、`<image>`、`<foreignObject>`、巢狀 `<svg>`，建檔時會指出。`id`（箭頭、漸層）加上圖名前綴，同一份報告的圖才不會互相影響。
+- 驗收：`check.mjs` 與 `check-report.mjs` 讀 SVG 內所有文字（含 `<title>`、`<desc>`），圖上的阿拉伯數字和其他畫面文字一樣，要在原稿找得到，或是同頁（報告為同節）加減算式的結果。原稿沒有數字時也能放自畫圖。字不要轉成外框，否則讀不到。
+- 輸出：SVG，簡報內附 PNG 後備；不是 PowerPoint 原生可編輯圖表，要改就改 SVG 檔後重產。交付時列在 SVG 一類，並提醒這是選單外的自畫圖。
+- 最小範例：`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1144 400"><rect x="20" y="120" width="320" height="160" fill="none" stroke="#8F8D86" stroke-width="3"/><text x="180" y="210" text-anchor="middle" font-size="28">收件</text></svg>`。

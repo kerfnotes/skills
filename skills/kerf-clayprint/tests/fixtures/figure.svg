@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" font-family="sans-serif" font-size="28">
+  <defs><marker id="figure-arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#555555"/></marker></defs>
+  <rect x="20" y="120" width="320" height="160" fill="none" stroke="#555555" stroke-width="3"/>
+  <text x="180" y="190" text-anchor="middle">收件</text>
+  <text x="180" y="240" text-anchor="middle"><tspan>1</tspan><tspan>2</tspan> 件</text>
+  <line x1="340" y1="200" x2="440" y2="200" stroke="#555555" stroke-width="3" marker-end="url(#figure-arrow)"/>
+  <rect x="440" y="120" width="320" height="160" fill="none" stroke="#555555" stroke-width="3"/>
+  <text x="600" y="190" text-anchor="middle">審核</text>
+  <text x="600" y="240" text-anchor="middle">8 件</text>
+  <line x1="760" y1="200" x2="860" y2="200" stroke="#555555" stroke-width="3" marker-end="url(#figure-arrow)"/>
+  <rect x="860" y="120" width="320" height="160" fill="none" stroke="#555555" stroke-width="3"/>
+  <text x="1020" y="215" text-anchor="middle">結案</text>
+</svg>

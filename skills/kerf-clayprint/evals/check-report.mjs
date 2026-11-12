@@ -4,19 +4,11 @@ import { dirname } from 'node:path';
 import { buildReport, resolveReport } from '../scripts/report.js';
 import { numbers, found, calculations } from './numbers.mjs';
 import { isMain } from '../scripts/main.js';
+import { decode, figureText } from '../scripts/figure.js';
 
 const hiddenTags = new Set(['head', 'style', 'script', 'template', 'noscript', 'defs', 'title', 'desc']);
 const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'path', 'rect', 'line', 'circle', 'polygon', 'polyline', 'ellipse', 'use']);
 const blockTags = new Set(['p', 'div', 'li', 'tr', 'table', 'header', 'footer', 'section', 'article', 'figure', 'figcaption', 'h1', 'h2', 'h3', 'br', 'th', 'td', 'dt', 'dd', 'text']);
-
-function decode(text) {
-  const named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
-  return text.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (all, entity) => {
-    if (entity[0] !== '#') return named[entity.toLowerCase()] ?? all;
-    const value = entity[1].toLowerCase() === 'x' ? parseInt(entity.slice(2), 16) : Number(entity.slice(1));
-    return Number.isInteger(value) && value >= 0 && value <= 0x10ffff ? String.fromCodePoint(value) : all;
-  });
-}
 
 function reportParts(html) {
   const blocks = [{ label: '文件', text: '' }], sections = [blocks[0]], figures = [], activeFigures = [], tags = [];
@@ -120,12 +112,14 @@ function verifiedCharts(html, report, baseDir, original) {
   // Use only visible copy from the delivered section after removing all SVGs.
   // Model-generated labels cannot supply equations or authorize another chart's inputs.
   const { blocks } = reportParts(html);
-  const charts = resolved.sections.flatMap((section, i) => section.blocks.flatMap((block, j) =>
-    block.type === 'chart' ? [{ chart: block.chart, path: `sections[${i}].blocks[${j}].chart` }] : []));
-  charts.forEach(({ chart, path }, i) => {
+  // One SVG per chart or figure block, in block order. A chart's inputs are checked; a figure the author drew is not
+  // generated from data, so every piece of text inside its SVG is checked like body copy of its section.
+  const exhibits = resolved.sections.flatMap((section, i) => section.blocks.flatMap((block, j) =>
+    block.type === 'chart' || block.type === 'figure' ? [{ block, path: `sections[${i}].blocks[${j}].${block.type}` }] : []));
+  exhibits.forEach(({ block, path }, i) => {
     const section = actualSpans[i].section;
     const allowed = [...original, ...calculations({ notes: blocks[section].text }, original, section + 1)];
-    chartInputs(chart, path, allowed);
+    chartInputs(block.type === 'chart' ? block.chart : figureText(block.figure.svg), path, allowed);
   });
   return html;
 }

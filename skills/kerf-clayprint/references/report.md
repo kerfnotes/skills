@@ -11,7 +11,7 @@
 產生 HTML → 驗收 → 看螢幕寬度，HTML 就是成品。使用者要列印或 PDF 時才加第 5 步。
 
 1. 讀原稿，寫下讀者要帶走的一句話；替每節先寫一句判斷。沿用已知對象、目的及其先備知識，只有缺口會改變取捨時才詢問一次，依 [SKILL.md 原則 6](../SKILL.md#原則)安排解釋並在交付前檢查理解斷點；核對單位、期間、來源與缺口，不補造數字。
-2. 寫 `out/report.json`：封面、摘要，再依判斷寫各節的元件。摘要左側放建議，右側只放支撐它的數字。欄位見下方〈report.json〉。依[圖表選單](charts.md)主動判斷哪項證據適合用圖。每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），圖表 JSON 必須填 `source`；無數字時使用段落、清單或流程。
+2. 寫 `out/report.json`：封面、摘要，再依判斷寫各節的元件。摘要左側放建議，右側只放支撐它的數字。欄位見下方〈report.json〉。依[圖表選單](charts.md)主動判斷哪項證據適合用圖。每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），圖表 JSON 必須填 `source`；無數字時使用段落、清單或流程。選單沒有能畫出主張的圖時，用 `figure` 元件放[自畫圖](charts.md#自畫圖)。
 3. 產生 HTML：`node scripts/report.js out/report.json out/report.html`，結尾印「完成：N 節、M 張圖，K 項警告」（節數含摘要）。
 4. 驗收：`node evals/check-report.mjs out/report.html script.md out/report.json`，核對所有可見文字與 SVG 數字、未填的 `{{…}}` 示意文字，以及每張圖都有含「來源」的圖說。座標軸刻度（`data-tick`）和簡報驗收一樣不核對，產生器加的「圖 N」「表 N」標籤（`data-label`）也不核對；其他數字，包括摘要、引言與資料標籤，都必須出現在原稿，或在同節寫出可核對的加減算式。範例：`node scripts/report.js examples/report.json out/report.html`，再 `node evals/check-report.mjs out/report.html evals/fixtures/explain-script.md examples/report.json`。
 
@@ -20,7 +20,7 @@
    圖表含模型推導的比例、轉換率、差額或中位數時，提供生成規格：`node evals/check-report.mjs out/report.html script.md out/report.json`。外部圖表相對於 `report.json` 解析；驗收先核對原值，再重建並比對每張 SVG 及其位置，合法衍生標籤只在該圖有效。生成與驗收使用相同設計層，修改圖表或排列後須重產 HTML。雙檔舊入口仍可使用；詳細邊界見 [evals/README.md](../evals/README.md#報告數字驗收)。
 5. 使用者要列印或 PDF 時才印：`node scripts/pdf.js out/report.html out/print`（見下方〈列印 PDF〉）。逐條處理警告後重印，再逐頁看 `page-NN.png`。找不到瀏覽器時 PDF 標「受阻」並附原因，HTML 與驗收照常交付。
 6. 用瀏覽器看手機寬度（網頁型再看桌機寬度）：寬表格與圖應在自己的容器內橫向捲動，頁面本身不應橫向溢出。驗收器與列印檢查都無法代替視覺檢查。
-7. 交付 HTML（有印時加 PDF）、`report.json` 與每張圖的輸入 JSON。和簡報一樣，交付說明集中列出：讀者要帶走的那句話、缺的資料、時間不夠還沒修好的地方。依 [四層交付證據](../SKILL.md#交付證據)分列程式核對、實際預覽、PowerPoint 原生編輯（純報告不適用）及讀者理解；缺少目標讀者回饋時只回報內容檢視。
+7. 交付 HTML（有印時加 PDF）、`report.json` 與每張圖的輸入 JSON（自畫圖交 SVG 檔，列為選單外的圖）。和簡報一樣，交付說明集中列出：讀者要帶走的那句話、缺的資料、時間不夠還沒修好的地方。依 [四層交付證據](../SKILL.md#交付證據)分列程式核對、實際預覽、PowerPoint 原生編輯（純報告不適用）及讀者理解；缺少目標讀者回饋時只回報內容檢視。
 
 ## report.json
 
@@ -48,6 +48,7 @@
 | `text` | 段落，說明原因、限制或下一步。 | `text` |
 | `callout` | 需要讀者停下來記住的一句結論。螢幕是色框；列印是引言：24 pt 強調色、一般字重、無框，對齊左 22 mm 線。 | `text` |
 | `chart` | 有數據可畫時。 | `title`（圖上方標題與無障礙名稱）、`chart`（圖表 JSON 路徑，相對於 `report.json`；或圖表物件）、選用 `note`（圖下方附註）、`wide` |
+| `figure` | 選單沒有、自己畫的圖。 | `title`（圖上方標題與無障礙名稱）、`figure`（SVG 檔路徑，相對於 `report.json`）、`source`（圖說的來源，必填）、選用 `note`、`wide`；寫法見[自畫圖](charts.md#自畫圖) |
 | `table` | 需要逐格比對精確數值。 | 同[表格圖種](charts.md#表格-table)：`columns`、`rows`、選用 `total`、`emphasis`、`caption`（表上方標題）；另可選 `note`、`source`（表下方小字）與 `wide` |
 | `compare` | 在幾個方案間取捨。 | 同簡報 `compare`：`rows`、`options: [{name, recommended?, values}]`、選用 `caption` |
 | `list` | 逐項列出原因、觀察或待查問題。 | `items: [{heading, body?}]` |
@@ -59,6 +60,7 @@
 
 - 圖與表各自自動編號。圖上方是「圖 N」標籤與 `title`；圖下方的圖說（figcaption）依序是單位、期間、附註、來源，由圖表 JSON 的 `unit`、`period`、`note`、`source` 與元件的 `note` 組成，缺值項目也寫進附註。
 - 圖說最後有收合的「查看資料」，照圖表 JSON 原樣列出輸入數字（至多六位小數）：不依 `digits` 四捨五入，缺值標「未提供」，用五數摘要的箱型圖逐項標名。參考線、分割線與基準的位置附在表下；讀者展開就能把每個圖形對回原始數字和來源。只在螢幕顯示，列印與 PDF 不出現；`table` 圖種本身就是數字，不另附。驗收器帶 report.json 時會逐字比對這張表，手改數字會被擋下；先前版本產生、沒有這張表的 HTML，要重新產生後再帶 report.json 驗收。
+- `figure` 元件與圖表共用「圖 N」編號；圖說是 `note` 與 `source`，沒有「查看資料」。驗收器帶 report.json 時逐字比對 SVG 檔並核對圖上文字的數字，改圖後要重產 HTML。
 - 表的「表 N」標籤與 `caption` 在表上方；填了 `note` 或 `source` 就在表下方印「附註：…｜來源：…」。
 - 預設寬度是正文欄，列印時可伸到離右紙邊 14 mm（A4 寬 146 mm）；`wide: true` 從左 22 mm 線起全寬（A4 寬 174 mm），適合長標籤或多欄。
 - 列印時圖、表、引言、摘要、清單（`list`）、流程（`process`）、比較（`compare`）與追蹤事項表（`close`）都整塊不切頁；表格超過八列才可分頁，並在下一頁重複表頭。

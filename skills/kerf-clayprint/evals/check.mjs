@@ -1,6 +1,8 @@
 // Validate a story against its source manuscript, then build it with the production renderer.
 import { readFileSync } from 'node:fs';
-import { build, validateStory, deckCategories } from '../scripts/pptx.js';
+import { dirname } from 'node:path';
+import { build, validateStory, resolveStory, deckCategories } from '../scripts/pptx.js';
+import { isFigure, figureText } from '../scripts/figure.js';
 import { normalize, numbers, found, calculations, calculationPattern } from './numbers.mjs';
 import { isMain, rerunForMode } from '../scripts/main.js';
 import { prepare, delta, shownDigits } from '../scripts/core.js';
@@ -9,12 +11,15 @@ function visibleText(value, path) {
   if (typeof value === 'number' || typeof value === 'string') return [{ text: String(value), path }];
   if (Array.isArray(value)) return value.flatMap((v, i) => visibleText(v, `${path}[${i}]`));
   if (!value || typeof value !== 'object') return [];
+  // A figure shows the text inside its SVG; its file name and markup are not on screen.
+  if (isFigure(value)) return [{ text: figureText(value.figure.svg), path: `${path}.figure` }];
   // digits and numeric focus indices control rendering; neither is a visible measurement.
   return Object.entries(value).flatMap(([key, v]) => key === 'digits' || key === 'focus' && typeof v === 'number' ? [] : visibleText(v, `${path}.${key}`));
 }
 
-export async function check(story, script) {
+export async function check(story, script, { baseDir = '.' } = {}) {
   validateStory(story);
+  story = resolveStory(story, { baseDir });
   if (typeof script !== 'string' || !script.trim()) throw new Error('script.md 必須是非空文字稿；請提供原始內容。');
   const original = numbers(script);
   const warnings = [];
@@ -32,7 +37,7 @@ export async function check(story, script) {
     if (typeof page.sources?.source !== 'string' || !page.sources.source.trim()) {
       throw new Error(`第 ${n} 頁 sources.source 缺少資料來源；請填文字稿名稱，虛構稿也要註明。`);
     }
-    if (!original.length && page.type === 'evidence' && page.visual.kind !== 'table') {
+    if (!original.length && page.type === 'evidence' && page.visual.kind !== 'table' && !isFigure(page.visual)) {
       throw new Error(`第 ${n} 頁：文字稿沒有可核對的數字，不能放量化圖表；請改用 statement、compare、close 或純文字 table。`);
     }
     const allowed = [...original, ...calculations(page, original, n)];
@@ -60,11 +65,12 @@ export async function check(story, script) {
     const fields = ['visual', 'lede', 'takeaway', 'points', 'footnotes'];
     if (page.type === 'evidence') fields.push('metric');
     if (['cover', 'section', 'statement', 'evidence'].includes(page.type)) fields.push('note');
-    const picture = fields.filter((field) => field !== 'visual' || page.type !== 'evidence')
+    const drawn = page.type === 'evidence' && !isFigure(page.visual);
+    const picture = fields.filter((field) => field !== 'visual' || !drawn)
       .flatMap((field) => visibleText(shown(field), field))
       .filter(({ path }) => !/\.(?:focus|digits|source|period|prev)(?:[.\[]|$)/.test(path))
       .flatMap(({ text }) => numbers(text));
-    if (page.type === 'evidence') {
+    if (drawn) {
       const model = prepare(page.visual, { categoryOrder });
       const labels = visibleText(model, 'visual').filter(({ path }) => /\.(?:text|texts|\w*Text|label|name|x|periods|rowLabels|colLabels|xLabel|yLabel)(?:\[\d+\])?$/.test(path)
         && !(page.visual.kind === 'slope' && page.visual.native !== false && path.endsWith('.delta.text')));
@@ -106,7 +112,7 @@ if (isMain(import.meta.url)) {
       let script;
       try { script = readFileSync(scriptFile, 'utf8'); }
       catch { throw new Error(`無法讀取文字稿 ${scriptFile}；請確認檔案路徑。`); }
-      const result = await check(story, script);
+      const result = await check(story, script, { baseDir: dirname(storyFile) });
       for (const warning of result.warnings) console.error(`警告：${warning}`);
       console.log(`通過：${result.pages} 頁，PowerPoint 建檔成功；${result.warnings.length} 項警告。請再逐頁核對語意與預覽。`);
     } catch (error) {

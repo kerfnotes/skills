@@ -6,6 +6,7 @@ import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
 import { T, C, SLIDE_FONT, delta, formatValue, textWidth, documentCategories, borrowedNotice, prepare, decimalsOf, shownDigits, textOn, tickText, boxesOverlap, segmentHitsBox } from './core.js';
 import { render } from './svg.js';
+import { isFigure, figureInput, resolveFigure } from './figure.js';
 import { svgToPng } from './png.js';
 import { isMain, rerunForMode } from './main.js';
 import { MODE } from './tokens.js';
@@ -390,6 +391,12 @@ function chart(slide, spec, area, ctx) {
   for (const w of model.warnings) ctx.warn(`第 ${ctx.n} 頁圖表：${w}`);
 }
 
+// A figure the author drew (scripts/figure.js) keeps its proportions: scaled to fit the chart area, anchored top left like the title.
+function figure(slide, { svg, width, height }, area) {
+  const scale = Math.min(area.w / width, area.h / height);
+  slide.addImage({ data: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, ...position({ x: area.x, y: area.y, w: width * scale, h: height * scale }) });
+}
+
 // ---- layouts
 
 const LAYOUT = {};
@@ -481,7 +488,7 @@ export function validateStory(story) {
     }
     // Evidence charts and chart cells in panels go through the same checks; who names the cell in repair hints.
     const checkChart = (v, path, who = '') => {
-      check(CHART_KINDS.has(v.kind), `${path}.kind`, `${who ? `為${who}` : ''}選用 ${[...CHART_KINDS].join('、')} 其中一種圖表`);
+      check(CHART_KINDS.has(v.kind), `${path}.kind`, `${who ? `為${who}` : ''}選用 ${[...CHART_KINDS].join('、')} 其中一種圖表${who ? '' : '；選單沒有的圖，畫成 SVG 後改填 {"figure": "檔名.svg"}'}`);
       if (v.native !== undefined) check(typeof v.native === 'boolean', `${path}.native`, '填入 true 或 false');
       if (v.digits !== undefined) digits(v.digits, `${path}.digits`);
       for (const key of ['categories', 'x', 'periods', 'rowLabels', 'colLabels']) if (v[key] !== undefined) check(Array.isArray(v[key]) && v[key].every((s) => typeof s === 'string'), `${path}.${key}`, '改成文字字串陣列');
@@ -514,7 +521,10 @@ export function validateStory(story) {
     };
     const v = page.visual;
     check(isObject(v), 'visual', `提供 ${page.type} 的主視覺物件，參考 examples/story.json`);
-    if (page.type === 'evidence') {
+    if (page.type === 'evidence' && isFigure(v)) {
+      check(v.kind === undefined, 'visual', '圖表填 kind，自畫圖填 figure，兩者擇一');
+      check(figureInput(v.figure), 'visual.figure', '填自畫圖的 SVG 檔路徑（相對於 story.json），例如 "flow.svg"');
+    } else if (page.type === 'evidence') {
       checkChart(v, 'visual');
     } else if (page.type === 'numbers' || page.type === 'summary') {
       if (page.type === 'summary') {
@@ -724,7 +734,8 @@ LAYOUT.evidence = (slide, ctx) => {
   const side = page.takeaway || page.points?.length || page.note || metric;
   if (MODE === 'read' && !page.takeaway && !page.points?.length && !page.note) ctx.warn(`第 ${ctx.n} 頁右欄空白：閱讀版的 evidence 要有 takeaway 或 points。`);
   const area = { x: M.x, y: top, w: side ? T.chartArea.evidence.width : T.chartArea.evidenceNoNote.width, h: end - top };
-  if (page.visual) chart(slide, page.visual, area, ctx);
+  if (isFigure(page.visual)) figure(slide, page.visual.figure, area);
+  else if (page.visual) chart(slide, page.visual, area, ctx);
   if (!side) return;
   const x = M.x + area.w + 96, w = INNER - area.w - 96;
   let y = top;
@@ -1217,8 +1228,15 @@ export function deckCategories(story) {
   return documentCategories(story.pages.flatMap((p) => p.type === 'panels' ? p.visual.items.map((cell) => cell.visual) : [p.visual]));
 }
 
-export async function build(story) {
+// Read each figure's SVG once, relative to the story file. A story that is already resolved passes through unchanged.
+export function resolveStory(story, { baseDir = '.' } = {}) {
+  return { ...story, pages: story.pages.map((page, i) => page.type === 'evidence' && isFigure(page.visual)
+    ? { ...page, visual: { ...page.visual, figure: resolveFigure(page.visual.figure, { baseDir, path: `第 ${i + 1} 頁 visual.figure` }) } } : page) };
+}
+
+export async function build(story, { baseDir = '.' } = {}) {
   validateStory(story);
+  story = resolveStory(story, { baseDir });
   if ((story.mode ?? 'present') !== MODE) {
     throw new Error(`story 的 mode 是 ${story.mode ?? 'present'}，但字級以 ${MODE} 載入；請用 node scripts/pptx.js 或 node evals/check.mjs 建檔，它們會自動切換。程式內呼叫要先設 ${ENV}_MODE=${story.mode ?? 'present'}。`);
   }
@@ -1248,7 +1266,7 @@ export async function build(story) {
     if (page.type === 'kpi') ctx.missing.push(...[page.visual.main, ...page.visual.main.benchmarks, ...(page.visual.secondary ?? [])].filter((it) => !emptyCell(it) && it.value === null).map((it) => it.label));
     if (page.type === 'evidence' && page.metric?.value === null) ctx.missing.push(page.metric.label);
     // The source row is laid out before the chart (it decides the chart's height), so collect missing values first.
-    if (page.type === 'evidence' && page.visual) {
+    if (page.type === 'evidence' && page.visual && !isFigure(page.visual)) {
       ctx.model = prepare(page.visual, { categoryOrder });
       ctx.missing.push(...ctx.model.missing);
     }
@@ -1550,7 +1568,7 @@ if (isMain(import.meta.url)) {
   try {
     const story = JSON.parse(readFileSync(input, 'utf8'));
     if (rerunForMode(story)) process.exit();
-    const { buffer, warnings } = await build(story);
+    const { buffer, warnings } = await build(story, { baseDir: dirname(input) });
     mkdirSync(dirname(output), { recursive: true });
     writeFileSync(output, buffer);
     for (const w of warnings) console.error(`警告：${w}`);
