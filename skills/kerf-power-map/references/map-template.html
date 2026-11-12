@@ -7,31 +7,34 @@
 <!-- 只改這段 JSON。欄位說明見 map.md。 -->
 <script type="application/json" id="map-data">
 {
-  "title": "主管不放人：誰拍板、他靠誰、今天動哪條線",
+  "title": "想多一天在家上班：誰拍板、他靠誰、先找誰",
   "people": [
-    { "name": "你的主管", "ring": 1 },
+    { "name": "部門經理", "ring": 1 },
     { "name": "你", "ring": 2 },
-    { "name": "主管的上級", "ring": 2, "guess": true },
-    { "name": "珮君", "ring": 3 },
-    { "name": "人資", "ring": 3 }
+    { "name": "組長", "ring": 3 },
+    { "name": "人資", "ring": 3 },
+    { "name": "隔壁組", "ring": 3 }
   ],
   "lines": [
-    { "from": "你的主管", "to": "你", "kind": "depend", "label": "月結只有你會" },
-    { "from": "你的主管", "to": "主管的上級", "kind": "depend", "label": "月結要交差（推測）", "guess": true },
-    { "from": "人資", "to": "你", "kind": "talk", "label": "要主管簽、月底截止" },
-    { "from": "你", "to": "珮君", "kind": "talk", "label": "先要：到任可延？願意開口？" },
-    { "from": "珮君", "to": "你的主管", "kind": "talk", "label": "她親口要人（還沒有）", "guess": true },
-    { "from": "你", "to": "你的主管", "kind": "talk", "label": "交接方案換簽字\n月底前簽、交接完再到任", "today": true }
+    { "from": "部門經理", "to": "你", "kind": "depend", "label": "報表系統只有你熟" },
+    { "from": "組長", "to": "部門經理", "kind": "talk", "label": "進度他說了算" },
+    { "from": "人資", "to": "部門經理", "kind": "talk", "label": "上限兩天，經理核准" },
+    { "from": "隔壁組", "to": "部門經理", "kind": "talk", "label": "已在試（聽說）", "guess": true }
+  ],
+  "moves": [
+    { "from": "你", "to": "組長", "label": "問：在家兩天，\n他最擔心哪件事？", "when": "今天", "now": true },
+    { "from": "你", "to": "人資", "label": "問別組怎麼核准", "if": "組長直接說不" },
+    { "from": "你", "to": "部門經理", "label": "帶方案：\n試行一個月", "when": "週五一對一" }
   ],
   "choice": {
-    "who": "你的主管",
-    "yesMeans": "放人",
-    "noMeans": "等明年",
-    "yes": ["下個月月結有風險", "要補人", "要向上級解釋（推測）"],
-    "no": ["今天什麼事都沒有", "你繼續跑月結", "不用給任何人理由"],
-    "note": "要改的是這張表：交接方案讓「好」變安全；珮君親口要人，讓「不」得給理由。"
+    "who": "部門經理",
+    "yesMeans": "試行",
+    "noMeans": "維持一天",
+    "yes": ["多一個要盯的做法", "組長要調進度", "別組也會來問（推測）"],
+    "no": ["今天什麼都不用改", "你照舊進辦公室", "不用給任何人理由"],
+    "note": "要改的是這張表：試行一個月、到期再談，讓「好」收得回來；組長先點頭，讓「不」得多說服一個人。"
   },
-  "today": "去之前先向珮君要兩樣帶過去：到任日可延、她願不願意親口要人。上級那條線先不動，留作第二步。"
+  "order": "組長的擔心決定第 3 步的方案怎麼寫；第 3 步照排在週五，不等第 2 步。第 2 步是備案，組長直接說不才走。"
 }
 </script>
 <style>
@@ -53,9 +56,19 @@
 .pm .ringlabel{font-size:12px;fill:var(--muted-foreground,#6b7280);text-anchor:middle;dominant-baseline:central}
 .pm .dep{stroke:currentColor;stroke-width:3;fill:none}
 .pm .info{stroke:var(--muted-foreground,#6b7280);stroke-width:1.2;fill:none}
-.pm .todayline{stroke:#2563eb;stroke-width:4;fill:none}
+.pm .mv{stroke:#2563eb;stroke-width:2;fill:none}
+.pm .mv.now{stroke-width:4}
 .pm .lbl{font-size:12px;fill:var(--muted-foreground,#6b7280);text-anchor:middle;dominant-baseline:central}
-.pm .lbl.today{fill:#2563eb;font-weight:600}
+.pm .lbl.mv-l{fill:#2563eb}
+.pm .lbl.mv-l.now{font-weight:600}
+.pm .badge{fill:var(--background,#fff);stroke:#2563eb;stroke-width:2}
+.pm .badge.now{fill:#2563eb}
+.pm .badge-n{font-size:12px;font-weight:700;fill:#2563eb;text-anchor:middle;dominant-baseline:central}
+.pm .badge-n.now{fill:#fff}
+.pm ol.moves{list-style:none;margin:0;padding:0}
+.pm ol.moves li{display:flex;gap:6px;align-items:flex-start;margin:3px 0}
+.pm .num{flex:0 0 18px;height:18px;margin-top:1px;box-sizing:border-box;border:2px solid #2563eb;border-radius:50%;color:#2563eb;font-size:11px;font-weight:700;line-height:14px;text-align:center}
+.pm .num.now{background:#2563eb;color:#fff}
 .pm .ah-a{fill:currentColor}
 .pm .ah-m{fill:var(--muted-foreground,#6b7280)}
 .pm .ah-b{fill:#2563eb}
@@ -73,6 +86,7 @@
 <marker id="pm-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-a" d="M0,0 L10,5 L0,10 z"/></marker>
 <marker id="pm-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="ah-m" d="M0,0 L10,5 L0,10 z"/></marker>
 <marker id="pm-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah-b" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="pm-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah-b" d="M0,0 L10,5 L0,10 z"/></marker>
 <mask id="pm-holes" maskUnits="userSpaceOnUse" x="-600" y="-600" width="1840" height="1780"><rect x="-600" y="-600" width="1840" height="1780" fill="white"/></mask>
 </defs>
 </svg>
@@ -86,7 +100,7 @@
   const RING_R = [100, 200, 275];   // 三圈的邊界
   const NODE_R = [0, 150, 238];    // 節點放在每圈帶狀的中線；第二圈太近，圓心連過去的線會短到只剩箭頭
   const RING_TEXT = ['拍板', '他靠誰、少了誰不行', '意見會被聽、定規則'];
-  const NW = 104, NH = 34, LH = 15;
+  const NW = 104, NH = 34, LH = 15, BR = 10;   // BR：動線號碼圈的半徑
 
   const root = document.querySelector('.pm');
   let data;
@@ -144,13 +158,24 @@
   }));
 
   // 線：二次曲線，從框邊連到框邊；h 是曲線中點偏離直線的距離，0 就是直線
-  const lines = (data.lines || []).filter(l => {
+  const valid = l => {
     const ok = nodes[l.from] && nodes[l.to] && l.from !== l.to;
     if (!ok) console.warn('這條線的人名對不上 people，略過：', l);
     return ok;
-  });
-  const todays = lines.filter(l => l.today);
-  if (todays.length > 1) console.warn(`今天要動的線只能一條，現在有 ${todays.length} 條；照畫。`);
+  };
+  const situation = (data.lines || []).filter(valid);
+  if (situation.some(l => l.today)) console.warn('lines 裡的 today 不再使用：要動的步驟改寫進 moves。');
+
+  // 動線：照 moves 的順序編號；馬上做的（now）排最前面。時間只寫 when，照抄回覆的字
+  const MAX_MOVES = 4;
+  const moves = (data.moves || []).filter(valid).map((m, i) => ({ ...m, move: true, n: i + 1 }));
+  const nNow = moves.filter(m => m.now).length;
+  if (moves.some(m => m.today)) console.warn('moves 的 today 改成 now（馬上做的步驟），回覆寫的時間另外寫進 when；這次照 today 沒標畫。');
+  if (moves.length > MAX_MOVES) console.warn(`動線最多 ${MAX_MOVES} 步，現在有 ${moves.length} 步：只畫決定先後的幾步，其餘寫進回覆。照畫。`);
+  if (moves.length && !nNow) console.warn('沒有標 now 的步驟：回覆裡馬上做的那一步排第一、標 now。');
+  if (moves.some((m, i) => m.now && i >= nNow)) console.warn('標 now 的步驟要排在 moves 最前面、連在一起。');
+  moves.forEach(m => { if (m.now && m.if) console.warn(`第 ${m.n} 步同時標了 now 和 if：馬上做的就不是有條件才走。`); });
+  const lines = [...situation, ...moves];   // 先排局面的線，動線後排，才會繞開已經在的線
   const qp = (q, t) => [0, 1].map(i => (1 - t) * (1 - t) * q[0][i] + 2 * (1 - t) * t * q[1][i] + t * t * q[2][i]);
   const qd = (q, t) => [0, 1].map(i => 2 * (1 - t) * (q[1][i] - q[0][i]) + 2 * t * (q[2][i] - q[1][i]));
   const samples = (q, n) => Array.from({ length: n + 1 }, (_, i) => qp(q, i / n));
@@ -189,10 +214,10 @@
   RING_R.forEach(r => el('circle', { class: 'ring', cx: CX, cy: CY, r }, gRings));
   const f = p => p.map(v => +v.toFixed(1)).join(',');
   lines.forEach(l => {
-    const kind = l.today ? 'b' : l.kind === 'depend' ? 'a' : 'm';
-    const cls = { a: 'dep', m: 'info', b: 'todayline' }[kind] + (l.guess ? ' guess' : '');
+    const kind = l.move ? (l.now ? 'b' : 'c') : l.kind === 'depend' ? 'a' : 'm';
+    const cls = l.move ? 'mv' + (l.now ? ' now' : '') + (l.if ? ' guess' : '') : (kind === 'a' ? 'dep' : 'info') + (l.guess ? ' guess' : '');
     const path = el('path', { class: cls, d: `M${f(l.q[0])} Q${f(l.q[1])} ${f(l.q[2])}`, 'marker-end': `url(#pm-${kind})` }, gLines);
-    if (l.both) path.setAttribute('marker-start', `url(#pm-${kind})`);
+    if (l.both && !l.move) path.setAttribute('marker-start', `url(#pm-${kind})`);
   });
   nodeList.forEach(n => {
     el('rect', { class: 'node' + (n.guess ? ' guess' : ''), x: n.b.x1, y: n.b.y1, width: n.w, height: NH, rx: 6 }, gNodes);
@@ -203,16 +228,17 @@
   // 標籤：每個候選位置算分，撞到節點、別的標籤、線都扣分，挑最低分的
   // ponytail: 貪婪逐一放，不回頭重排；真的擠到放不下，console 會警告，改 JSON（縮短標籤、換圈）比改演算法快
   lines.forEach(l => { l.pts = samples(l.q, 60); });
-  const placed = [], linePts = lines.flatMap(l => l.pts);
+  const placed = [], labelBoxes = [], linePts = lines.flatMap(l => l.pts);
   const gap = (b, pts) => Math.min(...pts.map(p => Math.hypot(Math.max(b.x1 - p[0], 0, p[0] - b.x2), Math.max(b.y1 - p[1], 0, p[1] - b.y2))));
   function score(b, blue, own) {
     let bad = 0, s = 0;
     if (own) {   // 別條線沒比自己的線遠出 12px，就會被讀成別條線的標籤；夾在兩條線中間也算
-      const mine = gap(b, own.pts);
+      let mine = gap(b, own.pts);
+      if (own.badge) mine = Math.min(mine, Math.max(0, gap(b, [own.badge]) - BR));   // 緊貼自己的號碼圈也算自己的
       if (lines.some(l => l !== own && gap(b, l.pts) < mine + 12)) bad += 150;
     }
     nodeList.forEach(n => { if (hit(b, grow(n.b, 4))) bad += 200; else if (hit(b, grow(n.b, 14))) s += 40; });   // 貼著框會被讀成那個人的註解
-    placed.forEach(p => { if (hit(b, p.b)) bad += 200; else if (p.blue === blue && hit(b, grow(p.b, 8))) s += 12; });   // 同色又太近會讀成同一個標籤
+    placed.forEach(p => { if (hit(b, p.b)) bad += 200; else if (p.blue === blue && p.owner !== own && hit(b, grow(p.b, 8))) s += 12; });   // 同色又太近會讀成同一個標籤
     const bl = grow(b, 4);
     linePts.forEach(p => { if (has(bl, p)) bad += 15; });
     s += 3 * (Math.max(0, 4 - b.x1) + Math.max(0, b.x2 - W + 4) + Math.max(0, 4 - b.y1) + Math.max(0, b.y2 - H + 4));
@@ -225,20 +251,47 @@
     const w = Math.max(...texts.map(t => measure(t, cls))), h = texts.length * LH;
     let best;
     cands(w, h).forEach(c => {
-      const b = box(c.x, c.y, w, h), [s, bad] = score(b, cls.includes('today'), own);
+      const b = box(c.x, c.y, w, h), [s, bad] = score(b, cls.includes('mv-l'), own);
       if (!best || s + c.cost < best.s) best = { b, s: s + c.cost, bad, c };
     });
     if (best.bad) console.warn(`標籤「${texts.join(' ')}」找不到乾淨的位置，縮短它或換人的圈。`);
     texts.forEach((t, i) => el('text', { class: cls, x: best.c.x, y: best.b.y1 + LH * (i + 0.5) }, gLabels, t));
-    placed.push({ b: grow(best.b, 3), blue: cls.includes('today') });
+    placed.push({ b: grow(best.b, 3), blue: cls.includes('mv-l'), owner: own });
+    labelBoxes.push({ b: best.b, text: texts.join(' ') });
     hole(grow(best.b, 2));
   }
+  // 編號圈：先於標籤放，標籤會讓開它；實心是馬上做的。沿線從 t=0.2 到 0.8 逐點算分，
+  // 壓到人、貼到別的號碼圈、坐在別條線上都扣分，挑最好的一點；中段優先
+  const cdist = (p, b) => Math.hypot(Math.max(b.x1 - p[0], 0, p[0] - b.x2), Math.max(b.y1 - p[1], 0, p[1] - b.y2));
+  const SPACE = 2 * BR + 4;   // 兩個號碼圈圓心至少要隔這麼遠，否則貼在一起
+  moves.forEach(m => {
+    let best;
+    for (let t = 0.2; t <= 0.8001; t += 0.025) {
+      const p = qp(m.q, t);
+      let s = Math.abs(t - 0.5) * 20;
+      nodeList.forEach(n => { const d = cdist(p, n.b); if (d < BR + 3) s += 1000; else if (d < BR + 12) s += (BR + 12 - d) * 4; });
+      moves.forEach(o => { if (o.badge) { const d = Math.hypot(o.badge[0] - p[0], o.badge[1] - p[1]); if (d < SPACE) s += 1000; else if (d < SPACE + 16) s += (SPACE + 16 - d) * 6; } });
+      lines.forEach(l => { if (l !== m) { const d = Math.min(...l.pts.map(q => Math.hypot(q[0] - p[0], q[1] - p[1]))); if (d < BR + 2) s += 150; else if (d < BR + 8) s += (BR + 8 - d) * 6; } });
+      if (!best || s < best.s) best = { p, s };
+    }
+    const b = box(best.p[0], best.p[1], 2 * BR, 2 * BR);
+    el('circle', { class: 'badge' + (m.now ? ' now' : ''), cx: best.p[0], cy: best.p[1], r: BR }, gLabels);
+    el('text', { class: 'badge-n' + (m.now ? ' now' : ''), x: best.p[0], y: best.p[1] }, gLabels, String(m.n));
+    m.badge = best.p;
+    placed.push({ b: grow(b, 2), blue: true, owner: m });
+    hole(grow(b, 1));
+  });
   [1, 2].forEach(i => put([RING_TEXT[i]], 'ringlabel', () => [
     { x: CX, y: CY - RING_R[i] + 11, cost: 0 }, { x: CX, y: CY + RING_R[i] - 11, cost: 5 }]));
-  [...lines].sort((a, b) => !!b.today - !!a.today || (b.kind === 'depend') - (a.kind === 'depend')).forEach(l => {
-    if (!l.label) return;
-    put(String(l.label).split('\n'), 'lbl' + (l.today ? ' today' : ''), (w, h) => {
+  const rank = l => l.move ? l.n : l.kind === 'depend' ? 10 : 11;   // 動線照步驟先放，再放依賴線、傳話線
+  [...lines].sort((a, b) => rank(a) - rank(b)).forEach(l => {
+    const texts = (l.if ? [`若${l.if}`] : []).concat(l.label ? String(l.label).split('\n') : []);
+    if (!texts.length) return;
+    put(texts, 'lbl' + (l.move ? ' mv-l' + (l.now ? ' now' : '') : ''), (w, h) => {
       const out = [];
+      if (l.badge) [[1, 0], [-1, 0], [0, -1], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => {   // 先試貼著號碼圈
+        out.push({ x: l.badge[0] + sx * (BR + 5 + w / 2), y: l.badge[1] + sy * (BR + 5 + h / 2), cost: 2 });
+      });
       [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8].forEach(t => {
         const P = qp(l.q, t), D = qd(l.q, t), len = Math.hypot(D[0], D[1]);
         [1, -1].forEach(side => {
@@ -257,15 +310,26 @@
   put([RING_TEXT[0] + (centerGuess ? '（推測）' : '')], 'ringlabel', w => [[1, 1], [-1, 1], [0, 1], [1, -1], [-1, -1], [0, -1]].map(([sx, sy], k) => (
     { x: CX + sx * Math.max(55 - w / 2, w / 2 + 8), y: CY + sy * 33, cost: k })));   // 長的從圓心往外長，不跨過直上直下的線
 
+  // 號碼圈檢查：全部標籤放完才查，彼此貼住或重疊、壓到人的框或任何標籤都在 console 提出
+  moves.forEach((m, i) => {
+    moves.slice(i + 1).forEach(o => {
+      const d = Math.hypot(m.badge[0] - o.badge[0], m.badge[1] - o.badge[1]);
+      if (d < SPACE) console.warn(`號碼圈 ${m.n} 和 ${o.n} ${d < 2 * BR ? '重疊' : '貼在一起'}（圓心相距 ${Math.round(d)}px）：縮短標籤、換人的圈，或自己畫。`);
+    });
+    nodeList.forEach(n => { if (cdist(m.badge, n.b) < BR + 1) console.warn(`號碼圈 ${m.n} 壓到「${n.name}」的框。`); });
+    labelBoxes.forEach(L => { if (cdist(m.badge, L.b) < BR) console.warn(`號碼圈 ${m.n} 壓到標籤「${L.text}」。`); });
+  });
+
   // 標籤超出畫框時把 viewBox 撐大，不截字
   const bb = svg.getBBox();
   const x1 = Math.min(0, bb.x - 6), y1 = Math.min(0, bb.y - 6);
   const x2 = Math.max(W, bb.x + bb.width + 6), y2 = Math.max(H, bb.y + bb.height + 6);
   svg.setAttribute('viewBox', `${x1} ${y1} ${x2 - x1} ${y2 - y1}`);
   const names = r => nodeList.filter(n => n.ring === r).map(n => n.name).join('、') || '沒有人';
-  const first = l => l.label ? '：' + String(l.label).split('\n')[0] : '';
+  const full = l => l.label ? '：' + String(l.label).split('\n').reduce((a, t) => a + (/[，。、：；？！]$/.test(a) ? '' : '，') + t) : '';
+  const when = m => [m.when, m.if && `若${m.if}`].filter(Boolean).join('，');   // 時間只用 when 的原字，不自己補「今天」
   svg.querySelector('desc').textContent = `同心圓：圓心是${names(1)}（拍板）。第二圈是${names(2)}。外圈是${names(3)}。`
-    + todays.map(l => `今天要動的線：${l.from} → ${l.to}${first(l)}。`).join('');
+    + (moves.length ? '動線：' + moves.map(m => `第 ${m.n} 步${when(m) ? '（' + when(m) + '）' : ''}${m.from} → ${m.to}${full(m)}`).join('；') + '。' : '');
 
   // 右欄
   const side = document.getElementById('pm-side');
@@ -290,17 +354,21 @@
     }
     if (c.note) h('p', side, c.note);
   }
-  if (todays.length || data.today) {
-    h('h3', side, '今天動哪條線');
-    const p = h('p', side);
-    todays.forEach((l, i) => h('span', p, `${i ? '；' : ''}${l.from} → ${l.to}${first(l)}`, 'today'));
-    if (data.today) p.append((todays.length ? '。' : '') + data.today);
+  if (moves.length || data.order) {
+    h('h3', side, '動線：先找誰、再找誰');
+    const ol = h('ol', side, null, 'moves');
+    moves.forEach(m => {
+      const li = h('li', ol);
+      h('span', li, String(m.n), 'num' + (m.now ? ' now' : ''));
+      h('span', li, `${when(m) ? when(m) + '｜' : ''}${m.from} → ${m.to}${full(m)}`, m.now ? 'today' : '');
+    });
+    if (data.order) h('p', side, data.order);
   }
   const legend = [];
-  if (lines.some(l => !l.today && l.kind === 'depend')) legend.push('粗實線＝誰離不開誰（箭頭指向被依賴的人）');
-  if (lines.some(l => !l.today && l.kind !== 'depend')) legend.push('細線＝話怎麼傳');
-  if (todays.length) legend.push('藍粗線＝今天要動');
-  if (people.some(p => p.guess) || lines.some(l => l.guess)) legend.push('虛框、虛線＝推測或還沒有');
+  if (situation.some(l => l.kind === 'depend')) legend.push('粗實線＝誰離不開誰（箭頭指向被依賴的人）');
+  if (situation.some(l => l.kind !== 'depend')) legend.push('細線＝話怎麼傳');
+  if (moves.length) legend.push('藍線＝要動的步驟，號碼是先後：' + [nNow && '粗線實心號馬上做', moves.some(m => !m.now && !m.if) && '細線空心號排在後面', moves.some(m => m.if) && '藍虛線有條件才走'].filter(Boolean).join('，') + (moves.some(m => m.when) ? '；時間見動線清單' : ''));
+  if (people.some(p => p.guess) || situation.some(l => l.guess)) legend.push('虛框、虛線＝推測或還沒有');
   h('p', side, legend.join('　'), 'legend');
 })();
 </script>
