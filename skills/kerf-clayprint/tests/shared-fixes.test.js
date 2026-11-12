@@ -79,7 +79,7 @@ test('表格數值未指定 digits 時照原小數位：報告 table 區塊與�
   const columns = [{ name: '項目' }, { name: '比例' }, { name: '變化', type: 'delta' }, { name: '整數', digits: 0 }];
   const rows = [['甲', 24.7, 1.25, 24.7], ['乙', 18, -2, 3]];
   const { html } = buildReport({ title: '位數', message: '帶走這句', sections: [{ claim: '表格', blocks: [{ type: 'table', columns, rows }] }] });
-  const cells = [...html.matchAll(/<td class="num">([^<]*)<\/td>/g)].map((m) => m[1]);
+  const cells = [...html.matchAll(/<td class="num"[^>]*>([^<]*)<\/td>/g)].map((m) => m[1]);
   assert.deepEqual(cells, ['24.7', '+1.25', '25', '18', '−2', '3']);
   const text = await slideText([{ type: 'evidence', claim: '表格', sources, visual: { kind: 'table', columns, rows } }]);
   for (const shown of ['24.7', '+1.25', '25', '18']) assert.ok(text.includes(shown), `${shown} 不在 ${text.join('|')}`);

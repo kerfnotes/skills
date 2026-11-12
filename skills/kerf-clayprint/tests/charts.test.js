@@ -113,9 +113,11 @@ test('share: an existing 其他 and folded categories merge into one segment', (
   assert.equal(model.rows[0].segments.find((s) => s.name === '其他').value, 12);
 });
 
-test('share: warns when every category folded into 其他', () => {
+test('share: categories past the shared palette borrow free colors instead of folding', () => {
   const { model } = render({ kind: 'share', categories: ['觀光', '運動'], rows: [{ label: 'X', values: [1, 2] }] }, { categoryOrder: ['通勤', '購物', '休閒', '接駁', '觀光', '運動'] });
-  assert.ok(model.warnings.some((w) => w.includes('所有類別')));
+  assert.deepEqual(model.warnings, []);
+  assert.deepEqual(model.categories.map((c) => c.other), [false, false]);
+  assert.notEqual(model.categories[0].color, model.categories[1].color);
 });
 
 test('share: 其他 is hatched in SVG, other segments are solid', () => {

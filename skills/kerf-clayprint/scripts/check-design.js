@@ -67,7 +67,7 @@ export function checkDesign(design) {
   for (const key of ['text', 'textSecondary', 'better', 'worse', 'unchanged', 'dark', 'tint', 'focus', 'gray', 'other']) {
     validHex(`color.${key}`, c?.[key]);
   }
-  // Optional: the table header rule; without it the engine uses color.text.
+  // Optional: the table header rule; without it the engine uses color.focus.
   if (c?.tableRule !== undefined) validHex('color.tableRule', c.tableRule);
   for (const [key, min] of [['onDark', 2], ['categorical', 1], ['ordered', 2]]) {
     const values = c?.[key];
@@ -91,6 +91,16 @@ export function checkDesign(design) {
       (warning ? warnings : failures).push(`${label} ${measured.toFixed(digits)}（門檻 ≥ ${threshold}）：${advice}`);
     }
   };
+  const referenceMinimum = (key, label, measured, standard) => {
+    const limit = design.colorChecks?.[key] ?? standard;
+    if (!Number.isFinite(limit) || limit <= 0 || limit > standard) {
+      failFormat(`colorChecks.${key}`, limit, `大於 0 且不超過 ${standard}`, '省略以沿用標準門檻');
+      return;
+    }
+    const advice = '保留來源色時，需搭配直接標註與數值';
+    minimum(label, measured, limit, advice);
+    if (measured >= limit && measured < standard) warnings.push(`${label} ${measured.toFixed(2)} 低於一般門檻 ${standard}：${advice}`);
+  };
   const background = c.onDark[0];
   for (const key of ['text', 'textSecondary', 'better', 'worse', 'unchanged']) {
     minimum(`color.${key} ${c[key]} 在底色 onDark[0] ${background} 上對比`, contrast(c[key], background), 4.5, '拉開文字與底色的亮度差');
@@ -106,12 +116,12 @@ export function checkDesign(design) {
   for (const [key, fill] of [['focus', c.focus], ...c.categorical.map((v, i) => [`categorical[${i}]`, v])]) {
     minimum(`color.${key} ${fill} 與底色 ${background} 對比`, contrast(fill, background), 3, '需要直接標值或表格；也可加深標記顏色', true);
   }
-  minimum(`color.ordered[0] ${c.ordered[0]} 與底色 ${background} 對比`, contrast(c.ordered[0], background), 2, '加深 ordered 最淺一階，並維持由淺到深');
+  referenceMinimum('orderedLightestContrast', `color.ordered[0] ${c.ordered[0]} 與底色 ${background} 對比`, contrast(c.ordered[0], background), 2);
 
   for (let i = 0; i < c.categorical.length - 1; i++) {
     const first = c.categorical[i], second = c.categorical[i + 1];
     const pair = `color.categorical[${i}] ${first} 與 categorical[${i + 1}] ${second}`;
-    minimum(`${pair} 在正常色覺下色差 ΔE`, deltaE(first, second), 15, '把其中一色的亮度拉開，或換色相');
+    referenceMinimum('categoricalAdjacentDeltaE', `${pair} 在正常色覺下色差 ΔE`, deltaE(first, second), 15);
     for (const [vision, label] of Object.entries(VISION)) {
       const distance = deltaE(first, second, vision);
       minimum(`${pair} 在${label}下色差 ΔE`, distance, 6, '把其中一色的亮度拉開，或換色相');

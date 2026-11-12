@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
-import { T, C, SLIDE_FONT, delta, formatValue, textWidth, categoryLimit, categoryColors, documentCategories, prepare, decimalsOf, shownDigits, textOn } from './core.js';
+import { T, C, SLIDE_FONT, delta, formatValue, textWidth, documentCategories, borrowedNotice, prepare, decimalsOf, shownDigits, textOn, tickText, boxesOverlap, segmentHitsBox } from './core.js';
 import { render } from './svg.js';
 import { svgToPng } from './png.js';
 import { isMain, rerunForMode } from './main.js';
@@ -90,7 +90,7 @@ function sourceItems(sources = {}, missing = []) {
 // Thin rule with 9 ticks, then source｜unit｜period on up to two lines, page number on the right.
 // Read-deck footnotes sit just above the rule, numbered (1), (2)…
 // Returns the top of that block (the rule when there are no footnotes) so the layout knows where content must stop.
-function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
+function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary, divider = line } = {}) {
   const pageNo = `${ctx.n} / ${ctx.total}`;
   const avail = INNER - textWidth(pageNo, SOURCE) - 40;
   const rows = [[]];
@@ -104,7 +104,7 @@ function sourceRow(slide, ctx, { line = C.gray, ink = C.textSecondary } = {}) {
   if (rows.length > T.sourceRow.maxLines) ctx.warn(`第 ${ctx.n} 頁 sources：來源列需要 ${rows.length} 行，上限 ${T.sourceRow.maxLines} 行`);
   const rowH = SOURCE * LH;
   const ruleY = H - M.bottom - rows.length * rowH - 14 - T.stroke.tickLong;
-  rule(slide, M.x, ruleY, W - M.x, ruleY, line);
+  rule(slide, M.x, ruleY, W - M.x, ruleY, divider);
   for (let i = 0; i <= 8; i++) {
     const tx = M.x + (i * INNER) / 8;
     rule(slide, tx, ruleY, tx, ruleY + (i % 4 === 0 ? T.stroke.tickLong : T.stroke.tickShort), line);
@@ -195,15 +195,79 @@ function nativeTable(slide, m, area, ctx) {
   const none = { type: 'none', color: hex(C.grid) };
   const border = (color, edge) => [0, 1, 2, 3].map((i) => i === edge ? { color: hex(color), pt: pt(T.stroke.grid) } : none);
   const rows = [m.header.map((h) => ({ text: h.text, options: {
-    align: h.align === 'end' ? 'right' : 'left', color: hex(C.textSecondary), fontSize: pt(head), border: border(C.tableRule ?? C.text, 2),
+    align: h.align === 'end' ? 'right' : 'left', color: hex(C.textSecondary), fontSize: pt(head), border: border(C.tableRule ?? C.focus, 2),
   } })), ...m.rows.map((r, i) => r.cells.map((c, j) => {
     checkWrap(ctx, `visual.rows[${i}][${j}]`, c.text, body, widths[j] - 32, Math.max(0, Math.floor((rowH - 16) / (body * LH))));
+    const next = m.rows[i + 1];
     return { text: c.text, options: { align: c.align === 'end' ? 'right' : 'left', color: hex(c.color), bold: r.bold,
-      fill: hex(r.fill ?? C.onDark[0]), border: border(r.total ? C.text : C.grid, 0) } };
+      fill: hex(r.fill ?? C.onDark[0]), border: next ? border(next.total ? C.text : C.grid, 2) : none } };
   }))];
   slide.addTable(rows, { ...position(area), colW: widths.map(inch), rowH: [headH, ...m.rows.map(() => rowH)].map(inch),
     fontFace: SLIDE_FONT, fontSize: pt(body), color: hex(C.text), margin: [pt(8), pt(12), pt(8), pt(12)],
     valign: 'middle', autoPage: false, border: none });
+}
+
+// Native line charts. PowerPoint sizes an automatic plot to the chart box and does not leave room for a "right" data
+// label: an end label that would cross the box edge is pulled back left, over its own line. So the plot is laid out
+// here (inner layout, fractions of the chart box): tick labels on the left, category labels below, the end labels'
+// width right of the last category (categories sit mid-band, half a band inside the plot), room above a peak label.
+// The same geometry then places every label PowerPoint will draw, to report clashes the build can see.
+// Estimates: label widths come from textWidth, and the axis maximum is PowerPoint's automatic one, which m.axis.hi
+// predicts (min and step are fixed). Clashes shallower than LINE_SLACK are not reported.
+const LINE_LABEL = { h: CHART * 1.25, gap: CHART * 0.3, pad: CHART * 0.2 };
+const LINE_SLACK = CHART * 0.15;
+const lineLabelWidth = (str, bold) => textWidth(str, CHART) * (bold ? 1.08 : 1) + LINE_LABEL.pad * 2;
+const FEWER = '：減少系列、換 focus，或改用其他圖';
+const endLabel = (s) => `${s.name} ${s.texts[s.last]}`;
+
+export function lineGeometry(m, area) {
+  const n = m.x.length, { lo, hi } = m.axis;
+  const left = Math.max(...m.axis.ticks.map((t) => textWidth(tickText(m.axis, t), CHART))) + CHART;
+  const bottom = CHART * 2;
+  const endW = Math.max(0, ...m.series.filter((s) => s.last === n - 1).map((s) => lineLabelWidth(endLabel(s), s.focus)));
+  const right = endW ? endW + LINE_LABEL.gap : CHART;
+  const w = Math.min(area.w - left - CHART, (area.w - left - right) / (1 - 1 / (2 * n)));
+  let top = CHART * 0.75;
+  for (let pass = 0; pass < 2; pass++) {
+    const h = area.h - top - bottom;
+    for (const s of m.series) {
+      if (s.peak < 0) continue;
+      const labelTop = top + h * (hi - s.values[s.peak]) / (hi - lo) - LINE_LABEL.gap - LINE_LABEL.h;
+      if (labelTop < 0) top -= labelTop;
+    }
+  }
+  const h = area.h - top - bottom;
+  return { x: left, y: top, w, h, fits: w >= area.w * 0.4 && h >= area.h * 0.4,
+    at: (i, v) => [left + w * (i + 0.5) / n, top + h * (hi - v) / (hi - lo)] };
+}
+
+// Clashes between the labels PowerPoint will draw (series end labels, focus peak labels), the lines, and the chart box.
+export function lineLabelClashes(m, area, g = lineGeometry(m, area)) {
+  const labels = [];
+  for (const s of m.series) {
+    if (s.last >= 0) {
+      const [x, y] = g.at(s.last, s.values[s.last]), w = lineLabelWidth(endLabel(s), s.focus);
+      labels.push({ str: endLabel(s), end: true, x0: x + LINE_LABEL.gap, x1: x + LINE_LABEL.gap + w, y0: y - LINE_LABEL.h / 2, y1: y + LINE_LABEL.h / 2 });
+    }
+    if (s.peak >= 0) {
+      const [x, y] = g.at(s.peak, s.values[s.peak]), w = lineLabelWidth(s.texts[s.peak], true);
+      labels.push({ str: s.texts[s.peak], x0: x - w / 2, x1: x + w / 2, y0: y - LINE_LABEL.gap - LINE_LABEL.h, y1: y - LINE_LABEL.gap });
+    }
+  }
+  const out = [];
+  for (const b of labels) {
+    if (b.x0 < -LINE_SLACK || b.x1 > area.w + LINE_SLACK || b.y0 < -LINE_SLACK || b.y1 > area.h + LINE_SLACK) out.push(`標籤「${b.str}」超出圖表區，PowerPoint 會把它推回圖內${FEWER}`);
+  }
+  labels.forEach((a, i) => labels.slice(i + 1).forEach((b) => {
+    if (boxesOverlap(a, b, LINE_SLACK)) out.push(`標籤「${a.str}」和「${b.str}」重疊${a.end && b.end ? '：設 native: false 改用 SVG，線尾標籤會自動錯開' : FEWER}`);
+  }));
+  for (const s of m.series) {
+    const pts = s.values.map((v, i) => (v === null ? null : g.at(i, v)));
+    for (const b of labels) {
+      if (pts.some((p, i) => i > 0 && p && pts[i - 1] && segmentHitsBox(pts[i - 1], p, b, LINE_SLACK))) out.push(`標籤「${b.str}」壓到「${s.name}」的線${FEWER}`);
+    }
+  }
+  return out;
 }
 
 function nativeChart(slide, m, area, ctx) {
@@ -266,6 +330,15 @@ function nativeChart(slide, m, area, ctx) {
       : m.rows.map((r) => ({ name: r.label, labels: m.periods, values: [...r.values] }));
     Object.assign(opts, { chartColors: m.kind === 'line' ? m.series.map((s) => hex(s.color)) : m.rows.map(() => hex(C.gray)),
       lineDataSymbol: m.kind === 'slope' ? 'circle' : 'none' });
+    if (m.kind === 'line') {
+      const g = lineGeometry(m, area);
+      if (g.fits) {
+        opts.layout = { x: g.x / area.w, y: g.y / area.h, w: g.w / area.w, h: g.h / area.h };
+        for (const w of lineLabelClashes(m, area, g)) ctx.warn(`第 ${ctx.n} 頁折線圖${w}；改完重跑並看預覽。`);
+      } else {
+        ctx.warn(`第 ${ctx.n} 頁折線圖的線尾標籤太長，繪圖區放不下，PowerPoint 會把標籤推回線上：縮短系列名稱、加寬圖表，或設 native: false 改用 SVG。`);
+      }
+    }
     if (m.kind === 'slope') {
       Object.assign(opts, { valAxisHidden: true, valGridLine: { style: 'none' } });
       // PowerPoint places native labels without avoiding each other: endpoints closer than a label line are nudged apart
@@ -324,7 +397,7 @@ const LAYOUT = {};
 const CAP = { numbers: [2, 4], numbersNote: 1, summary: [2, 3], summaryBody: 3, compare: [2, 4], list: [3, 5], listBody: 1, process: [3, 6], columns: [2, 4],
   columnsBody: Infinity, compareRows: Infinity, tableRows: Infinity, closeRows: Infinity, ...T.capacity };
 const outside = (count, [lo, hi]) => count < lo || count > hi;
-const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table', 'multiples', 'bridge', 'histogram', 'strip', 'matrix', 'dumbbell', 'funnel', 'heat', 'grouped', 'sharetrend', 'combo', 'bullet', 'waffle', 'mekko', 'pareto', 'tornado', 'box', 'ordered']);
+const CHART_KINDS = new Set(['rank', 'line', 'slope', 'share', 'scatter', 'table', 'multiples', 'bridge', 'histogram', 'strip', 'matrix', 'dumbbell', 'funnel', 'heat', 'grouped', 'sharetrend', 'combo', 'bullet', 'waffle', 'mekko', 'pareto', 'tornado', 'box', 'ordered', 'contrib']);
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
 const emptyCell = (v) => isObject(v) && Object.values(v).every((x) => x === null || x === undefined || x === '' || (Array.isArray(x) && !x.length));
@@ -643,7 +716,7 @@ LAYOUT.evidence = (slide, ctx) => {
   const { page, story } = ctx;
   header(slide, page.kicker, story.title);
   const top = contentTop(slide, ctx);
-  const ruleY = sourceRow(slide, ctx);
+  const ruleY = sourceRow(slide, ctx, { divider: C.grid });
   const end = ruleY - M.sourceGap;
   if (top >= end) ctx.warn(`第 ${ctx.n} 頁證據頁高度不足`);
   if (page.visual?.kind === 'table' && page.visual.rows.length > CAP.tableRows) ctx.warn(`第 ${ctx.n} 頁表格是 ${page.visual.rows.length} 列，規格是至多 ${CAP.tableRows} 列：刪列或合併相近的列，或拆成兩頁。`);
@@ -1023,7 +1096,7 @@ LAYOUT.panels = (slide, ctx) => {
   const cells = page.visual.items.map((cell) => ({ ...cell, model: isObject(cell.visual) && cell.visual.kind ? prepare(cell.visual, { categoryOrder: ctx.categoryOrder }) : null }));
   // The source row lists missing values, so collect them before drawing it.
   for (const cell of cells) if (cell.model) ctx.missing.push(...cell.model.missing);
-  const end = sourceRow(slide, ctx) - M.sourceGap;
+  const end = sourceRow(slide, ctx, { divider: C.grid }) - M.sourceGap;
   const gap = 96, [a, b] = page.visual.split ?? [1, 1];
   const widths = [a, b].map((s) => ((INNER - gap) * s) / (a + b));
   const B = T.type.body.px, titleH = LABEL * LH;
@@ -1032,7 +1105,7 @@ LAYOUT.panels = (slide, ctx) => {
   let filled = top;
   cells.forEach((cell, j) => {
     const x = M.x + (j ? widths[0] + gap : 0), w = widths[j], path = `visual.items[${j}]`, v = cell.visual;
-    rule(slide, x, top, x + w, top, C.gray);
+    rule(slide, x, top, x + w, top, C.grid);
     checkWrap(ctx, `${path}.title`, cell.title, LABEL, w, 1);
     text(slide, cell.title, { x, y: top + 16, w, h: titleH, color: C.text, bold: true });
     const y = top + 16 + titleH + 16, area = { x, y, w, h: end - noteH - y };
@@ -1162,8 +1235,8 @@ export async function build(story) {
   // The section ruler lists every kicker in page order (the cover's kicker is the organisation, not a section).
   const sections = [...new Set(story.pages.filter((p) => p.type !== 'cover' && p.kicker).map((p) => p.kicker))];
   const categoryOrder = deckCategories(story);
-  const folded = categoryColors(categoryOrder, { order: categoryOrder }).folded;
-  if (folded.length) warnings.push(`整份簡報超過 ${categoryLimit()} 個類別，「${folded.join('、')}」在每張圖都併入「其他」`);
+  const borrowed = borrowedNotice(categoryOrder, '整份簡報');
+  if (borrowed) warnings.push(borrowed);
   story.pages.forEach((page, i) => {
     const fn = LAYOUT[page.type];
     const slide = pres.addSlide();
@@ -1180,14 +1253,16 @@ export async function build(story) {
       ctx.missing.push(...ctx.model.missing);
     }
     fn(slide, ctx);
-    if (page.notes) slide.addNotes(page.notes);
+    if (page.notes) slide.addNotes([page.notes].flat().join('\n'));
   });
   const buf = await pres.write({ outputType: 'nodebuffer' });
   return { buffer: await finish(buf, story, charts), warnings };
 }
 
+// wrap="none": PowerPoint otherwise wraps a data label wider than its own limit (a bar-end "名稱 900" broke after the
+// name), and the layouts size label room for one line.
 function labelStyle(color, bold = false) {
-  return `<a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${pt(CHART) * 100}" b="${bold ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill><a:latin typeface="${SLIDE_FONT}"/></a:defRPr></a:pPr></a:p>`;
+  return `<a:bodyPr wrap="none"/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${pt(CHART) * 100}" b="${bold ? 1 : 0}"><a:solidFill><a:srgbClr val="${hex(color)}"/></a:solidFill><a:latin typeface="${SLIDE_FONT}"/></a:defRPr></a:pPr></a:p>`;
 }
 
 // Per row and period, a vertical offset (fraction of the chart height, negative is up) that keeps slope labels at the
@@ -1231,11 +1306,14 @@ function labelNudges(m, lo, hi, chartH) {
   return crowded ? null : nudges;
 }
 
-function pointLabel(i, { color = C.text, bold = false, name = false, category = false, value = true, pos = 'r', label, formatCode, dy = 0 } = {}) {
+// fill: a label box in the chart background, so a gridline under a bar-end label stops at the label instead of crossing
+// its text. Line and slope labels stay clear, or the box would hide part of a line.
+function pointLabel(i, { color = C.text, bold = false, name = false, category = false, value = true, pos = 'r', label, formatCode, dy = 0, fill } = {}) {
   const tx = label === undefined ? '' : `<c:tx><c:rich>${labelStyle(color, bold).replace('</a:p>', () => `<a:r><a:t>${xml(label)}</a:t></a:r></a:p>`)}</c:rich></c:tx>`;
   const numFmt = formatCode === undefined ? '' : `<c:numFmt formatCode="${xml(formatCode)}" sourceLinked="0"/>`;
   const layout = dy ? `<c:layout><c:manualLayout><c:x val="0"/><c:y val="${dy.toFixed(4)}"/></c:manualLayout></c:layout>` : '';
-  return `<c:dLbl><c:idx val="${i}"/>${layout}${tx}${numFmt}<c:txPr>${labelStyle(color, bold)}</c:txPr><c:dLblPos val="${pos}"/>`
+  const box = fill === undefined ? '' : `<c:spPr><a:solidFill><a:srgbClr val="${hex(fill)}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>`;
+  return `<c:dLbl><c:idx val="${i}"/>${layout}${tx}${numFmt}${box}<c:txPr>${labelStyle(color, bold)}</c:txPr><c:dLblPos val="${pos}"/>`
     + `<c:showLegendKey val="0"/><c:showVal val="${value ? 1 : 0}"/><c:showCatName val="${category ? 1 : 0}"/><c:showSerName val="${name ? 1 : 0}"/>`
     + '<c:showPercent val="0"/><c:showBubbleSize val="0"/><c:separator> </c:separator></c:dLbl>';
 }
@@ -1258,15 +1336,15 @@ function patchChart(s, m) {
     const i = si++;
     let labels = '', points = '';
     if (m.kind === 'rank') {
-      labels = m.rows.map((r, j) => pointLabel(j, { color: r.focus ? C.focus : C.text, bold: r.focus, category: r.focus && m.rankEndNames !== false, pos: 'outEnd', formatCode })).join('');
+      labels = m.rows.map((r, j) => pointLabel(j, { color: r.focus ? C.focus : C.text, bold: r.focus, category: r.focus && m.rankEndNames !== false, pos: 'outEnd', formatCode, fill: C.onDark[0] })).join('');
     } else if (m.kind === 'ordered') {
       labels = m.rows.flatMap((r, j) => r.value === null ? [] : [pointLabel(j, {
-        color: r.focus ? C.focus : C.text, bold: r.focus, pos: 'outEnd', formatCode,
+        color: r.focus ? C.focus : C.text, bold: r.focus, pos: 'outEnd', formatCode, fill: C.onDark[0],
       })]).join('');
       points = m.rows.map((r, j) => pointFill(j, r.color)).join('');
     } else if (m.kind === 'grouped') {
       labels = m.series[i].values.flatMap((v, j) => v === null ? [] : [pointLabel(j, {
-        color: C.text, pos: 'outEnd', formatCode,
+        color: C.text, pos: 'outEnd', formatCode, fill: C.onDark[0],
       })]).join('');
     } else if (m.kind === 'line') {
       const row = m.series[i];
@@ -1363,6 +1441,13 @@ export function oneParagraphProps(s) {
   });
 }
 
+export function notesParagraphs(s) {
+  return s.replace(/<a:p><a:r>(<a:rPr\b[^>]*\/>)<a:t>([^<]*)<\/a:t><\/a:r>(<a:endParaRPr\b[^>]*\/>)<\/a:p>/, (p, rPr, t, end) => {
+    if (!/[\r\n]/.test(t)) return p;
+    return t.split(/\r\n|\r|\n/).map((line) => (line ? `<a:p><a:r>${rPr}<a:t>${line}</a:t></a:r>${end}</a:p>` : `<a:p>${end}</a:p>`)).join('');
+  });
+}
+
 async function finish(buf, story, charts) {
   const zip = await JSZip.loadAsync(buf);
   const chartNames = Object.keys(zip.files).filter((n) => /^ppt\/charts\/chart\d+\.xml$/.test(n))
@@ -1377,6 +1462,8 @@ async function finish(buf, story, charts) {
     bookModels.set(`ppt/embeddings/${target}`, charts[i]);
   }
   for (const [i, page] of story.pages.entries()) if (page.build) await patch(zip, `ppt/slides/slide${i + 1}.xml`, buildTiming);
+  // pptxgenjs writes the notes as one run and keeps line breaks as raw CRLF inside it. Give each line its own paragraph.
+  for (const name of Object.keys(zip.files).filter((n) => /^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(n))) await patch(zip, name, notesParagraphs);
   for (const name of Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))) await patch(zip, name, oneParagraphProps);
   await patch(zip, 'ppt/theme/theme1.xml', (s) => s
     .replace(/<a:font script="Hant" typeface="[^"]*"\/>/g, `<a:font script="Hant" typeface="${SLIDE_FONT}"/>`)

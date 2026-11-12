@@ -1,12 +1,14 @@
 # 文字稿 → HTML 報告與 PDF
 
-報告供讀者連續閱讀、轉寄與列印；先寫清楚每節判斷，再選擇能支撐它的段落、表格或圖。內容寫在 `report.json`，由 `scripts/report.js` 產生 HTML，`scripts/pdf.js` 印成 PDF。元件和簡報一樣只放有內容的，需要但原稿沒給的資料，在原位標「未提供」。
+報告是供讀者連續閱讀與轉寄的 HTML 網頁；先寫清楚每節判斷，再選擇能支撐它的段落、表格或圖。內容寫在 `report.json`，由 `scripts/report.js` 產生 HTML；使用者要列印或 PDF 時，再由 `scripts/pdf.js` 印成 PDF。元件和簡報一樣只放有內容的，需要但原稿沒給的資料，在原位標「未提供」。
+
+版型二選一：只在螢幕上讀或轉寄連結，用網頁型（`"layout": "web"`）：開頭以 `message` 當大標，沒有封面橫幅、目錄與列印規則，`pdf.js` 會拒印。使用者要列印或 PDF 時，用預設的報告型（封面、目錄、A4 分頁）。兩者的元件、配色、圖表與數字驗收相同。
 
 完整示例見 [examples/report.json](../examples/report.json) 與產物 [examples/report.html](../examples/report.html)，原稿見 [explain-script.md](../evals/fixtures/explain-script.md)：三節加目錄、封面橫幅、一張 `wide: true` 的圖、一張表、帶目前步驟的流程與一段引言。圖的資料在 [時間圖 JSON](../examples/report-time.json)；處理件數與遺漏件數不是可比較的類別，所以用表而不畫成同一張長條圖。[assets/report.html](../assets/report.html) 是同一套元件的 HTML 原型，供手工修改既有報告時參考。
 
 ## 流程
 
-固定三步：產生 HTML → 驗收 → 印 PDF。
+產生 HTML → 驗收 → 看螢幕寬度，HTML 就是成品。使用者要列印或 PDF 時才加第 5 步。
 
 1. 讀原稿，寫下讀者要帶走的一句話；替每節先寫一句判斷。沿用已知對象、目的及其先備知識，只有缺口會改變取捨時才詢問一次，依 [SKILL.md 原則 6](../SKILL.md#原則)安排解釋並在交付前檢查理解斷點；核對單位、期間、來源與缺口，不補造數字。
 2. 寫 `out/report.json`：封面、摘要，再依判斷寫各節的元件。摘要左側放建議，右側只放支撐它的數字。欄位見下方〈report.json〉。依[圖表選單](charts.md)主動判斷哪項證據適合用圖。每張圖的輸入另存 JSON（格式見[圖表選單](charts.md)），圖表 JSON 必須填 `source`；無數字時使用段落、清單或流程。
@@ -16,9 +18,9 @@
    驗收器不判斷圖表是否適合、內容是否重複。逐節人工確認：同一張圖比較的是同類、可比較的項目（總量與其中的子集分開呈現，例如用表）；同一組數字除了摘要以外，只在一處證據出現，不在相鄰的段落、圖與表重複。
 
    圖表含模型推導的比例、轉換率、差額或中位數時，提供生成規格：`node evals/check-report.mjs out/report.html script.md out/report.json`。外部圖表相對於 `report.json` 解析；驗收先核對原值，再重建並比對每張 SVG 及其位置，合法衍生標籤只在該圖有效。生成與驗收使用相同設計層，修改圖表或排列後須重產 HTML。雙檔舊入口仍可使用；詳細邊界見 [evals/README.md](../evals/README.md#報告數字驗收)。
-5. 印 PDF：`node scripts/pdf.js out/report.html out/print`（見下方〈列印 PDF〉）。逐條處理警告後重印，再逐頁看 `page-NN.png`。找不到瀏覽器時 PDF 標「受阻」並附原因，HTML 與驗收照常交付。
-6. 要轉寄就用瀏覽器看手機寬度：寬表格與圖應在自己的容器內橫向捲動，頁面本身不應橫向溢出。驗收器與列印檢查都無法代替視覺檢查。
-7. 交付 HTML、PDF、`report.json` 與每張圖的輸入 JSON。和簡報一樣，交付說明集中列出：讀者要帶走的那句話、缺的資料、時間不夠還沒修好的地方。依 [四層交付證據](../SKILL.md#交付證據)分列程式核對、實際預覽、PowerPoint 原生編輯（純報告不適用）及讀者理解；缺少目標讀者回饋時只回報內容檢視。
+5. 使用者要列印或 PDF 時才印：`node scripts/pdf.js out/report.html out/print`（見下方〈列印 PDF〉）。逐條處理警告後重印，再逐頁看 `page-NN.png`。找不到瀏覽器時 PDF 標「受阻」並附原因，HTML 與驗收照常交付。
+6. 用瀏覽器看手機寬度（網頁型再看桌機寬度）：寬表格與圖應在自己的容器內橫向捲動，頁面本身不應橫向溢出。驗收器與列印檢查都無法代替視覺檢查。
+7. 交付 HTML（有印時加 PDF）、`report.json` 與每張圖的輸入 JSON。和簡報一樣，交付說明集中列出：讀者要帶走的那句話、缺的資料、時間不夠還沒修好的地方。依 [四層交付證據](../SKILL.md#交付證據)分列程式核對、實際預覽、PowerPoint 原生編輯（純報告不適用）及讀者理解；缺少目標讀者回饋時只回報內容檢視。
 
 ## report.json
 
@@ -26,9 +28,10 @@
 
 | 欄位 | 說明 |
 | --- | --- |
-| `title` | 報告標題；也印在第 2 頁起的頁尾。 |
-| `message` | 讀者要帶走的一句話，印在封面。 |
-| `kicker` | 選用，封面標題上方的小字。 |
+| `layout` | 選用。`"web"` 為螢幕閱讀的網頁型；省略或 `"report"` 為可列印的報告型。 |
+| `title` | 報告標題；也印在第 2 頁起的頁尾。網頁型只用於瀏覽器分頁標題。 |
+| `message` | 讀者要帶走的一句話，印在封面；網頁型當頁首大標。 |
+| `kicker` | 選用，封面標題上方的小字；網頁型在大標上方。 |
 | `meta` | 選用，封面資訊 `[{label, value}]`，建議至多三項，超過會警告；一律留在封面。 |
 | `cover` | 選用。省略時第 1 頁是印到紙邊的封面橫幅，下面接目錄與摘要；填 `"page"` 時第 1 頁只有整頁封面，目錄與摘要移到第 2 頁、接著各節。 |
 | `summary` | 選用，`{kicker?, claim, body?, items}`：`claim` 寫建議，`items` 建議 2～3 格 `{label, value, unit?, digits?}`，超出會警告。 |
@@ -60,7 +63,7 @@
 - 預設寬度是正文欄，列印時可伸到離右紙邊 14 mm（A4 寬 146 mm）；`wide: true` 從左 22 mm 線起全寬（A4 寬 174 mm），適合長標籤或多欄。
 - 列印時圖、表、引言、摘要、清單（`list`）、流程（`process`）、比較（`compare`）與追蹤事項表（`close`）都整塊不切頁；表格超過八列才可分頁，並在下一頁重複表頭。
 
-報告與簡報共用目前生效的設計層，預設為 clay。`scripts/report.js` 產生時同時寫入樣式與圖表顏色；換成 blue 就用 `CLAYPRINT_TOKENS=design/tokens.blue.json node scripts/report.js out/report.json out/report.html` 重建。手工組成的報告用 `node scripts/theme-css.js report.html` 同步樣式，其中由 `scripts/svg.js` 產生的圖也要用同一設計層重產。沒有檔名時，`node scripts/theme-css.js` 會把 CSS 印到終端。
+報告與簡報共用目前生效的設計層，預設為 clay。`scripts/report.js` 產生時同時寫入樣式與圖表顏色；換成 blue 就用 `CLAYPRINT_TOKENS=design/tokens.blue.json node scripts/report.js out/report.json out/report.html` 重建。手工組成的報告用 `node scripts/theme-css.js report.html` 同步樣式，已有內嵌 SVG 或由產生器加色的增減儲存格時，從 JSON 用同一設計層重產，以更新資料顏色。沒有檔名時，`node scripts/theme-css.js` 會把 CSS 印到終端。
 
 螢幕與列印字級、單位及 preset 來源見[全交付字級索引](../design/README.md#全交付字級索引)。
 

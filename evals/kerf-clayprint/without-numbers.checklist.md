@@ -9,6 +9,6 @@
 - [ ] 負責單位沿用原稿；期限可以寫「試走後」等已知條件，或省略。空欄位不填「未提供」湊格子。
 - [ ] 存取權限、保存方式與表單服務仍待確認，沒有代替管理小組做未授權決定。
 - [ ] 每頁來源列指向這份虛構提案；較長講稿放 notes。
-- [ ] `node evals/check.mjs <story.json> evals/without-numbers.md` 通過，警告有處置記錄。
+- [ ] `node evals/check.mjs <story.json> ../../evals/kerf-clayprint/without-numbers.md`（在 skill 資料夾執行）通過，警告有處置記錄。
 - [ ] PowerPoint 實際開啟且逐頁看過，沒有文字裁切、重疊或空框；最弱的一頁經修改後重新檢查。
 - [ ] 交付清楚區分自動驗證、實際預覽與沒做到的地方。

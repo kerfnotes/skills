@@ -10,7 +10,7 @@
 - [ ] 報名流程的人數次序正確；差額、合計如另行填入 visual，當頁 notes 或 sources.more 有可核對算式。
 - [ ] 沒有自行新增預算、改善百分比或核定日期，沒有聲稱缺席原因已被證明。
 - [ ] 每頁來源列註明虛構示意資料，已知的單位與期間正確；講稿在 notes。
-- [ ] `node evals/check.mjs <story.json> evals/with-numbers.md` 通過；警告有逐項看圖與處置記錄。
+- [ ] `node evals/check.mjs <story.json> ../../evals/kerf-clayprint/with-numbers.md`（在 skill 資料夾執行）通過；警告有逐項看圖與處置記錄。
 - [ ] PowerPoint 實際開啟無修復提示，逐頁無裁切、重疊與難讀文字；記下最弱一頁修改前後的理由。
 - [ ] 可編輯圖表與 SVG 的範圍說明正確；有授權的實機環境實測修改一個原生圖數值。未能操作時明記未驗，不以建檔通過代替。
 

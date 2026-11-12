@@ -110,9 +110,15 @@ function strandedEndings(pages, html) {
 }
 
 export function printPdf(html, outDir, { letter = false, paper = 'white' } = {}) {
+  const source = readFileSync(html, 'utf8');
+  if (/<html\b[^>]*\bdata-layout\s*=\s*["']web["']/i.test(source)) {
+    const error = new Error('網頁型不供列印；要 PDF 請用預設版型。');
+    error.exitCode = 2;
+    throw error;
+  }
   const browser = findBrowser();
   if (!browser) throw new Error(NO_BROWSER);
-  const name = basename(html, extname(html)), pdf = resolve(outDir, `${name}.pdf`), source = readFileSync(html, 'utf8');
+  const name = basename(html, extname(html)), pdf = resolve(outDir, `${name}.pdf`);
   mkdirSync(outDir, { recursive: true });
   // Paper and size switch through root attributes the print CSS reads; a sibling copy keeps the source untouched.
   const attrs = [paper === 'clay' && 'data-paper="clay"', letter && 'data-size="letter"'].filter(Boolean);
@@ -186,6 +192,6 @@ if (isMain(import.meta.url)) {
     console.log(`印出 ${result.fills.length} 頁（${result.size}）；填滿率 ${result.fills.join('／')}%。`);
   } catch (error) {
     console.error(`錯誤：${error.message}`);
-    process.exit(1);
+    process.exit(error.exitCode ?? 1);
   }
 }

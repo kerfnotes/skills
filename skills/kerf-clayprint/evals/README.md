@@ -1,6 +1,6 @@
-# Clayprint：從文字稿驗收簡報
+# Clayprint：自動驗收指令
 
-獨立製作者先讀 SKILL.md 及它連結的檔案，再依 [有數字稿](with-numbers.md) 或 [無數字稿](without-numbers.md) 自行完成故事線與 PowerPoint。驗收者再依 [有數字清單](with-numbers.checklist.md)、[無數字清單](without-numbers.checklist.md) 逐頁檢查；這兩份稿沒有預寫的 story 答案。
+交付前用這裡的指令核對：簡報用 `check.mjs`，報告用 `check-report.mjs`。通過只代表下面列出的項目，其餘仍要看預覽。
 
 從 skill 根目錄執行：
 
@@ -11,7 +11,7 @@ node evals/check.mjs out/story.json script.md
 
 check 先用 pptx.js 的 `validateStory` 核對結構，再確認每頁 `claim` 與 `sources.source` 非空。數字掃描涵蓋根層 `title`／`date`，以及每頁 `claim`／`kicker`／`lede`／`note`／`takeaway`／`points`／`footnotes`、`metric.value`／`label`／`unit`、`sources.source`／`unit`／`more`、`visual` 內的所有數值和字串（含 panels 每格的 `title`、`visual` 與 `note`）；因此表格、方案值、標籤與來源列都會核對。正文的註腳記號「(N)」在 N 介於 1 與當頁 `footnotes` 數量之間時視為記號、不當數字；超出註腳數的「(N)」照常核對。panels 的 `split` 是寬度比例，不核對。`sources.period` 多半是日期區間，不做數字比對，交給人工核對。`digits` 與數字 `focus` 索引是控制欄位，不算資料。最後實際呼叫 `build` 在記憶體產生完整 PPTX，不寫入檔案；保存交付檔仍使用 `node scripts/pptx.js out/story.json out/deck.pptx`。
 
-警告包含：`claim` 中的數字在當頁實際使用的 `visual`／`metric`／`lede`／`visual.body`／畫面 `note` 找不到（沿用百分比／比例別名、圖表顯示 model 與整份簡報的類別折疊，含漏斗轉換率／流失標籤、數字格增減）；現場簡報非封面頁 `notes` 空白或只有「計算：／算法：」行（閱讀型不檢查講稿）；文字超出容量或指定欄位末行孤字；標題（含封面）估算超過兩行；閱讀型簡報另有內容頁填滿低於 70%（數字格、流程、並列、時程、一句話頁、清單、方案比較、收尾待辦、主管摘要，以及兩格都是文字或清單的 panels；會拉伸的版型以內容自然高度估算），與證據頁右欄空白（沒有 `takeaway`、`points` 或 `note`）。講稿、來源列及未繪製欄位不代替主視覺佐證。換行警告列出原始欄位路徑、估算行數與上限；估算沿用字寬並接受 LF／CRLF／CR，實際字型、英文整詞換行與不均勻斷行仍需預覽。
+警告包含：`claim` 中的數字在當頁實際使用的 `visual`／`metric`／`lede`／`visual.body`／畫面 `note` 找不到（沿用百分比／比例別名、圖表顯示 model 與整份簡報的類別折疊，含漏斗轉換率／流失標籤、數字格增減）；現場簡報非封面頁 `notes` 空白或只有「計算：／算法：」行（閱讀型不檢查講稿）；文字超出容量或指定欄位末行孤字；標題（含封面）估算超過兩行；閱讀型簡報另有內容頁填滿低於 70%（數字格、流程、並列、時程、一句話頁、清單、方案比較、收尾待辦、主管摘要，以及兩格都是文字或清單的 panels；會拉伸的版型以內容自然高度估算），與證據頁右欄空白（沒有 `takeaway`、`points` 或 `note`）。講稿、來源列及未繪製欄位不代替主視覺佐證。圖表標籤重疊也會警告，位置由引擎算出：SVG 圖（`native: false`，以及 PowerPoint 不支援原生的圖種）任兩段文字明顯重疊、文字超出圖表區、折線峰值標籤壓到線；PowerPoint 原生折線圖的線尾與峰值標籤彼此重疊、壓到線、超出圖表區，或線尾標籤長到繪圖區放不下。原生排行、直條、分組、比例、散佈圖的資料標籤與圖例由 PowerPoint 自己排，引擎算不準，不檢查，仍要看預覽。換行警告列出原始欄位路徑、估算行數與上限；估算沿用字寬並接受 LF／CRLF／CR，實際字型、英文整詞換行與不均勻斷行仍需預覽。
 
 數字支援正負號、小數、科學記號、千分位、全形，以及百分比寫法（例如 `32%`、`32 %`、`百分之32`、`0.32`）。來源寫 `32%` 時，visual 可保留 `32` 百分數或 `0.32` 比例；選哪種仍須配合圖表實際使用的單位。沒有可核對數字的稿不得放量化圖表；純文字 table 可用。根層 `title`／`date` 的數字須直接在原稿找得到，不採用某一頁的算式；原稿沒日期就省略 `date`。
 

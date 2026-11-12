@@ -77,7 +77,7 @@ Clayprint 設計層 focus-gray-test：未通過 47 項檢查，4 項失敗、2 �
 | 缺值要揭露 | `scripts/core.js` 的圖表模型、`scripts/pptx.js` 的 `sourceRow`；`tests/null-behavior.test.js`。 |
 | 增減好壞依指標判定 | `scripts/core.js` 的 `delta`；`tests/core.test.js`、`tests/charts.test.js`。 |
 | 沒內容的版面格可省略，缺少的資料不能藏 | `scripts/pptx.js` 的 `emptyCell`、`sourceRow`；`tests/layouts-phase2.test.js`、`tests/null-behavior.test.js`。 |
-| 類別超過上限按規則併入「其他」 | `scripts/core.js` 的 `categoryColors`、`KINDS.share`；`tests/core.test.js`、`tests/charts.test.js`。 |
+| 顏色效果優先：放得下的圖都上色，超出色盤才併入「其他」 | `scripts/core.js` 的 `categoryColors`、`borrowedNotice`、`KINDS.share`；`tests/core.test.js`、`tests/charts.test.js`、`tests/contrib.test.js`。 |
 | 每頁有來源列 | `scripts/pptx.js` 的 `sourceRow`、`evals/check.mjs`；`tests/evals.test.js`。 |
 
 要改這些判斷，先寫新用途與預期結果，再一起改規則和測試；不要為了讓檢查通過而刪測試。

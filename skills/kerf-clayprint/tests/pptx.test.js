@@ -771,7 +771,8 @@ test('native table maps model cells, emphasis, alignment, text sizes, and total 
       if (r && model.rows[r - 1].fill) assert.ok(nodes(one(cells[c], 'a:tcPr'), 'a:srgbClr').some((p) => p.attrs.val === hex(model.rows[r - 1].fill)));
     }
   }
-  assert.ok(nodes(rows.at(-1), 'a:lnT').some((line) => nodes(line, 'a:solidFill').length));
+  const totalRule = nodes(rows.at(-2), 'a:lnB');
+  assert.ok(totalRule.some((line) => nodes(line, 'a:srgbClr').some((color) => color.attrs.val === hex(C.text))));
 });
 
 test('all eight SVG-only charts have real PNG fallbacks linked by their slide', async () => {
@@ -931,7 +932,9 @@ test('every numeric point label has its own number format in OOXML order', async
       assert.equal(formats.length, 1, `${spec.kind}: point ${labelIndex(label)} needs its own format`);
       assert.equal(formats[0].attrs.formatCode, `${n};−${n};0${unit}`);
       assert.equal(formats[0].attrs.sourceLinked, '0');
-      assert.deepEqual(label.children.slice(0, 3).map((c) => c.name), ['c:idx', 'c:numFmt', 'c:txPr']);
+      // Bar-end labels add a background box (c:spPr), which the schema places between numFmt and txPr.
+      const names = label.children.map((c) => c.name), box = names.includes('c:spPr') ? ['c:spPr'] : [];
+      assert.deepEqual(names.slice(0, 3 + box.length), ['c:idx', 'c:numFmt', ...box, 'c:txPr']);
       assert.equal(children(label, 'c:tx').length, 0, 'numeric labels remain linked to data');
     }
   }

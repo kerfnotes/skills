@@ -40,7 +40,7 @@
   "color": {
     "text": "#111111", "textSecondary": "#4A4A4A", "grid": "#DDDDDD", "gray": "#7F7F7F",
     "title": "#00315A", "dark": "#023560", "onDark": ["#FFFFFF", "#B5CFEC"], "tint": "#E8EFF7",
-    "focus": "#125A98",
+    "focus": "#125A98", "tableRule": "#111111",
     "ordered": ["#8AAFD6", "#6898C9", "#4B83BB", "#2F6DAA", "#125A98"],
     "categorical": ["#125A98", "#9B482F", "#B58A26", "#976DA9"],
     "other": "#B3B3B3",

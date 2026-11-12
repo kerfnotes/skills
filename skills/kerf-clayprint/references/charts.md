@@ -1,6 +1,6 @@
 # 圖表選單：先決定要回答的問題
 
-目前有 23 種圖表與 1 種表格。把下列 spec 放進證據頁的 `visual`；版面結構見 [layouts.md](layouts.md)。這些是輸入欄位，`core.prepare()` 產生的 `axis`、`missing`、`warnings`、`text` 等結果不用自己填。範例數字都是虛構示意；製作簡報時以文字稿為準。
+目前有 24 種圖表與 1 種表格。把下列 spec 放進證據頁的 `visual`；版面結構見 [layouts.md](layouts.md)。這些是輸入欄位，`core.prepare()` 產生的 `axis`、`missing`、`warnings`、`text` 等結果不用自己填。範例數字都是虛構示意；製作簡報時以文字稿為準。
 
 有足夠且同口徑的資料時，先看讀者是否需要比較差距、看趨勢、理解組成、分布或關係。圖能讓支持結論的證據更容易看懂，就主動選圖。單一關鍵數字用 KPI，精確查值用表格；數字不足或圖無助判斷時，用適合的非圖表版型。
 
@@ -13,7 +13,7 @@
 - 數值用 JSON 數字，缺值用 `null`，0 照常保留。缺值會自動列入證據頁來源列；表格會在原格寫「未提供」，其他圖種依圖種留白、斷線或略去。若缺值本身是論證重點，改用能在原格標示的數字、比較或表格版型。文字稿沒有可畫數字時，選非圖表版型。
 - 原生：`rank`、`line`、`slope`、`share`、`scatter`、`grouped`、`sharetrend`、`ordered` 是 PowerPoint 圖表，`table` 是 PowerPoint 表格。其餘為 SVG，簡報內附 PNG 後備。原生圖可加 `native: false` 改用 SVG；散佈圖有 `refs`，或極小非零值會顯示成 0 時，也會自動改用 SVG 並提示。
 - 一張圖只有一個數值軸；`combo` 是上下對齊的兩張圖，各有自己的數值軸與單位，沒有雙軸圖。
-- 同類別整份簡報維持同色。`share`、`sharetrend`、`waffle`、`mekko` 超過可用類別色數的類別會合併為「其他」；無 `focus` 的多系列 `line` 超出可用色數者改用灰色，但不合併資料。可用色數取 `categoryRules.maxCategorical` 與 `categorical` 長度的較小值；預設為四色。看警告與圖面再決定是否調整。
+- 顏色效果優先：每張圖放得下的類別都上色，讓讀者在這張圖上分得開。同名類別在整份文件盡量同色：文件中先出現的前 N 類固定色位（N 取 `categoryRules.maxCategorical` 與 `categorical` 長度的較小值，預設四色）；之後出現的類別借用該圖沒用到的顏色，所以同一色在不同圖可能代表不同類別，各圖圖例要清楚，產生器會提醒。單張圖的類別超過 N 時，排名較後的類別才併為「其他」（`share`、`sharetrend`、`waffle`、`mekko`）或改用灰色（無 `focus` 的多系列 `line`、`grouped`、`contrib`）；這通常代表該合併類別、分圖或改用 `focus`。
 
 獨立圖表預覽指令（從 skill 根目錄執行）：
 
@@ -120,6 +120,15 @@ node scripts/png.js out/rank.svg out/rank.png
 - 輸出：SVG。
 - 常見錯誤：把總額當差額；把支出減少誤寫成負貢獻；期末數字與累計不合卻忽略原因。缺值會跳過該步並警告後續累計可能不對，需在來源列說明。`estimate` 只標示預估，數字仍須有來源。
 - 最小範例：`{"kind":"bridge","steps":[{"label":"期初","value":10,"total":true},{"label":"增加","value":3},{"label":"期末","value":13,"total":true}]}`。完整檔：[examples/bridge.json](../examples/bridge.json)。
+
+### 正負拆解 `contrib`
+
+用於逐項拆解增減由哪幾部分組成，尤其各部分方向相反、互相抵消時；每列正的部分從 0 往右疊、負的往左疊，右側寫合計。一個總數的拆解改用 `bridge`。
+
+- 欄位：`parts: [部分名稱, ...]`（2～4 個）、`rows: [{label, values: [...]}]`，每列長度等於 `parts`；選用 `focus`（列名或列名陣列）、`net: false`（不畫合計欄）、`digits`。值可為負；`null` 保留該列與其餘段、不算該列合計，並列入來源缺值。合計由各段相加，不另輸入。
+- 輸出：SVG。段內放得下就標在段內，放不下的最外段標在長條外側；其他放不下的段會警告，請在圖說或正文補數字。
+- 常見錯誤：把合計當成其中一段；各列口徑不同；部分之間有重疊而非互斥。部分與其他圖的類別同名時共用顏色。
+- 最小範例：`{"kind":"contrib","parts":["甲","乙"],"rows":[{"label":"北區","values":[8,-3]},{"label":"南區","values":[-2,5]}]}`。完整檔：[examples/contrib.json](../examples/contrib.json)。
 
 ### 占比隨期間變化 `sharetrend`
 

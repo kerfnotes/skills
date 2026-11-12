@@ -61,15 +61,15 @@ test('claim matching includes displayed number-tile deltas, but not unused colum
   assert.ok((await check(story(visual, { type: 'columns', claim: '增加 4 件', notes: '說明前後變化。' }), '甲 12 件，前期 8 件，差額 4 件。')).warnings.some((w) => /claim.*4/.test(w)));
 });
 
-test('claim matching shares the renderer category order when later categories fold', async () => {
+test('claim matching sees categories that borrow free colors instead of folding', async () => {
   const input = { pages: [
     { type: 'evidence', claim: '首批類別', sources, notes: '說明首批類別。', visual: { kind: 'share', categories: ['甲', '乙', '丙', '丁'], rows: [{ label: '首批', values: [1, 1, 1, 1] }] } },
-    { type: 'evidence', claim: '其他占 100%', sources, notes: '說明合併後的類別。', visual: { kind: 'share', categories: ['戊', '己'], rows: [{ label: '次批', values: [600, 400] }] } },
+    { type: 'evidence', claim: '戊占 60%', sources, notes: '說明次批類別。', visual: { kind: 'share', categories: ['戊', '己'], rows: [{ label: '次批', values: [600, 400] }] } },
   ] };
-  const manuscript = '首批甲乙丙丁各 1。次批戊 600、己 400，分別占 60% 與 40%，合併為其他占 100%。';
+  const manuscript = '首批甲乙丙丁各 1。次批戊 600、己 400，分別占 60% 與 40%，合計 100%。';
   assert.ok(!(await check(input, manuscript)).warnings.some((w) => /claim/.test(w)));
-  input.pages[1].claim = '戊占 60%';
-  assert.ok((await check(input, manuscript)).warnings.some((w) => /第 2 頁 claim.*60%/.test(w)));
+  input.pages[1].claim = '合計 100%';
+  assert.ok((await check(input, manuscript)).warnings.some((w) => /第 2 頁 claim.*100%/.test(w)));
 });
 
 test('calculation and speaker lines accept LF, CRLF, and CR consistently', async () => {

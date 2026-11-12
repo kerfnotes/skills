@@ -48,6 +48,8 @@ function shapes(xml) {
       x: x / EMU, y: y / EMU, w: cx / EMU, h: cy / EMU,
       chart: sp.includes('/chart"'), table: sp.includes('<a:tbl>'),
       text: sp.includes('<a:tbl>') ? '' : [...sp.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]).join(''),
+      colors: [...sp.matchAll(/<a:srgbClr val="([A-F0-9]+)"\/?[>]/g)].map((m) => m[1]),
+      line: /<a:prstGeom prst="line"/.test(sp),
       sizes: [...sp.matchAll(/\ssz="(\d+)"/g)].map((m) => Number(m[1])),
     };
   });
@@ -65,7 +67,12 @@ test('panels：圖表加表格、清單加文字兩頁可建檔，每格有標�
 
     const one = shapes(await zip.file('ppt/slides/slide1.xml').async('string'));
     const titles = chartPage.visual.items.map((it) => one.find((s) => s.text === it.title));
-    for (const t of titles) assert.deepEqual([...new Set(t.sizes)], [1200], `格標題 12 pt：${t.text}`);
+    for (const t of titles) {
+      assert.deepEqual([...new Set(t.sizes)], [1200], `格標題 12 pt：${t.text}`);
+      assert.ok(t.colors.includes('141413'), `格標題用正文色：${t.text}`);
+    }
+    const dividers = one.filter((s) => s.line && s.colors.includes('E8E6DC'));
+    assert.equal(dividers.length, 3, '兩格頂線與來源橫線');
     near(titles[0].w, titles[1].w * 1.5, '左格寬為右格 1.5 倍');
     assert.ok(titles[0].x + titles[0].w < titles[1].x, '兩格不重疊');
     const chart = one.find((s) => s.chart), table = one.find((s) => s.table);

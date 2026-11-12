@@ -163,7 +163,8 @@ if (isMain(import.meta.url)) {
         catch { throw new Error(`無法讀取 ${reportFile} 為 report.json；請確認路徑與 JSON 格式。`); }
       }
       const result = checkReport(readFileSync(htmlFile, 'utf8'), readFileSync(scriptFile, 'utf8'), options);
-      console.log(`通過：${result.sections} 節、${result.figures} 張圖；請再檢查列印分頁與手機寬度。`);
+      const next = /<html\b[^>]*\bdata-layout="web"/.test(readFileSync(htmlFile, 'utf8')) ? '手機與桌機寬度' : '列印分頁與手機寬度';
+      console.log(`通過：${result.sections} 節、${result.figures} 張圖；請再檢查${next}。`);
     } catch (error) {
       console.error(`驗收失敗：${error.message}`);
       process.exitCode = 1;

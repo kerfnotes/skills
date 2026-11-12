@@ -162,17 +162,17 @@ test('外部圖表相對 report.json 解析；缺檔、錯 JSON 與錯圖表都�
 });
 
 
-test('超上限類別、既有其他與局部子集合沿用文件折疊與合併值', () => {
+test('超上限類別：超出色盤的圖才折疊，放得下的局部子集合借用空色', () => {
   const full = { ...share, categories: ['甲', '乙', '丙', '丁', '戊', '己', '其他'], rows: [{ label: '全部', values: [1, 2, 3, 4, 5, 6, 7] }] };
   const subset = { ...share, categories: ['戊', '其他', '乙'], rows: [{ label: '部分', values: [5, 7, 2] }] };
   const spec = report(chart(full), chart(subset));
   const { html, warnings } = buildReport(spec);
   const svgs = html.match(/<svg\b[\s\S]*?<\/svg>/g);
   assert.match(svgs[0], /width="585.64" height="60"/); // (5+6+7)/28, existing 其他 merged once
-  assert.match(svgs[1], /width="780.86" height="60"/); // (5+7)/14; 戊 remains folded in subset
-  assert.doesNotMatch(svgs[1], /<text[^>]*>戊</);
+  assert.doesNotMatch(svgs[0], /<text[^>]*>戊</);
+  assert.match(svgs[1], /<text[^>]*>戊</); // 戊 fits this chart, so it keeps its own color
   assert.match(svgs[1], /<text[^>]*>其他</);
-  assert.ok(warnings.some((w) => /整份報告.*戊、己/.test(w)));
+  assert.ok(warnings.some((w) => /整份報告.*戊、己.*借用/.test(w)));
   assert.equal(checkReport(html, '虛構稿 1 2 3 4 5 6 7', { report: spec }).figures, 2);
 });
 

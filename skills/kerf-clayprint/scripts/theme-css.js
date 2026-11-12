@@ -1,9 +1,10 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { loadTokens } from './tokens.js';
+import { contrast } from './core.js';
 import { isMain } from './main.js';
 import { SLUG } from './brand.js';
 
-export function themeCss(tokens = loadTokens()) {
+function cssParts(tokens) {
   const c = tokens.color;
   const font = [...tokens.font.latin, ...tokens.font.cjk].map((name) => `"${name}"`).join(', ');
   // Explicit screen sizes are CSS px; legacy layers keep the original slide-size calculation.
@@ -12,18 +13,19 @@ export function themeCss(tokens = loadTokens()) {
   const { margin: pm, type: pt } = tokens.print;
   // ponytail: print front matter (.report-front) longer than one page keeps the 50 mm padding on top of page 2's margin;
   // shorten the summary if it spills.
-  return `:root {
+  const screenCss = `:root {
   --cp-paper: ${c.onDark[0]};
   --cp-ink: ${c.text};
   --cp-muted: ${c.textSecondary};
   --cp-title: ${c.title};
   --cp-cover: ${c.cover ?? c.title};
+  --cp-cover-paper: ${c.cover ? c.onDark[0] : c.tint};
   --cp-display-font: ${(tokens.font.display ?? [...tokens.font.latin, ...tokens.font.cjk]).map((name) => `"${name}"`).join(', ')}, ${tokens.font.display ? 'serif' : 'sans-serif'};
   --cp-line: ${c.grid};
   --cp-accent: ${c.focus};
-  --cp-table-rule: ${c.tableRule ?? c.text};
+  --cp-table-rule: ${c.tableRule ?? c.focus};
   --cp-tint: ${c.tint};
-  --cp-soft: ${c.onDark[1]};
+  --cp-context: ${c.gray};
   --cp-font: ${font}, sans-serif;
   --cp-body: ${body}px;
   --cp-small: ${screen?.small ?? tokens.type.label.px / 2}px;
@@ -64,8 +66,8 @@ figure { margin: 32px 0; }
 figure svg { display: block; width: 100%; height: auto; max-width: 100%; }
 .chart-scroll { max-width: 100%; overflow-x: auto; }
 /* Figures and tables: generated 「圖 N」「表 N」 label and title above, notes and source below. */
-.exhibit-title, caption { margin-bottom: 10px; color: var(--cp-title); font-weight: 700; line-height: 1.4; }
-.exhibit-label { display: block; color: var(--cp-accent); font-size: var(--cp-small); letter-spacing: .08em; }
+.exhibit-title, caption { margin-bottom: 10px; color: var(--cp-ink); font-weight: 700; line-height: 1.4; }
+.exhibit-label { display: block; color: var(--cp-muted); font-size: var(--cp-small); letter-spacing: .08em; }
 figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); font-size: var(--cp-small); line-height: 1.5; }
 /* Screen only: the figure's input numbers, closed until the reader opens them. */
 .chart-data { margin-top: 8px; color: var(--cp-muted); font-size: var(--cp-small); }
@@ -75,7 +77,7 @@ figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); 
 .chart-data th, .chart-data td { padding: 6px 10px; }
 .chart-data p { margin: 8px 0 0; }
 .chart-focus { fill: var(--cp-accent); stroke: var(--cp-accent); }
-.chart-muted { fill: var(--cp-soft); stroke: var(--cp-soft); }
+.chart-muted { fill: var(--cp-context); stroke: var(--cp-context); }
 .chart-grid { stroke: var(--cp-line); }
 .chart-text { fill: var(--cp-ink); }
 .chart-subtle { fill: var(--cp-muted); }
@@ -83,9 +85,11 @@ figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); 
 table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
 caption { text-align: left; }
 th, td { padding: 11px 14px; border-bottom: 1px solid var(--cp-line); vertical-align: top; }
-thead th { border-bottom: 2px solid var(--cp-table-rule); font-size: var(--cp-small); }
+thead th { border-bottom: 2px solid var(--cp-table-rule); color: var(--cp-muted); font-size: var(--cp-small); }
 .num, td[data-type="number"], th[data-type="number"] { text-align: right; white-space: nowrap; }
-tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
+tr.emphasis { font-weight: 700; background: var(--cp-tint); }
+${contrast(c.focus, c.tint) >= 4.5 ? 'tr.emphasis > th[scope="row"] { color: var(--cp-accent); }\n' : ''}tbody:has(+ tfoot .total) tr:last-child > * { border-bottom: 0; }
+tr.total > * { border-top: 1px solid var(--cp-ink); }
 .comparison .recommended { background: var(--cp-tint); }
 .diagnosis, .flow { padding-left: 1.4em; }
 .diagnosis li, .flow li { padding: 9px 0; border-bottom: 1px solid var(--cp-line); }
@@ -101,8 +105,8 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .summary { grid-template-columns: 1fr; padding: 20px; }
   .summary-metrics { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
   .chart-scroll svg { min-width: 640px; max-width: none; }
-}
-/* Chrome clips print content outside the page area and shrinks the whole page when anything overflows on the right,
+}`;
+  const printCss = `/* Chrome clips print content outside the page area and shrinks the whole page when anything overflows on the right,
    so @page sits on the outermost lines (22 mm left, 14 mm right) and body padding sets the 50 / 25 mm text column.
    Sizes come from the design layer's print block; @page takes the numbers, element rules the --cp-print-* variables. */
 @page {
@@ -141,7 +145,7 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   /* Page 1 has no @page margin: the front container cancels the body padding and brings back the 50 / 25 mm column,
      the cover band cancels that again to reach the paper edge. Sections always start on the next page. */
   .report-front { margin: 0 calc(-1 * var(--cp-print-gutter)) 0 calc(-1 * var(--cp-print-indent)); padding: 0 var(--cp-print-text-right) var(--cp-print-bottom) var(--cp-print-text-left); break-after: page; }
-  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 18mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-tint); }
+  .report-cover { margin: 0 calc(-1 * var(--cp-print-text-right)) 10mm calc(-1 * var(--cp-print-text-left)); padding: 18mm var(--cp-print-text-right) 12mm var(--cp-print-text-left); background: var(--cp-cover-paper); }
   .report-cover h1 { font-size: var(--cp-print-cover); line-height: 1.2; }
   /* Source, period and check date stay on one row at the 10 pt print size; a second row pushes the summary off page 1. */
   .cover-meta { gap: 2mm 6mm; }
@@ -155,9 +159,9 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .toc li { padding: 1.2mm 0; }
   /* Section headings, contents and pull quotes sit on the 22 mm line, the inner edge of @page. */
   .toc, .section-heading, .callout { margin-left: calc(-1 * var(--cp-print-indent)); }
-  .section-heading { break-inside: avoid; break-after: avoid; margin-bottom: 4mm; border-top: 1.5pt solid var(--cp-accent); padding-top: 4mm; }
+  .section-heading { break-inside: avoid; break-after: avoid; margin-bottom: 4mm; border-top: 1.5pt solid var(--cp-line); padding-top: 4mm; }
   .section-heading .eyebrow { margin-bottom: 1mm; }
-  .section-heading h2 { color: var(--cp-accent); margin-bottom: 3mm; }
+  .section-heading h2 { color: var(--cp-title); margin-bottom: 3mm; }
   .callout { margin-top: 6mm; margin-bottom: 6mm; padding: 0; background: none; border: 0; }
   .callout p { font-size: var(--cp-print-heading); line-height: 1.3; color: var(--cp-accent); font-weight: 400; max-width: none; }
   figure, .callout, .summary, .table-scroll, .comparison, .diagnosis, .flow, .decisions { break-inside: avoid; }
@@ -182,9 +186,28 @@ tr.emphasis, tr.total { font-weight: 700; background: var(--cp-tint); }
   .chart-data { display: none; }
   a { color: inherit; }
 }`;
+  return { screenCss, printCss };
 }
 
-export function replaceTheme(html, css = themeCss()) {
+export function themeCss(tokens = loadTokens()) {
+  const { screenCss, printCss } = cssParts(tokens);
+  return `${screenCss}\n${printCss}`;
+}
+
+// Web layout: the report's screen rules without print, plus a hero in the cover's style. Text keeps the 72ch measure; figures and tables use the full column.
+export function webThemeCss(tokens = loadTokens()) {
+  return `${cssParts(tokens).screenCss}
+[data-layout="web"] .web-hero { padding: 72px 0 40px; border-bottom: 3px solid var(--cp-accent); }
+[data-layout="web"] .web-hero h1 { color: var(--cp-cover); font-family: var(--cp-display-font); }
+[data-layout="web"] .web-meta { margin: 24px 0 0; color: var(--cp-muted); font-size: var(--cp-small); }
+@media (max-width: 640px) {
+[data-layout="web"] .web-hero { padding: 48px 0 32px; }
+}
+`;
+}
+
+// Web-layout pages (data-layout="web" on <html>) get the web CSS, so restyling never brings back print rules.
+export function replaceTheme(html, css = /<html\b[^>]*\bdata-layout=["']web["']/i.test(html) ? webThemeCss() : themeCss()) {
   const pattern = new RegExp(`(<style\\s+id=["']${SLUG}-theme["']\\s*>)[\\s\\S]*?(</style>)`, 'i');
   if (!pattern.test(html)) throw new Error(`找不到 <style id="${SLUG}-theme"> 區塊`);
   // Keep the file's own line endings (Windows checkouts and editors may use CRLF).
@@ -202,3 +225,4 @@ if (isMain(import.meta.url)) {
     process.exitCode = 1;
   }
 }
+
