@@ -85,6 +85,7 @@ figcaption, .sources, .exhibit-note { margin-top: 10px; color: var(--cp-muted); 
 table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
 caption { text-align: left; }
 th, td { padding: 11px 14px; border-bottom: 1px solid var(--cp-line); vertical-align: top; }
+tbody th[scope="row"] { min-width: calc(3em + 28px); }
 thead th { border-bottom: 2px solid var(--cp-table-rule); color: var(--cp-muted); font-size: var(--cp-small); }
 .num, td[data-type="number"], th[data-type="number"] { text-align: right; white-space: nowrap; }
 tr.emphasis { font-weight: 700; background: var(--cp-tint); }
