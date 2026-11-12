@@ -84,7 +84,7 @@ Power Map 是給上班族的職涯策略軍師，高階主管也算在內，分�
 | 《Power: Why Some People Have It and Others Don't》 | Jeffrey Pfeffer | 2010 | 他看到什麼、誰離不開誰 |
 | 《Getting to Yes: Negotiating Agreement Without Giving In》 | Roger Fisher、William Ury、Bruce Patton | 第三版（2011） | 說好、說不各付出什麼，雙方的退路 |
 
-skill 裡附了三本書的分析工具整理（[books.md](references/books.md)）、269 筆有完整情節的書中故事（[stories.md](references/stories.md)），以及 712 筆一句話的案例索引（[case-library](references/case-library/index.md)）。都是自行撰寫的摘要，不是原文，使用時不需要原書。書名和術語只在帶來你自己想不到的洞見時出現，不逐書摘要。
+skill 裡附了三本書的分析工具整理（[books.md](references/books.md)），以及 269 筆有完整情節的書中故事（[stories.md](references/stories.md)）。都是自行撰寫的摘要，不是原文，使用時不需要原書。書名和術語只在帶來你自己想不到的洞見時出現，不逐書摘要。
 
 來源只有這三本書。若你點名別的書，例如《Managing with Power》，它會用一般知識回答，並註明這不在 skill 的來源內。
 

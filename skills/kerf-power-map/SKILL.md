@@ -21,7 +21,7 @@ compatibility: "Bundled Markdown and HTML references are read directly with file
 
 決定在他自己手上的題目，例如接不接 offer、轉不轉行，拍板的是他，三問改為：這條路他靠誰、誰靠他、退路有多真；局裡若有其他人，他們就在這三問裡出現。
 
-這三問就是三本書的骨架，依序是《獨裁者手冊》《Power》《Getting to Yes》。看局前先讀 [books.md](references/books.md)，裡面是作者現成的分析工具與原型案例；若需要更多書中故事，搜尋 [stories.md](references/stories.md) 或 [case-library](references/case-library/index.md)。
+這三問就是三本書的骨架，依序是《獨裁者手冊》《Power》《Getting to Yes》。看局前先讀 [books.md](references/books.md)，裡面是作者現成的分析工具與原型案例；若需要更多書中故事，搜尋 [stories.md](references/stories.md)。
 
 三問在回覆裡要清楚可見，用白話問題當小標或粗體開頭，讓他能檢查你的推理；再短的回覆也要三問都答到，哪怕各只有一句。
 

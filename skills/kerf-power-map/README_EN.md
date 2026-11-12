@@ -84,7 +84,7 @@ The shape can change; the way to read it does not. Position carries meaning: the
 | *Power: Why Some People Have It and Others Don't* | Jeffrey Pfeffer | 2010 | What they see, and who cannot do without whom |
 | *Getting to Yes: Negotiating Agreement Without Giving In* | Roger Fisher, William Ury, Bruce Patton | 3rd edition (2011) | What yes and no cost, and each side's fallback |
 
-The skill bundles a guide to the books' analytical tools ([books.md](references/books.md)), 269 book stories with full plots ([stories.md](references/stories.md)) and a one-line index of 712 cases ([case-library](references/case-library/index.md)), all in Traditional Chinese. They are summaries written for this skill, not quotations, so you do not need the books. Titles and terms appear only when they bring an insight you would not have reached yourself; there are no book-by-book summaries.
+The skill bundles a guide to the books' analytical tools ([books.md](references/books.md)) and 269 book stories with full plots ([stories.md](references/stories.md)), both in Traditional Chinese. They are summaries written for this skill, not quotations, so you do not need the books. Titles and terms appear only when they bring an insight you would not have reached yourself; there are no book-by-book summaries.
 
 These three books are the only sources. If you name another book, such as *Managing with Power*, it answers from general knowledge and says that the book is outside the skill's sources.
 

@@ -50,7 +50,6 @@ Copy-Item -Recurse (Join-Path $KerfnotesTmp 'skills\skills\kerf-power-map') $Pow
 - `SKILL.md` 存在，`name` 是 `kerf-power-map`，與資料夾名稱相同。
 - `references/books.md`、`references/map.md`、`references/map-template.html`、`references/stories.md` 存在且非空。
 - `references/examples/` 有 `index.md`，以及它列出的範例 `.md` 與對應的 `.html` 地圖。
-- `references/case-library/index.md` 存在，且各分類資料夾內有案例頁。
 - 從使用者專案重新開啟 agent 或開新對話後，skill 清單裡看得到 `kerf-power-map`。Codex 可明確呼叫 `$kerf-power-map`；Claude Code 可用 `/kerf-power-map`。`agents/openai.yaml` 是顯示與提示資料，不能代替安裝路徑。
 
 無法確認 agent 是否已載入 skill 時，回報「檔案已驗，agent 載入未驗」，不宣稱完整可用，也不為了載入而關閉使用者正在工作的對話。
